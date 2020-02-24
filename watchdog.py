@@ -24,6 +24,8 @@ def load():
     The data is stored in a json like cfg file with the following format:
     {"token":"WATCHDOG-TOKEN-HERE"}
     """
+    if not os.path.exists("data"):
+        os.mkdir("data")
     global token
     print("Loading data...")
     if os.path.exists(os.path.join("data", "watchdog.cfg")):

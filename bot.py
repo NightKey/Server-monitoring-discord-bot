@@ -25,6 +25,8 @@ def load():
     The data is stored in a json like cfg file with the following format:
     {"token":"BOT-TOKEN-HERE", "ids":{"bot":BOT-ID-HERE, "watchdog":WATCHDOG-ID-HERE}}
     """
+    if not os.path.exists("data"):
+        os.mkdir("data")
     global token    #The discord bot's login tocken
     global ids      #The discord bots' ID (If watchdog is used too)
     print("Loading data...")
