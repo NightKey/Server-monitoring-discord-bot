@@ -1,3 +1,4 @@
 .backup
 logs*
 *.json
+__py*
