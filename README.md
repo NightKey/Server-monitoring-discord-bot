@@ -1,2 +1,13 @@
 # Server-monitoring-discord-bot
+
 This bot monitors the server that it's running on.
+For it to woek, you will need to create at least one [Discord bot accont](https://discordapp.com/developers/applications/).
+Both the watchdog, and the bot is capable of running without one an other.
+
+## The bot
+
+This application is a chat-bot, that is capable of telling the status of the computer, and the watchlist's status (what application is and is not running), however, it can't send notification message of a process suddenly stopping.
+
+This bot, to function properly needs the following permissions:
+
+    
