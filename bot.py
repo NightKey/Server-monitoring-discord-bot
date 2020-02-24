@@ -225,6 +225,12 @@ async def on_message(message):
 &help - This help list"""
             await message.channel.send(f"```{text}```")
 
-load()
-print("started")
-client.run(token)
+if __name__ == "__main__":
+    try:
+        load()
+        print("started")
+        client.run(token)
+    except Exception as ex:
+        print(str(ex), error=True)
+        input("To exit, press return")
+    
