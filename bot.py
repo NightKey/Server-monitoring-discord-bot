@@ -218,6 +218,33 @@ async def on_message(message):
                 except:
                     pass
             else: await message.channel.send("Error in restarting watchdog!\nManual help needed!")
+        if message.content in ("&restart pc", "&restart server"):
+            await message.channel.send("Attempting to restart the pc...")
+            try:
+                ansv = os.system("shutdown /r /t 5")
+                if ansv != 0:
+                    await message.chanel.send("Permission denied!")
+            except Exception as ex:
+                await message.channel.send(f"Restart failed with the following error:\n```{str(ex)}```")
+        if "&stop " in message.content or "&terminate " in message.content:
+            target = message.content.replace('&stop ', '').replace("&terminate ", '')
+            if target not in process_list:
+                for p in process_list:
+                    if target in p:
+                        target = p
+                        break
+                else:
+                    await message.channel.send("Target not found, process can't be safely killed!")
+                    return
+            for process in psutil.process_iter():
+                try:
+                    name = os.path.basename(process.cmdline()[-1])
+                    if name.lower() == target:
+                        process.kill()
+                    break
+                except:
+                    pass
+            else: await message.channel.send(f"Error while stopping {target}!\nManual help needed!")
         if message.content == "&help":
             text = """Every time the bot starts up, it runs a system check for the running program. If watchdog is not running, trys to start it 3 times.
 &echo - Response test
@@ -228,6 +255,8 @@ async def on_message(message):
 &clear - Clears the current chanel, if the promission was granted
 &restart - Restarts the bot.
 &restart watchdog - Restarts the watchdog application.
+&restart pc or &restart server - Attempts to restart the host machine.
+&stop <name> or &terminate <name> - Kills the process with the name from the process list only!
 &help - This help list"""
             await message.channel.send(f"```{text}```")
 
