@@ -1,4 +1,4 @@
-import discord, psutil, os, json, sys, subprocess
+import discord, psutil, os, json
 from modules import writer, status, logger
 from threading import Thread
 
@@ -69,13 +69,6 @@ def check_process_list():
             process_list["watchdog.py"] = [False, False]
         ptime = mtime
 
-def open_file(filename):
-    if sys.platform == "win32":
-        os.startfile(filename)
-    else:
-        opener ="open" if sys.platform == "darwin" else "xdg-open"
-        subprocess.call([opener, filename])
-
 def add_process(name):
     """Adds a process to the watchlist. The watchdog automaticalli checks the watchlist file every 10 secounds to lighten the load.
     """
@@ -138,7 +131,7 @@ async def on_ready():
                                     pass
                             if retry < 3:
                                 await channel.send("Attempting to restart...")
-                                open_file("watchdog.py")
+                                os.startfile("watchdog.py")
                                 retry += 1
                                 break
                             else:
@@ -173,7 +166,7 @@ async def on_message(message):
                     if key == "watchdog.py" and not value[0]:
                         if retry < 3:
                             await message.channel.send("Watchdog offline...\nAttempting to restart...")
-                            open_file("watchdog.py")
+                            os.startfile("watchdog.py")
                             retry += 1
                             break
                         else:
