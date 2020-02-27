@@ -1,4 +1,4 @@
-import discord, psutil, os, json
+import discord, psutil, os, json, sys, subprocess
 from modules import writer, status, logger
 from threading import Thread
 
@@ -6,6 +6,7 @@ token = ""
 process_list = {}
 ptime = 0
 retry = 0
+was_online=False
 ids = {}
 lg = logger.logger("bot", folder="logs")
 
@@ -68,6 +69,13 @@ def check_process_list():
             process_list["watchdog.py"] = [False, False]
         ptime = mtime
 
+def open_file(filename):
+    if sys.platform == "win32":
+        os.startfile(filename)
+    else:
+        opener ="open" if sys.platform == "darwin" else "xdg-open"
+        subprocess.call([opener, filename])
+
 def add_process(name):
     """Adds a process to the watchlist. The watchdog automaticalli checks the watchlist file every 10 secounds to lighten the load.
     """
@@ -108,37 +116,42 @@ async def on_ready():
     It does a system scann for the running programs, and if watchdog is offline, but ID is given, it attempts to restart it 3 times
     """
     channels = ["commands"]
+    global was_online
     for channel in client.get_all_channels():   #Sets the channel to the first valid channel, and runs a scann.
         if str(channel) in channels:
-            await channel.send("Bot started")
-            global retry
-            while True:
-                scann()
-                text = ""
-                for key, value in process_list.items():
-                    if key == "watchdog.py" and not value[0]:
-                        if retry < 1:
-                            await channel.send("Watchdog offline!")
-                            try:
-                                with open(os.path.join("logs", "watchdog.lg"), 'r') as f:
-                                    text = f.read(-1).split('\n')
-                                if text[-2] == "---ERROR OCCURED!---":      #If the watchdog program stopped with an error, the bot will attempt to send a message containing that error
-                                    await channel.send(f"Watchdog error: {text[-1]}")
-                            except:
-                                pass
-                        if retry < 3:
-                            await channel.send("Attempting to restart...")
-                            os.startfile("watchdog.py")
-                            retry += 1
-                            break
-                        else:
-                            await channel.send("Watchdog can't be started automatically!")
-                    text += "{}\t{}\n".format(key, ("running" if value[0] else "stopped"))
-                    process_list[key] = [False, False]
-                else:
-                    await channel.send(f"```diff\n{text}```\n{status.get_graphical()}")
-                    break
-            break
+            if not was_online:
+                await channel.send("Bot started")
+                global retry
+                while True:
+                    scann()
+                    text = ""
+                    for key, value in process_list.items():
+                        if key == "watchdog.py" and not value[0]:
+                            if retry < 1:
+                                await channel.send("Watchdog offline!")
+                                try:
+                                    with open(os.path.join("logs", "watchdog.lg"), 'r') as f:
+                                        text = f.read(-1).split('\n')
+                                    if text[-2] == "---ERROR OCCURED!---":      #If the watchdog program stopped with an error, the bot will attempt to send a message containing that error
+                                        await channel.send(f"Watchdog error: {text[-1]}")
+                                except:
+                                    pass
+                            if retry < 3:
+                                await channel.send("Attempting to restart...")
+                                open_file("watchdog.py")
+                                retry += 1
+                                break
+                            else:
+                                await channel.send("Watchdog can't be started automatically!")
+                        text += "{}\t{}\n".format(key, ("running" if value[0] else "stopped"))
+                        process_list[key] = [False, False]
+                    else:
+                        await channel.send(f"```diff\n{text}```\n{status.get_graphical()}")
+                        was_online = True
+                        break
+            else:
+                await channel.send("Reconnected")
+        break
 
 @client.event
 async def on_message(message):
@@ -160,7 +173,7 @@ async def on_message(message):
                     if key == "watchdog.py" and not value[0]:
                         if retry < 3:
                             await message.channel.send("Watchdog offline...\nAttempting to restart...")
-                            os.startfile("watchdog.py")
+                            open_file("watchdog.py")
                             retry += 1
                             break
                         else:
