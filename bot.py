@@ -1,7 +1,11 @@
 import discord, psutil, os, json
 from modules import writer, status, logger
+from modules.scanner import scann
 from threading import Thread
+from time import sleep
 
+trys = 0
+last_stop = None
 token = ""
 process_list = {}
 ptime = 0
@@ -36,6 +40,7 @@ def load():
                 tmp = json.load(f)
             token = tmp["token"]
             ids = tmp["ids"]
+            print("Data loading finished!")
         except: #incase there is an error, the program deletes the file, and restarts
             os.remove(os.path.join("data", "bot.cfg"))
             print("Error in cfg file... Restarting")
@@ -68,6 +73,41 @@ def check_process_list():
             process_list["watchdog.py"] = [False, False]
         ptime = mtime
 
+async def status_check(channel):
+    """Scanns the system for the running applications, and creates a message depending on the resoults.
+    """
+    global retry
+    global process_list
+    while True:
+        process_list = scann(process_list, psutil.process_iter())
+        text = ""
+        for key, value in process_list.items():
+            if key == "watchdog.py" and not value[0]:
+                if retry < 1:
+                    await channel.send("Watchdog offline!")
+                    try:
+                        with open(os.path.join("logs", "watchdog.lg"), 'r') as f:
+                            print("Watchdog logs opened")
+                            text = f.read(-1).split('\n')
+                        if text[-3] == "---ERROR OCCURED!---":      #If the watchdog program stopped with an error, the bot will attempt to send a message containing that error
+                            print("Line found!")
+                            await channel.send(f"Watchdog error: {text[-2]}")
+                    except Exception as ex:
+                        print(f"Error in opening the log file:\n{ex}")
+                if retry < 3:
+                    await channel.send("Attempting to restart...")
+                    os.startfile("watchdog.py")
+                    retry += 1
+                    sleep(3)
+                    break
+                else:
+                    await channel.send("Watchdog can't be started automatically!")
+            text += "{}\t{}\n".format(key, ("running" if value[0] else "stopped"))
+            process_list[key] = [False, False]
+        else:
+            await channel.send(f"```diff\n{text}```\n{status.get_graphical()}")
+            break
+
 def add_process(name):
     """Adds a process to the watchlist. The watchdog automaticalli checks the watchlist file every 10 secounds to lighten the load.
     """
@@ -79,24 +119,6 @@ def add_process(name):
         pass
     with open(os.path.join("data", "process_list.json"), "w") as f:
         json.dump(process_list, f)
-
-def scann():
-    r"""Checks the currently running processes for the last argument in them. 
-    If a .exe program is being checked, the last argument is the program's name.
-    If a .py or other, console run program running, without any additional argument, the script's path will be the the last argument.
-    For example:
-        Discord's last argument: "path\to\discord\discord.exe"
-        This bot's last argument: "path\to\bot\bot.py"
-    If how ever, the program has any argument, it can't bi monitored by this methode.
-    """
-    check_process_list()
-    for process in psutil.process_iter():
-        try:
-            name = os.path.basename(process.cmdline()[-1])
-            if name.lower() in process_list.keys():
-                process_list[name.lower()] = [True, False]
-        except:
-            pass
 
 @client.event
 async def on_message_edit(before, after):
@@ -110,35 +132,18 @@ async def on_ready():
     channels = ["commands"]
     for channel in client.get_all_channels():   #Sets the channel to the first valid channel, and runs a scann.
         if str(channel) in channels:
-            await channel.send("Bot started")
-            global retry
-            while True:
-                scann()
-                text = ""
-                for key, value in process_list.items():
-                    if key == "watchdog.py" and not value[0]:
-                        if retry < 1:
-                            await channel.send("Watchdog offline!")
-                            try:
-                                with open(os.path.join("logs", "watchdog.lg"), 'r') as f:
-                                    text = f.read(-1).split('\n')
-                                if text[-2] == "---ERROR OCCURED!---":      #If the watchdog program stopped with an error, the bot will attempt to send a message containing that error
-                                    await channel.send(f"Watchdog error: {text[-1]}")
-                            except:
-                                pass
-                        if retry < 3:
-                            await channel.send("Attempting to restart...")
-                            os.startfile("watchdog.py")
-                            retry += 1
-                            break
-                        else:
-                            await channel.send("Watchdog can't be started automatically!")
-                    text += "{}\t{}\n".format(key, ("running" if value[0] else "stopped"))
-                    process_list[key] = [False, False]
-                else:
-                    await channel.send(f"```diff\n{text}```\n{status.get_graphical()}")
-                    break
+            global last_stop
+            if last_stop != None:
+                await channel.send(f"Unexcepted shutdown!\nError message:\n```Python{last_stop}```")
+                last_stop = None
+            else:
+                await channel.send("Bot started")
+            check_process_list()
+            await status_check(channel)
             break
+    print("Bot started up correctly!")      #The bot totally started up, and ready.
+    global trys
+    trys = 0
 
 @client.event
 async def on_message(message):
@@ -152,24 +157,7 @@ async def on_message(message):
         if message.content == "&echo":
             await message.channel.send("echo")
         if message.content == "&status":
-            global retry
-            while True:
-                text = ""
-                scann()
-                for key, value in process_list.items():
-                    if key == "watchdog.py" and not value[0]:
-                        if retry < 3:
-                            await message.channel.send("Watchdog offline...\nAttempting to restart...")
-                            os.startfile("watchdog.py")
-                            retry += 1
-                            break
-                        else:
-                            await message.channel.send("Watchdog restart failed!")
-                    text += "{}\t{}\n".format(key, ("running" if value[0] else "stopped"))
-                    process_list[key] = [False, False]
-                else:
-                    await message.channel.send(f"```diff\n{text}```\n{status.get_graphical()}")
-                    break
+            status_check(message.channel)
         if message.content == "&link":
             text = f"Watchdog - https://discordapp.com/oauth2/authorize?client_id={ids['watchdog']}&scope=bot&permissions=199680\n" if ids["watchdog"] != -1 else ""
             text += f"Bot - https://discordapp.com/oauth2/authorize?client_id={ids['me']}&scope=bot&permissions=199680"
@@ -226,11 +214,17 @@ async def on_message(message):
             await message.channel.send(f"```{text}```")
 
 if __name__ == "__main__":
-    try:
-        load()
-        print("started")
-        client.run(token)
-    except Exception as ex:
-        print(str(ex), error=True)
-        input("To exit, press return")
+    while True:
+        trys += 1
+        if trys <= 3:
+            try:
+                load()
+                print("started")
+                client.run(token)
+            except Exception as ex:
+                print(str(ex), error=True)
+                last_stop = str(ex)
+        else:
+            print("Restart failed 3 times...")
+            print("Exiting...")
     

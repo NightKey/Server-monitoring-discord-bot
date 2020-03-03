@@ -1,5 +1,6 @@
 import discord, psutil, os, json
 from modules import writer, logger
+from modules.scanner import scann
 from time import sleep
 
 token = ""
@@ -63,25 +64,6 @@ def check_process_list():
             process_list = json.load(f)
         ptime = mtime
 
-def scann(n):
-    r"""Checks the currently running processes for the last argument in them. 
-    If a .exe program is being checked, the last argument is the program's name.
-    If a .py or other, console run program running, without any additional argument, the script's path will be the the last argument.
-    For example:
-        Discord's last argument: "path\to\discord\discord.exe"
-        This bot's last argument: "path\to\bot\bot.py"
-    If how ever, the program has any argument, it can't bi monitored by this methode.
-    """
-    if n >= 5:
-        check_process_list()
-    for process in psutil.process_iter():
-        try:
-            name = os.path.basename(process.cmdline()[-1])
-            if name.lower() in process_list.keys():
-                process_list[name.lower()] = [True, False]
-        except:
-            pass
-
 async def watchdog():
     """This method scanns the system for runing processes, and if no process found, sends a mention message to all of the valid channels.
     This scan runs every 10 secound. And every 50 Secound, the program scanns for updates in the process list.
@@ -89,12 +71,14 @@ async def watchdog():
     print("started")
     n = 5
     while True:
-        scann(n)
+        if n >= 5:
+            check_process_list()
+        global process_list
+        process_list = scann(process_list, psutil.process_iter())
         if n >= 5:
             n = 0
         else:
             n += 1
-        global process_list
         global error
         for key, value in process_list.items():
             if not value[1] and not value[0]:
