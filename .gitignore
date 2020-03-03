@@ -2,5 +2,5 @@
 logs*
 *.cfg
 *.json
-__py*
+*__py*
 *.pyc
