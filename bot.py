@@ -10,6 +10,7 @@ token = ""
 process_list = {}
 ptime = 0
 retry = 0
+was_online=False
 ids = {}
 lg = logger.logger("bot", folder="logs")
 
@@ -130,16 +131,21 @@ async def on_ready():
     It does a system scann for the running programs, and if watchdog is offline, but ID is given, it attempts to restart it 3 times
     """
     channels = ["commands"]
+    global was_online
     for channel in client.get_all_channels():   #Sets the channel to the first valid channel, and runs a scann.
         if str(channel) in channels:
-            global last_stop
-            if last_stop != None:
-                await channel.send(f"Unexcepted shutdown!\nError message:\n```Python{last_stop}```")
-                last_stop = None
+            if not was_online:
+                global last_stop
+                if last_stop != None:
+                    await channel.send(f"Unexcepted shutdown!\nError message:\n```Python{last_stop}```")
+                    last_stop = None
+                else:
+                    await channel.send("Bot started")
+                check_process_list()
+                await status_check(channel)
+                was_online = True
             else:
-                await channel.send("Bot started")
-            check_process_list()
-            await status_check(channel)
+                await channel.send("Back online!")
             break
     print("Bot started up correctly!")      #The bot totally started up, and ready.
     global trys
@@ -200,6 +206,33 @@ async def on_message(message):
                 except:
                     pass
             else: await message.channel.send("Error in restarting watchdog!\nManual help needed!")
+        if message.content in ("&restart pc", "&restart server"):
+            await message.channel.send("Attempting to restart the pc...")
+            try:
+                ansv = os.system("shutdown /r /t 5")
+                if ansv != 0:
+                    await message.chanel.send("Permission denied!")
+            except Exception as ex:
+                await message.channel.send(f"Restart failed with the following error:\n```{str(ex)}```")
+        if "&stop " in message.content or "&terminate " in message.content:
+            target = message.content.replace('&stop ', '').replace("&terminate ", '')
+            if target not in process_list:
+                for p in process_list:
+                    if target in p:
+                        target = p
+                        break
+                else:
+                    await message.channel.send("Target not found, process can't be safely killed!")
+                    return
+            for process in psutil.process_iter():
+                try:
+                    name = os.path.basename(process.cmdline()[-1])
+                    if name.lower() == target:
+                        process.kill()
+                    break
+                except:
+                    pass
+            else: await message.channel.send(f"Error while stopping {target}!\nManual help needed!")
         if message.content == "&help":
             text = """Every time the bot starts up, it runs a system check for the running program. If watchdog is not running, trys to start it 3 times.
 &echo - Response test
@@ -210,6 +243,8 @@ async def on_message(message):
 &clear - Clears the current chanel, if the promission was granted
 &restart - Restarts the bot.
 &restart watchdog - Restarts the watchdog application.
+&restart pc or &restart server - Attempts to restart the host machine.
+&stop <name> or &terminate <name> - Kills the process with the name from the process list only!
 &help - This help list"""
             await message.channel.send(f"```{text}```")
 
