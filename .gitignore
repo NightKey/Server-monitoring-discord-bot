@@ -1,6 +1,0 @@
-.backup
-logs*
-*.cfg
-*.json
-*__py*
-*.pyc
