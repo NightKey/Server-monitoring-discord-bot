@@ -93,7 +93,11 @@ async def watchdog():
                 if str(channel) in channels:
                     await channel.send(f"@here\n{error}")
             error = ""
-        sleep(10)
+        if os.path.exists("stop.wd"):
+            os.remove("stop.wd")
+            await client.logout()
+            exit(0)
+        sleep(5)
 
 if __name__=="__main__":
     try:
