@@ -163,7 +163,7 @@ async def on_message(message):
         if message.content == "&echo":
             await message.channel.send("echo")
         if message.content == "&status":
-            status_check(message.channel)
+            await status_check(message.channel)
         if message.content == "&link":
             text = f"Watchdog - https://discordapp.com/oauth2/authorize?client_id={ids['watchdog']}&scope=bot&permissions=199680\n" if ids["watchdog"] != -1 else ""
             text += f"Bot - https://discordapp.com/oauth2/authorize?client_id={ids['me']}&scope=bot&permissions=199680"
