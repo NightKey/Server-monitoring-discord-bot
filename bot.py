@@ -195,23 +195,19 @@ async def on_message(message):
             await client.logout()
             exit(0)
         if message.content == "&restart watchdog":
-            for process in psutil.process_iter():
-                try:
-                    name = os.path.basename(process.cmdline()[-1])
-                    if name.lower() == "watchdog.py":
-                        process.kill()
-                    os.system("restarter.py watchdog.py")
-                    await message.channel.send("Restarting watchdog...")
-                    break
-                except:
-                    pass
-            else: await message.channel.send("Error in restarting watchdog!\nManual help needed!")
+            await message.channel.send("Restarting watchdog...")
+            f = open("stop.wd", "w")
+            f.close()
+            os.system("restarter.py watchdog.py")
         if message.content in ("&restart pc", "&restart server"):
             await message.channel.send("Attempting to restart the pc...")
             try:
                 ansv = os.system("shutdown /r /t 5")
                 if ansv != 0:
                     await message.chanel.send("Permission denied!")
+                else:
+                    f = open("stop.wd", "w")
+                    f.close()
             except Exception as ex:
                 await message.channel.send(f"Restart failed with the following error:\n```{str(ex)}```")
         if "&stop " in message.content or "&terminate " in message.content:
