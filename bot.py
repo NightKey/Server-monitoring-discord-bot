@@ -24,6 +24,20 @@ writer = writer.writer("Key Server")
 print = split   #Changed print to the split function
 client = discord.Client()       #Creates a client instance using the discord  module
 
+def updater(channel):
+    from modules import updater
+    if updater.main():
+        await channel.send("Update installed!")
+        f = open("stop.wd", "w")
+        f.close()
+        os.system("restarter.py watchdog.py")
+        os.system("restarter.py bot.py")
+        await client.logout()
+        exit(0)
+    else:
+        await channel.send('Nothing was updated!')
+
+
 def load():
     """This function loads in the data, and sets up the program variables. 
     In the case of a missing, or corrupt cfg file, this function requests the data's input through console inpt.
@@ -241,8 +255,11 @@ async def on_message(message):
 &restart watchdog - Restarts the watchdog application.
 &restart pc or &restart server - Attempts to restart the host machine.
 &stop <name> or &terminate <name> - Kills the process with the name from the process list only!
-&help - This help list"""
+&help - This help list
+&update - update the bots, and restart's them"""
             await message.channel.send(f"```{text}```")
+        if message.content == '&update':
+            updater(message.channel)
 
 if __name__ == "__main__":
     while True:
