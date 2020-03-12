@@ -1,5 +1,5 @@
 import discord, psutil, os, json
-from modules import writer, logger
+from modules import writer, logger, status
 from modules.scanner import scann
 from time import sleep
 
@@ -8,6 +8,7 @@ process_list = {}   #Formatting: "PROCESS-NAME":[IS-RUNNING, WAS-SENT-SINCE-LAST
 ptime = 0
 error = ""
 lg = logger.logger("watchdog", folder="logs")
+battery_warning = False
 
 def split(text, error=False):
     """Logs to both stdout and a log file, using both the writer, and the logger module
@@ -68,14 +69,28 @@ async def watchdog():
     """This method scanns the system for runing processes, and if no process found, sends a mention message to all of the valid channels.
     This scan runs every 10 secound. And every 50 Secound, the program scanns for updates in the process list.
     """
+    global battery_warning
+    channel = None
+    channels = ["commands"]
+    for channel in client.get_all_channels():
+        if str(channel) in channels:
+            break
     print("started")
     n = 5
     while True:
-        if n >= 5:
+        if n == 5:
             check_process_list()
         global process_list
         process_list = scann(process_list, psutil.process_iter())
         if n >= 5:
+            _, _, battery = status.get_pc_status()
+            if battery != None:
+                if not battery["power_plugged"]:
+                    if not battery_warning:
+                        await channel.send(f"@here The Battery is not plugged in!")
+                        battery_warning = True
+                elif battery_warning:
+                    battery_warning = False
             n = 0
         else:
             n += 1
@@ -88,10 +103,7 @@ async def watchdog():
                 process_list[key] = [False, value[1]]
         if error != "":
             print(error)
-            channels = ["commands"]
-            for channel in client.get_all_channels():
-                if str(channel) in channels:
-                    await channel.send(f"@here\n{error}")
+            await channel.send(f"@here\n{error}")
             error = ""
         if os.path.exists("stop.wd"):
             os.remove("stop.wd")
