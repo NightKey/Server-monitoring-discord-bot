@@ -30,7 +30,6 @@ def updater(channel):
         await channel.send("Update installed!")
         f = open("stop.wd", "w")
         f.close()
-        os.system("restarter.py watchdog.py")
         os.system("restarter.py bot.py")
         await client.logout()
         exit(0)
