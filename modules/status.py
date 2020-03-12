@@ -7,6 +7,7 @@ z = 123
 
 def get_pc_status():
     """With the help of the psutil module, scanns the PC for information about all the drives, the memory and the battery, if it has one.
+    Returns disk, memory, battery in this order.
     """
     disk = dict()
     for letter in range(a, z):
