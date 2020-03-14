@@ -82,7 +82,7 @@ async def watchdog():
             check_process_list()
         global process_list
         process_list = scann(process_list, psutil.process_iter())
-        if n >= 5:
+        if n % 2 == 0:
             _, _, battery = status.get_pc_status()
             if battery != None:
                 if not battery["power_plugged"]:
@@ -91,6 +91,7 @@ async def watchdog():
                         battery_warning = True
                 elif battery_warning:
                     battery_warning = False
+        if n >= 5:
             n = 0
         else:
             n += 1
