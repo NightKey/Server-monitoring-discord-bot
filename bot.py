@@ -24,7 +24,7 @@ writer = writer.writer("Key Server")
 print = split   #Changed print to the split function
 client = discord.Client()       #Creates a client instance using the discord  module
 
-def updater(channel):
+async def updater(channel):
     from modules import updater
     if updater.main():
         await channel.send("Update installed!")
