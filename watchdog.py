@@ -30,21 +30,24 @@ def load():
         os.mkdir("data")
     global token
     print("Loading data...")
-    if os.path.exists(os.path.join("data", "watchdog.cfg")):
+    if os.path.exists(os.path.join("data", "bot.cfg")):
         try:
-            with open(os.path.join("data", "watchdog.cfg"), "r") as f:
+            with open(os.path.join("data", "bot.cfg"), "r") as f:
                 tmp = json.load(f)
             token = tmp["token"]
-        except:
-            os.remove(os.path.join("data", "watchdog.cfg"))
+            print("Data loading finished!")
+        except: #incase there is an error, the program deletes the file, and restarts
+            os.remove(os.path.join("data", "bot.cfg"))
             print("Error in cfg file... Restarting")
             os.system("restarter.py watchdog.py")
             exit(0)
     else:
         print("Data not found!")
         token = input("Type in the token: ")
-        tmp = {"token":token}
-        with open(os.path.join("data", "watchdog.cfg"), "w") as f:
+        me = int(input("Type in this bot's user id: "))
+        id = me
+        tmp = {"token":token, "id":id}
+        with open(os.path.join("data", "bot.cfg"), "w") as f:
             json.dump(tmp, f)
     del tmp
 

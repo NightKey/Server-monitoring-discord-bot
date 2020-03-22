@@ -11,7 +11,7 @@ process_list = {}
 ptime = 0
 retry = 0
 was_online=False
-ids = {}
+id = None
 lg = logger.logger("bot", folder="logs")
 
 def split(text, error=False):
@@ -41,19 +41,19 @@ def load():
     """This function loads in the data, and sets up the program variables. 
     In the case of a missing, or corrupt cfg file, this function requests the data's input through console inpt.
     The data is stored in a json like cfg file with the following format:
-    {"token":"BOT-TOKEN-HERE", "ids":{"bot":BOT-ID-HERE, "watchdog":WATCHDOG-ID-HERE}}
+    {"token":"BOT-TOKEN-HERE", "id":{"bot":BOT-ID-HERE, "watchdog":WATCHDOG-ID-HERE}}
     """
     if not os.path.exists("data"):
         os.mkdir("data")
     global token    #The discord bot's login tocken
-    global ids      #The discord bots' ID (If watchdog is used too)
+    global id      #The discord bots' ID (If watchdog is used too)
     print("Loading data...")
     if os.path.exists(os.path.join("data", "bot.cfg")):
         try:
             with open(os.path.join("data", "bot.cfg"), "r") as f:
                 tmp = json.load(f)
             token = tmp["token"]
-            ids = tmp["ids"]
+            id = tmp["id"]
             print("Data loading finished!")
         except: #incase there is an error, the program deletes the file, and restarts
             os.remove(os.path.join("data", "bot.cfg"))
@@ -64,10 +64,8 @@ def load():
         print("Data not found!")
         token = input("Type in the token: ")
         me = int(input("Type in this bot's user id: "))
-        wd = int(input("Type in the watchdog's user id, or press enter: ") or -1)
-        ids["me"] = me
-        ids['watchdog'] = wd
-        tmp = {"token":token, "ids":ids}
+        id = me
+        tmp = {"token":token, "id":id}
         with open(os.path.join("data", "bot.cfg"), "w") as f:
             json.dump(tmp, f)
     del tmp
@@ -83,7 +81,6 @@ def check_process_list():
         print("Process list update detected!")
         with open(os.path.join("data", "process_list.json"), "r") as f:
             process_list = json.load(f)
-        if ids["watchdog"] != -1:
             process_list["watchdog.py"] = [False, False]
         ptime = mtime
 
@@ -134,6 +131,23 @@ def add_process(name):
     with open(os.path.join("data", "process_list.json"), "w") as f:
         json.dump(process_list, f)
 
+def remove(name):
+    """Removes the given program from the watchlist
+    """
+    global process_list
+    try:
+        del process_list[name]
+    except:
+        return False
+    try:
+        del process_list["watchdog.py"] #If the watchdog's ID is not given during the setup, the program won't have it in it's process list.
+    except:
+        pass
+    with open(os.path.join("data", "process_list.json"), "w") as f:
+        json.dump(process_list, f)
+    return True
+    
+
 @client.event
 async def on_message_edit(before, after):
     await on_message(after)
@@ -143,6 +157,8 @@ async def on_ready():
     """When the client is all set up, this sectio get's called, and runs once.
     It does a system scann for the running programs, and if watchdog is offline, but ID is given, it attempts to restart it 3 times
     """
+    print("Bot started up correctly!")      #The bot totally started up, and ready.
+    print('Startup check ...')
     channels = ["commands"]
     global was_online
     for channel in client.get_all_channels():   #Sets the channel to the first valid channel, and runs a scann.
@@ -160,7 +176,7 @@ async def on_ready():
             else:
                 await channel.send("Back online!")
             break
-    print("Bot started up correctly!")      #The bot totally started up, and ready.
+    print('Startup check finished')
     global trys
     trys = 0
 
@@ -169,7 +185,7 @@ async def on_message(message):
     """This get's called when a message was sent to the server. It checks for all the usable commands, and executes them, if they were sent to the correct channel.
     """
     channels = ["commands"]
-    me = client.get_user(ids["me"])
+    me = client.get_user(id)
     if message.author == me:
         return
     if str(message.channel) in channels:
@@ -178,8 +194,7 @@ async def on_message(message):
         if message.content == "&status":
             await status_check(message.channel)
         if message.content == "&link":
-            text = f"Watchdog - https://discordapp.com/oauth2/authorize?client_id={ids['watchdog']}&scope=bot&permissions=199680\n" if ids["watchdog"] != -1 else ""
-            text += f"Bot - https://discordapp.com/oauth2/authorize?client_id={ids['me']}&scope=bot&permissions=199680"
+            text = f"Bot - https://discordapp.com/oauth2/authorize?client_id={id}&scope=bot&permissions=199680"
             await message.channel.send(text)
         if message.content.startswith("&add"):
             name = message.content.replace("&add ", '')
@@ -259,6 +274,10 @@ async def on_message(message):
             await message.channel.send(f"```{text}```")
         if message.content == '&update':
             updater(message.channel)
+        if '&remove' in message.content:
+            if not remove(message.content.replace('&remove ')):
+                await message.channel.send(f"Couldn't delete the '{message.content.replace('&remove ')}' item.")
+
 
 if __name__ == "__main__":
     while True:
