@@ -289,7 +289,7 @@ async def on_message(message):
 &update - update the bots, and restart's them"""
             await message.channel.send(f"```{text}```")
         if message.content == '&update':
-            updater(message.channel)
+            await updater(message.channel)
         if '&remove' in message.content:
             if not remove(message.content.replace('&remove ')):
                 await message.channel.send(f"Couldn't delete the '{message.content.replace('&remove ')}' item.")
