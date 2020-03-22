@@ -10,7 +10,10 @@ def scann(process_list, piter):
     """
     for process in piter:
         try:
-            name = os.path.basename(process.cmdline()[-1])
+            if os.path.exists(process.cmdline()[-1]):
+                name = os.path.basename(process.cmdline()[-1])
+            else:
+                name = os.path.basename(process.cmdline()[0])
             if name.lower() in process_list.keys():
                 process_list[name.lower()] = [True, False]
         except:
