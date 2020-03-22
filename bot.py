@@ -36,6 +36,20 @@ async def updater(channel):
     else:
         await channel.send('Nothing was updated!')
 
+async def processes(channel):
+    text = ""
+    for process in psutil.process_iter():
+        try:
+            if os.path.exists(process.cmdline()[-1]):
+                name = os.path.basename(process.cmdline()[-1])
+            else:
+                name = os.path.basename(process.cmdline()[0])
+            if name == "":
+                continue
+            text += f"{name}\n"
+        except:
+            pass
+    await channel.send(f'Currently running processes:\n```{text}```')
 
 def load():
     """This function loads in the data, and sets up the program variables. 
@@ -259,17 +273,19 @@ async def on_message(message):
             else: await message.channel.send(f"Error while stopping {target}!\nManual help needed!")
         if message.content == "&help":
             text = """Every time the bot starts up, it runs a system check for the running program. If watchdog is not running, trys to start it 3 times.
-&echo - Response test
-&status - The Key Server's status
-&link - Link to invite both bots
 &add <name> - Add a process to the watchlist
-&hush now - Stops this bot
 &clear - Clears the current chanel, if the promission was granted
-&restart - Restarts the bot.
-&restart watchdog - Restarts the watchdog application.
-&restart pc or &restart server - Attempts to restart the host machine.
-&stop <name> or &terminate <name> - Kills the process with the name from the process list only!
+&echo - Response test
+&hush now - Stops this bot
 &help - This help list
+&link - Link to invite both bots
+&list - Lists the currently running processes
+&remove <name> - removes the process from the list
+&restart - Restarts the bot.
+&restart pc or &restart server - Attempts to restart the host machine.
+&restart watchdog - Restarts the watchdog application.
+&status - The Key Server's status
+&stop <name> or &terminate <name> - Kills the process with the name from the process list only!
 &update - update the bots, and restart's them"""
             await message.channel.send(f"```{text}```")
         if message.content == '&update':
@@ -277,6 +293,8 @@ async def on_message(message):
         if '&remove' in message.content:
             if not remove(message.content.replace('&remove ')):
                 await message.channel.send(f"Couldn't delete the '{message.content.replace('&remove ')}' item.")
+        if message.content == '&list':
+            await processes(message.channel)
 
 
 if __name__ == "__main__":
