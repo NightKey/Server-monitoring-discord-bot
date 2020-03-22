@@ -291,7 +291,7 @@ async def on_message(message):
         if message.content == '&update':
             await updater(message.channel)
         if '&remove' in message.content:
-            if not remove(message.content.replace('&remove ')):
+            if not remove(message.content.replace('&remove ', '')):
                 await message.channel.send(f"Couldn't delete the '{message.content.replace('&remove ')}' item.")
         if message.content == '&list':
             await processes(message.channel)
