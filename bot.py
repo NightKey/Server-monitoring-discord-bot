@@ -37,7 +37,8 @@ async def updater(channel):
         await channel.send('Nothing was updated!')
 
 async def processes(channel):
-    text = ""
+    text = 'Currently running processes:\n'
+    text += f"{(chr(96) * 3)}\n"
     for process in psutil.process_iter():
         try:
             if os.path.exists(process.cmdline()[-1]):
@@ -49,7 +50,10 @@ async def processes(channel):
             text += f"{name}\n"
         except:
             pass
-    await channel.send(f'Currently running processes:\n```{text}```')
+        if len(text) > 1900:
+            await channel.send(f"{text}{chr(96)*3}")
+            text = f"{(chr(96) * 3)}\n"
+    await channel.send(f'{text}{chr(96)*3}')
 
 def load():
     """This function loads in the data, and sets up the program variables. 
