@@ -3,6 +3,7 @@ from modules import writer, status, logger
 from modules.scanner import scann
 from threading import Thread
 from time import sleep
+from datetime import datetime
 
 trys = 0
 last_stop = None
@@ -13,6 +14,7 @@ retry = 0
 was_online=False
 id = None
 lg = logger.logger("bot", folder="logs")
+dc_time = None
 
 def split(text, error=False):
     """Logs to both stdout and a log file, using both the writer, and the logger module
@@ -171,6 +173,12 @@ async def on_message_edit(before, after):
     await on_message(after)
 
 @client.event
+async def on_disconnect():
+    print("Connection lost!")
+    global dc_time
+    dc_time = datetime.now()
+
+@client.event
 async def on_ready():
     """When the client is all set up, this sectio get's called, and runs once.
     It does a system scann for the running programs, and if watchdog is offline, but ID is given, it attempts to restart it 3 times
@@ -193,6 +201,7 @@ async def on_ready():
                 was_online = True
             else:
                 await channel.send("Back online!")
+                await channel.send(f"Was offline since {dc_time}")
             break
     print('Startup check finished')
     global trys
