@@ -3,7 +3,7 @@ from modules import writer, status, logger
 from modules.scanner import scann
 from threading import Thread
 from time import sleep
-from datetime import datetime
+import datetime
 
 trys = 0
 last_stop = None
@@ -176,7 +176,7 @@ async def on_message_edit(before, after):
 async def on_disconnect():
     print("Connection lost!")
     global dc_time
-    dc_time = datetime.now()
+    dc_time = datetime.datetime.now()
 
 @client.event
 async def on_ready():
@@ -200,8 +200,10 @@ async def on_ready():
                 await status_check(channel)
                 was_online = True
             else:
-                await channel.send("Back online!")
-                await channel.send(f"Was offline since {dc_time}")
+                now = datetime.datetime.now()
+                if (now - dc_time) < datetime.timedelta(seconds=2):
+                    await channel.send("Back online!")
+                    await channel.send(f"Was offline for {now - dc_time}")
             break
     print('Startup check finished')
     global trys
