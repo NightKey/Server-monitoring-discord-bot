@@ -1,9 +1,24 @@
-import discord, psutil, os, json
 from modules import writer, status, logger
 from modules.scanner import scann
 from threading import Thread
 from time import sleep
-import datetime
+import datetime, psutil, os, json, webbrowser
+trys = 0
+while trys < 3:
+    try:
+        import discord
+        break
+    except:
+        print("Can't import something, trying to install dependencies....")
+        with open("dependencies.txt", 'r') as f:
+            dep = f.read(-1).split('\n')
+        for d in dep:
+            os.system(f"{os.sys.path} -m pip install --user {d}")
+        trys = 1
+if trys >= 3:
+    print("Couldn't import something for the 3rd time...")
+    input('Exiting... Press return...')
+    exit(1)
 
 trys = 0
 last_stop = None
@@ -15,6 +30,7 @@ was_online=False
 id = None
 lg = logger.logger("bot", folder="logs")
 dc_time = None
+what = ""
 
 def split(text, error=False):
     """Logs to both stdout and a log file, using both the writer, and the logger module
@@ -25,6 +41,14 @@ def split(text, error=False):
 writer = writer.writer("Key Server")
 print = split   #Changed print to the split function
 client = discord.Client()       #Creates a client instance using the discord  module
+
+def play():
+    print(f"The url was {what}")
+    webbrowser.open(what)
+    
+
+player = Thread(target=play)
+player.name = "Player"
 
 async def updater(channel):
     from modules import updater
@@ -310,6 +334,11 @@ async def on_message(message):
                 await message.channel.send(f"Couldn't delete the '{message.content.replace('&remove ')}' item.")
         if message.content == '&list':
             await processes(message.channel)
+        if '&play' in message.content:
+            global what
+            what = message.content.split(' ')[1]
+            player.start()
+            await message.channel.send('Started playing the link')
 
 
 if __name__ == "__main__":
