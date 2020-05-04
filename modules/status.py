@@ -28,7 +28,6 @@ def get_graphical(bar_size):
     """
     disk, memory, battery = get_pc_status()
     bars = bar.loading_bar("", 100, size=bar_size, show="▓", off_show="░")
-    bars.size = 50
     for letter in range(a, z):
         try:
             bars.update(round(disk[chr(letter)]["percent"], 1), False)
@@ -66,4 +65,4 @@ def get_graphical(bar_size):
 
 
 if __name__ == "__main__" :
-    print(get_graphical(50))
+    print(get_graphical(25))
