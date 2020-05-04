@@ -27,7 +27,7 @@ def get_graphical():
     It shows the disks' and the momory's percentage, the used and the total space, and the battery's remaning lifetime, if it's pugged, and the battery's percentage.
     """
     disk, memory, battery = get_pc_status()
-    bars = bar.loading_bar("", 100, show="▓")
+    bars = bar.loading_bar("", 100, size=50, show="▓", off_show="░")
     bars.size = 50
     for letter in range(a, z):
         try:
