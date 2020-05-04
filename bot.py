@@ -314,6 +314,7 @@ async def on_message(message):
         if message.content == "&help":
             text = """Every time the bot starts up, it runs a system check for the running program. If watchdog is not running, trys to start it 3 times.
 &add <name> - Add a process to the watchlist
+&bar <int> - Change the bar length when showing status
 &clear - Clears the current chanel, if the promission was granted
 &echo - Response test
 &hush now - Stops this bot
