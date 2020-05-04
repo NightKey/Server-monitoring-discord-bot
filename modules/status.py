@@ -49,19 +49,19 @@ def get_graphical():
             total = f"{tmp} GB"
             tmp = round(int(disk[letter]["used"]) / (1024 **3), 2)
             used = f"{tmp} GB"
-            string += f"{letter}: Max: {total}, used: {used}\t{dbar}\n"
+            string += f"{letter}: Max: {total}, used: {used}\n{dbar}\n"
         except:
             pass
     tmp = round(int(memory["used"]) / (1024 **3), 2)
     used = f"{tmp} GB"
     tmp = round(int(memory["free"]) / (1024 **3), 2)
     free = f"{tmp} GB"
-    string += f"Free memory: {free} / Used memory: {used}\t{memory['bar']}\n"
+    string += f"Free memory: {free} / Used memory: {used}\n{memory['bar']}\n"
     if battery == None:
         string += "Battery not detected!"
     else:
         tmp = "" if battery["power_plugged"] else "not "
-        string += f"Remaining battery life: {timedelta(seconds=battery['secsleft'])} and it's {tmp}plugged in.\nBattery status: {battery['bar']}"
+        string += f"Remaining battery life: {timedelta(seconds=battery['secsleft'])} and it's {tmp}plugged in.\nBattery status:\n {battery['bar']}"
     return string
 
 
