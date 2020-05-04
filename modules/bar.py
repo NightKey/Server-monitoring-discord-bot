@@ -44,20 +44,24 @@ class loading_bar():
                 string += self.char
             elif done - i != 0 and i <= done:
                 string += str(int(done*10 - int(done) * 10))
-            else: string += "░"
+            else: string += self.off_show
         if self.corners: string += "|"
         if self.percentage: string += " {}%".format(self.done)
         return string
 
-    def __init__(self, message, total, show="#", corners=True, percentage=True, separator="\t"):
+    def __init__(self, message, total, size=None, off_show=" ", show="#", corners=True, percentage=True, separator="\t"):
         self.message = message
-        try:
-	        self.size = (int(os.popen('stty size', 'r').read().split()[1]) - (len(message) + (2 if corners else 0) + (8 if percentage else 0) + len(separator)))
-        except:
-	        self.size = 100
+        if size != None:
+            self.size = size
+        else:
+            try:
+                self.size = (int(os.popen('stty size', 'r').read().split()[1]) - (len(message) + (2 if corners else 0) + (8 if percentage else 0) + len(separator)))
+            except:
+                self.size = 100
         self.total = total
         self.char = show
         self.corners = corners
+        self.off_show = off_show
         self.percentage = percentage
         self.done = 0
         self.separator = separator
@@ -86,7 +90,7 @@ class loading_bar():
 if __name__=="__main__":
     import time
     print("Test 1: 0-100")
-    test = loading_bar("Test 1", 100)
+    test = loading_bar("Test 1", 100, size=50)
     for i in range(101):
         time.sleep(0.25)
         test.update((i))
