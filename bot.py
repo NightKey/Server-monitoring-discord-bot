@@ -31,6 +31,7 @@ id = None
 lg = logger.logger("bot", folder="logs")
 dc_time = None
 what = ""
+bar_size=50
 
 def split(text, error=False):
     """Logs to both stdout and a log file, using both the writer, and the logger module
@@ -160,7 +161,7 @@ async def status_check(channel):
             text += "{}\t{}\n".format(key, ("running" if value[0] else "stopped"))
             process_list[key] = [False, False]
         else:
-            await channel.send(f"```diff\n{text}```\n{status.get_graphical()}")
+            await channel.send(f"```diff\n{text}```\n{status.get_graphical(bar_size)}")
             break
 
 def add_process(name):
@@ -339,6 +340,10 @@ async def on_message(message):
             what = message.content.split(' ')[1]
             player.start()
             await message.channel.send('Started playing the link')
+        if "&bar" in message.content:
+            global bar_size
+            bar_size = int(message.content.split(' ')[1])
+            await message.channel.send(f"Barsize set to {bar_size}")
 
 
 if __name__ == "__main__":

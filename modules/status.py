@@ -22,12 +22,12 @@ def get_pc_status():
         battery = None
     return disk, memory, battery
 
-def get_graphical():
+def get_graphical(bar_size):
     """Using the bar module, creates a visual representation of the system's status.
     It shows the disks' and the momory's percentage, the used and the total space, and the battery's remaning lifetime, if it's pugged, and the battery's percentage.
     """
     disk, memory, battery = get_pc_status()
-    bars = bar.loading_bar("", 100, size=50, show="▓", off_show="░")
+    bars = bar.loading_bar("", 100, size=bar_size, show="▓", off_show="░")
     bars.size = 50
     for letter in range(a, z):
         try:
@@ -66,4 +66,4 @@ def get_graphical():
 
 
 if __name__ == "__main__" :
-    print(get_graphical())
+    print(get_graphical(50))
