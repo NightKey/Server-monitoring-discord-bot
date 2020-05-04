@@ -95,7 +95,7 @@ if __name__=="__main__":
         time.sleep(0.25)
         test.update((i))
     print("\nTest 2: 0-10")
-    test = loading_bar("Test 2", 10)
+    test = loading_bar("Test 2", 10, size=25)
     test.show()
     for i in range(11):
         time.sleep(0.25)
