@@ -1,27 +1,16 @@
 import subprocess
 from platform import system
-from version import version_info
 from os import system as run
 from os import path, remove
 from sys import argv
 from time import sleep
 
 interpreter = 'python' if system() == 'Windows' else 'python3'
-version_file = '../version'
-
-def read_version():
-    """
-    Reads the version information from the 'version' file, and returns a version info.
-    """
-    with open(version_file, 'r') as f:
-        return version_info(f.read(-1).split('\n'))
 
 def main():
     """
     Main loop that handdles starting the server, and deciding what to do after an update.
     """
-    current = read_version()
-    print(f'Current version: {current}')
     server = subprocess.Popen([interpreter, 'bot_core.py'])  #Creates a child process with the 'server.py' script
     while server.poll() is None:    #Works while the child process runs
         try:

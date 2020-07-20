@@ -59,7 +59,6 @@ async def updater(channel):
     from modules import updater
     if updater.main():
         await channel.send("Update installed!")
-        os.system("restarter.py bot.py")
         await client.logout()
         with open("Restart", "w") as _: pass
     else:
