@@ -1,8 +1,8 @@
-from modules import writer, status, logger
+from modules import writer, status, logger, watchdog
 from modules.scanner import scann
 from threading import Thread
 from time import sleep
-import datetime, psutil, os, json, webbrowser
+import datetime, psutil, os, json, webbrowser, asyncio
 trys = 0
 while trys < 3:
     try:
@@ -32,6 +32,7 @@ lg = logger.logger("bot", folder="logs")
 dc_time = None
 what = ""
 bar_size=50
+channels = ["commands"]
 
 def split(text, error=False):
     """Logs to both stdout and a log file, using both the writer, and the logger module
@@ -39,7 +40,7 @@ def split(text, error=False):
     writer.write(text)
     lg.log(text, error=error)
 
-writer = writer.writer("Key Server")
+writer = writer.writer("Bot")
 print = split   #Changed print to the split function
 client = discord.Client()       #Creates a client instance using the discord  module
 
@@ -86,12 +87,12 @@ def load():
     """This function loads in the data, and sets up the program variables. 
     In the case of a missing, or corrupt cfg file, this function requests the data's input through console inpt.
     The data is stored in a json like cfg file with the following format:
-    {"token":"BOT-TOKEN-HERE", "id":{"bot":BOT-ID-HERE, "watchdog":WATCHDOG-ID-HERE}}
+    {"token":"BOT-TOKEN-HERE", "id":{"bot":BOT-ID-HERE}}
     """
     if not os.path.exists("data"):
         os.mkdir("data")
     global token    #The discord bot's login tocken
-    global id      #The discord bots' ID (If watchdog is used too)
+    global id      #The discord bots' ID
     print("Loading data...")
     if os.path.exists(os.path.join("data", "bot.cfg")):
         try:
@@ -114,6 +115,7 @@ def load():
         with open(os.path.join("data", "bot.cfg"), "w") as f:
             json.dump(tmp, f)
     del tmp
+    check_process_list()
 
 def check_process_list():
     """Looks for update in the process list. To lighten the load, it uses the last modified date.
@@ -126,7 +128,6 @@ def check_process_list():
         print("Process list update detected!")
         with open(os.path.join("data", "process_list.json"), "r") as f:
             process_list = json.load(f)
-            process_list["watchdog.py"] = [False, False]
         ptime = mtime
 
 async def status_check(channel):
@@ -138,26 +139,6 @@ async def status_check(channel):
         process_list = scann(process_list, psutil.process_iter())
         text = ""
         for key, value in process_list.items():
-            if key == "watchdog.py" and not value[0]:
-                if retry < 1:
-                    await channel.send("Watchdog offline!")
-                    try:
-                        with open(os.path.join("logs", "watchdog.lg"), 'r') as f:
-                            print("Watchdog logs opened")
-                            text = f.read(-1).split('\n')
-                        if text[-3] == "---ERROR OCCURED!---":      #If the watchdog program stopped with an error, the bot will attempt to send a message containing that error
-                            print("Line found!")
-                            await channel.send(f"Watchdog error: {text[-2]}")
-                    except Exception as ex:
-                        print(f"Error in opening the log file:\n{ex}")
-                if retry < 3:
-                    await channel.send("Attempting to restart...")
-                    os.startfile("watchdog.py")
-                    retry += 1
-                    sleep(3)
-                    break
-                else:
-                    await channel.send("Watchdog can't be started automatically!")
             text += "{}\t{}\n".format(key, ("running" if value[0] else "stopped"))
             process_list[key] = [False, False]
         else:
@@ -165,14 +146,10 @@ async def status_check(channel):
             break
 
 def add_process(name):
-    """Adds a process to the watchlist. The watchdog automaticalli checks the watchlist file every 10 secounds to lighten the load.
+    """Adds a process to the watchlist. The watchdog automaticalli gets updated with the new list.
     """
     global process_list
     process_list[name] = [False, False]
-    try:
-        del process_list["watchdog.py"] #If the watchdog's ID is not given during the setup, the program won't have it in it's process list.
-    except:
-        pass
     with open(os.path.join("data", "process_list.json"), "w") as f:
         json.dump(process_list, f)
 
@@ -184,10 +161,6 @@ def remove(name):
         del process_list[name]
     except:
         return False
-    try:
-        del process_list["watchdog.py"] #If the watchdog's ID is not given during the setup, the program won't have it in it's process list.
-    except:
-        pass
     with open(os.path.join("data", "process_list.json"), "w") as f:
         json.dump(process_list, f)
     return True
@@ -202,15 +175,14 @@ async def on_disconnect():
     print("Connection lost!")
     global dc_time
     dc_time = datetime.datetime.now()
+    _watchdog.not_ready()
 
 @client.event
 async def on_ready():
     """When the client is all set up, this sectio get's called, and runs once.
-    It does a system scann for the running programs, and if watchdog is offline, but ID is given, it attempts to restart it 3 times
+    It does a system scann for the running programs.
     """
-    print("Bot started up correctly!")      #The bot totally started up, and ready.
     print('Startup check ...')
-    channels = ["commands"]
     global was_online
     for channel in client.get_all_channels():   #Sets the channel to the first valid channel, and runs a scann.
         if str(channel) in channels:
@@ -226,19 +198,20 @@ async def on_ready():
                 was_online = True
             else:
                 now = datetime.datetime.now()
-                if (now - dc_time) < datetime.timedelta(seconds=2):
+                if (now - dc_time) > datetime.timedelta(seconds=2):
                     await channel.send("Back online!")
                     await channel.send(f"Was offline for {now - dc_time}")
             break
     print('Startup check finished')
+    _watchdog.ready()
     global trys
     trys = 0
+    print("Bot started up correctly!")      #The bot totally started up, and ready.
 
 @client.event
 async def on_message(message):
     """This get's called when a message was sent to the server. It checks for all the usable commands, and executes them, if they were sent to the correct channel.
     """
-    channels = ["commands"]
     me = client.get_user(id)
     if message.author == me:
         return
@@ -276,11 +249,6 @@ async def on_message(message):
             os.system("restarter.py bot.py")
             await client.logout()
             exit(0)
-        if message.content == "&restart watchdog":
-            await message.channel.send("Restarting watchdog...")
-            f = open("stop.wd", "w")
-            f.close()
-            os.system("restarter.py watchdog.py")
         if message.content in ("&restart pc", "&restart server"):
             await message.channel.send("Attempting to restart the pc...")
             try:
@@ -312,7 +280,7 @@ async def on_message(message):
                     pass
             else: await message.channel.send(f"Error while stopping {target}!\nManual help needed!")
         if message.content == "&help":
-            text = """Every time the bot starts up, it runs a system check for the running program. If watchdog is not running, trys to start it 3 times.
+            text = """Every time the bot starts up, it runs a system check for the running program.
 &add <name> - Add a process to the watchlist
 &bar <int> - Change the bar length when showing status
 &clear - Clears the current chanel, if the promission was granted
@@ -324,7 +292,6 @@ async def on_message(message):
 &remove <name> - removes the process from the list
 &restart - Restarts the bot.
 &restart pc or &restart server - Attempts to restart the host machine.
-&restart watchdog - Restarts the watchdog application.
 &status - The Key Server's status
 &stop <name> or &terminate <name> - Kills the process with the name from the process list only!
 &update - update the bots, and restart's them"""
@@ -346,6 +313,23 @@ async def on_message(message):
             bar_size = int(message.content.split(' ')[1])
             await message.channel.send(f"Barsize set to {bar_size}")
 
+def disconnect_check(loop):
+    while True:
+        if was_online and dc_time != None:
+            if (datetime.datetime.now() - dc_time) > datetime.timedelta(hours=1):
+                print('Offline for too long. Restarting!')
+                os.system("restarter.py bot.py")
+                exit(0)
+        sleep(2)
+
+def runner(loop):
+    dcc = Thread(target=disconnect_check, args=[loop,])
+    dcc.name = "Disconnect checker"
+    dcc.start()
+    wd = Thread(target=_watchdog.run_watchdog, args=[channels,])
+    wd.name = "Watchdog"
+    wd.start()
+    loop.run_until_complete(client.start(token))
 
 if __name__ == "__main__":
     while True:
@@ -354,11 +338,14 @@ if __name__ == "__main__":
             try:
                 load()
                 print("started")
-                client.run(token)
+                loop = asyncio.get_event_loop()
+                _watchdog = watchdog.watchdog(loop, client, process_list)
+                runner(loop)
+                #client.run(token)
             except Exception as ex:
                 print(str(ex), error=True)
                 last_stop = str(ex)
         else:
             print("Restart failed 3 times...")
             print("Exiting...")
-    
+            break

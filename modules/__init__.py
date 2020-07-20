@@ -1,1 +1,1 @@
-from modules import bar, status, writer, logger, scanner
+from modules import bar, status, writer, logger, scanner, watchdog
