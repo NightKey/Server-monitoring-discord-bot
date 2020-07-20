@@ -1,4 +1,5 @@
 import discord, psutil, os, json
+from copy import deepcopy
 from . import writer, logger, status
 from .scanner import scann
 from time import sleep
@@ -15,17 +16,17 @@ print = split   #Changed print to the split function
 
 class watchdog():
     def __init__(self, loop, client, process_list=None):
-        self.process_list = process_list
+        self.process_list = deepcopy(process_list)
         self.error = ""
         self.battery_warning = False
         self.client = client
         self.loop = loop
         self._ready = False
 
-    def update_process_list(self, new_process_list):
+    def update_process_list(self, process_list):
         """Updates the process list to the given argument's value.
         """
-        self.process_list = new_process_list
+        self.process_list = deepcopy(process_list)
 
     def ready(self):
         self._ready = True

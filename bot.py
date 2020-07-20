@@ -31,7 +31,7 @@ id = None
 lg = logger.logger("bot", folder="logs")
 dc_time = None
 what = ""
-bar_size=50
+bar_size=45
 channels = ["commands"]
 
 def split(text, error=False):
@@ -133,17 +133,13 @@ def check_process_list():
 async def status_check(channel):
     """Scanns the system for the running applications, and creates a message depending on the resoults.
     """
-    global retry
     global process_list
-    while True:
-        process_list = scann(process_list, psutil.process_iter())
-        text = ""
-        for key, value in process_list.items():
-            text += "{}\t{}\n".format(key, ("running" if value[0] else "stopped"))
-            process_list[key] = [False, False]
-        else:
-            await channel.send(f"```diff\n{text}```\n{status.get_graphical(bar_size)}")
-            break
+    process_list = scann(process_list, psutil.process_iter())
+    text = ""
+    for key, value in process_list.items():
+        text += "{}\t{}\n".format(key, ("running" if value[0] else "stopped"))
+        process_list[key] = [False, False]
+    await channel.send(f"```diff\n{text}```\n{status.get_graphical(bar_size)}")
 
 def add_process(name):
     """Adds a process to the watchlist. The watchdog automaticalli gets updated with the new list.
