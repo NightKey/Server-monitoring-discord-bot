@@ -134,12 +134,15 @@ async def status_check(channel):
     """Scanns the system for the running applications, and creates a message depending on the resoults.
     """
     global process_list
-    process_list = scann(process_list, psutil.process_iter())
-    text = ""
-    for key, value in process_list.items():
-        text += "{}\t{}\n".format(key, ("running" if value[0] else "stopped"))
-        process_list[key] = [False, False]
-    await channel.send(f"```diff\n{text}```\n{status.get_graphical(bar_size)}")
+    while True:
+        process_list = scann(process_list, psutil.process_iter())
+        text = ""
+        for key, value in process_list.items():
+            text += "{}\t{}\n".format(key, ("running" if value[0] else "stopped"))
+            process_list[key] = [False, False]
+        else:
+            await channel.send(f"```diff\n{text}```\n{status.get_graphical(bar_size)}")
+            break
 
 def add_process(name):
     """Adds a process to the watchlist. The watchdog automaticalli gets updated with the new list.
