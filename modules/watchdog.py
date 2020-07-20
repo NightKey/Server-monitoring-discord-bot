@@ -53,7 +53,7 @@ class watchdog():
                         if not self.battery_warning:
                             if self._ready:
                                 print('Power Disconnected!')
-                                self.loop.create_task(channel.send(f"@here The Battery is not plugged in!"))
+                                self.loop.create_task(channel.send(f"@everyone The Battery is not plugged in!"))
                                 self.battery_warning = True
                     elif self.battery_warning:
                         self.battery_warning = False
@@ -70,5 +70,5 @@ class watchdog():
             if self.error != "":
                 print(self.error)
                 if self._ready:
-                    self.loop.create_task(channel.send(f"@here\n{self.error}"))
+                    self.loop.create_task(channel.send(f"@everyone\n{self.error}"))
                     self.error = ""
