@@ -213,7 +213,8 @@ It does a system scann for the running programs.
                     td = f.read(-1)
                 os.remove("Offline")
                 check_process_list()
-                channel.send(f"Bot restarted after being offline for {td}")
+                _watchdog.was_restarted()
+                await channel.send(f"Bot restarted after being offline for {td}")
                 was_online = True
             elif not was_online:
                 global last_stop
