@@ -143,14 +143,14 @@ async def status_check(channel, _=None):
     global process_list
     process_list = scann(process_list, psutil.process_iter())
     embed = discord.Embed(title="Processes", color=0x14f9a2)
-    embed.set_author(name="Night Key", url="https://github.com/NightKey", icon_url="https://avatars1.githubusercontent.com/u/8132508?s=460&v=4")
+    embed.set_author(name="Night Key", url="https://github.com/NightKey", icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
     for key, value in process_list.items():
         embed.add_field(name=key, value=("running" if value[0] else "stopped"), inline=True)
         process_list[key] = [False, False]
     else:
         await channel.send(embed=embed)
         embed = discord.Embed(title="Status", color=0x14f9a2)
-        embed.set_author(name="Night Key", url="https://github.com/NightKey", icon_url="https://avatars1.githubusercontent.com/u/8132508?s=460&v=4")
+        embed.set_author(name="Night Key", url="https://github.com/NightKey", icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
         stts = status.get_graphical(bar_size, True)
         for key, value in stts.items():
             val = ("Status" if len(value) > 1 else value[0])
@@ -158,11 +158,11 @@ async def status_check(channel, _=None):
             if len(value) > 1 and key != "Battery":
                 embed.add_field(name="Max", value=value[0])
                 embed.add_field(name="Used", value=value[1])
-                embed.add_field(name="Bar", value=value[2])
+                embed.add_field(name="Status", value=value[2])
             elif len(value) > 1:
-                embed.add_field(name="Remaning Battery Life", value=value[0])
+                embed.add_field(name="Battery life", value=value[0])
                 embed.add_field(name="Power status", value=value[1])
-                embed.add_field(name="Bar", value=value[2])
+                embed.add_field(name="Status", value=value[2])
         await channel.send(embed=embed)
 
 async def add_process(channel, name):
@@ -324,7 +324,7 @@ async def set_bar(channel, value):
 Usage: &bar <integer value to change to>
     """
     global bar_size
-    bar_size = int(what)
+    bar_size = int(value)
     await channel.send(f"Barsize set to {bar_size}")
 
 linking = {
@@ -344,17 +344,20 @@ linking = {
 
 async def help(channel, what):
     """Returns the help text for the avaleable commands
-Usage: &help <optionaly a specific>
+Usage: &help <optionaly a specific without the '&' character>
     """
     if what == None:
         embed = discord.Embed(title="Help", description=f"Currently {len(linking.keys())} commands are avaleable", color=0x0083fb)
-        embed.set_author(name="Night Key", url="https://github.com/NightKey", icon_url="https://avatars1.githubusercontent.com/u/8132508?s=460&v=4")
+        embed.set_author(name="Night Key", url="https://github.com/NightKey", icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
         for key, value in linking.items():
             txt = value.__doc__
             if len(txt.split('\n'))>2:
                 key = txt.split('\n')[1].replace('Usage: ', '')
                 txt = txt.split('\n')[0]
             embed.add_field(name=key, value=txt, inline=False)
+    elif f"&{what}" in linking.keys():
+        embed = discord.Embed(title=f"Help for the {what} command", description=linking[f"&{what}"].__doc__, color=0xb000ff)
+        embed.set_author(name="Night Key", url="https://github.com/NightKey", icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
     await channel.send(embed=embed)
 
 linking["&help"] = help
@@ -366,8 +369,9 @@ async def on_message(message):
     me = client.get_user(id)
     if str(message.channel) in channels and message.author != me:
         if message.content.startswith('&'):
-            cmd = message.content.split(' ')[0]
-            etc = " ".join(message.content.split(' ')[1:]) if len(message.content.split(' ')) > 1 else None
+            splt = message.content.split(' ')
+            cmd = splt[0]
+            etc = " ".join(splt[1:]) if len(splt) > 1 else None
             if cmd in linking.keys():
                 await linking[cmd](message.channel, etc)
             else:
