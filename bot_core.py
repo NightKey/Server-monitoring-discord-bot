@@ -31,7 +31,7 @@ id = None
 lg = logger.logger("bot", folder="logs")
 dc_time = None
 what = ""
-bar_size=45
+bar_size=25
 channels = ["commands"]
 
 def split(text, error=False):
@@ -45,9 +45,17 @@ print = split   #Changed print to the split function
 client = discord.Client()       #Creates a client instance using the discord  module
 
 def play():
+    """
+    Opens an URL in the default browser
+    """
     print(f"The url was {what}")
     webbrowser.open(what)
-    
+
+def signal(what):
+    """
+    Sends a signal to the runner.
+    """
+    with open(what, 'w') as _: pass   
 
 player = Thread(target=play)
 player.name = "Player"
@@ -58,9 +66,9 @@ async def updater(channel):
     """
     from modules import updater
     if updater.main():
-        await channel.send("Update installed!")
+        await channel.send("Restarting...")
         await client.logout()
-        with open("Restart", "w") as _: pass
+        signal('Restart')
     else:
         await channel.send('Nothing was updated!')
 
@@ -130,39 +138,55 @@ def check_process_list():
             process_list = json.load(f)
         ptime = mtime
 
-async def status_check(channel):
+async def status_check(channel, _=None):
     """Scanns the system for the running applications, and creates a message depending on the resoults.
     """
     global process_list
-    while True:
-        process_list = scann(process_list, psutil.process_iter())
-        text = ""
-        for key, value in process_list.items():
-            text += "{}\t{}\n".format(key, ("running" if value[0] else "stopped"))
-            process_list[key] = [False, False]
-        else:
-            await channel.send(f"```diff\n{text}```\n{status.get_graphical(bar_size)}")
-            break
+    process_list = scann(process_list, psutil.process_iter())
+    embed = discord.Embed(title="Processes", color=0x14f9a2)
+    embed.set_author(name="Night Key", url="https://github.com/NightKey", icon_url="https://avatars1.githubusercontent.com/u/8132508?s=460&v=4")
+    for key, value in process_list.items():
+        embed.add_field(name=key, value=("running" if value[0] else "stopped"), inline=True)
+        process_list[key] = [False, False]
+    else:
+        await channel.send(embed=embed)
+        embed = discord.Embed(title="Status", color=0x14f9a2)
+        embed.set_author(name="Night Key", url="https://github.com/NightKey", icon_url="https://avatars1.githubusercontent.com/u/8132508?s=460&v=4")
+        stts = status.get_graphical(bar_size, True)
+        for key, value in stts.items():
+            val = ("Status" if len(value) > 1 else value[0])
+            embed.add_field(name=key, value=val, inline=False)
+            if len(value) > 1 and key != "Battery":
+                embed.add_field(name="Max", value=value[0])
+                embed.add_field(name="Used", value=value[1])
+                embed.add_field(name="Bar", value=value[2])
+            elif len(value) > 1:
+                embed.add_field(name="Remaning Battery Life", value=value[0])
+                embed.add_field(name=value[1], value=" ")
+                embed.add_field(name="Bar", value=value[2])
+        await channel.send(embed=embed)
 
-def add_process(name):
+async def add_process(channel, name):
     """Adds a process to the watchlist. The watchdog automaticalli gets updated with the new list.
+Usage: &add <existing process name>
     """
     global process_list
     process_list[name] = [False, False]
     with open(os.path.join("data", "process_list.json"), "w") as f:
         json.dump(process_list, f)
+    await channel.send('Process added')
 
-def remove(name):
+async def remove(channel, name):
     """Removes the given program from the watchlist
+Usage: &remove <watched process name>
     """
     global process_list
     try:
         del process_list[name]
     except:
-        return False
+        await channel.send(f"Couldn't delete the '{name}' item.")
     with open(os.path.join("data", "process_list.json"), "w") as f:
         json.dump(process_list, f)
-    return True
     
 
 @client.event
@@ -179,7 +203,7 @@ async def on_disconnect():
 @client.event
 async def on_ready():
     """When the client is all set up, this sectio get's called, and runs once.
-    It does a system scann for the running programs.
+It does a system scann for the running programs.
     """
     print('Startup check ...')
     global was_online
@@ -207,121 +231,162 @@ async def on_ready():
     trys = 0
     print("Bot started up correctly!")      #The bot totally started up, and ready.
 
+async def echo(channel, _):
+    """Responds with 'echo' and shows the current latency
+    """
+    await channel.send(f'echo {int(client.latency)} ms')
+
+async def send_link(channel, _):
+    """Responds with the currently running bot's invite link
+    """
+    await channel.send(f"Bot - https://discordapp.com/oauth2/authorize?client_id={id}&scope=bot&permissions=199680")
+
+async def stop_bot(channel, _):
+    """Stops the bot.
+    """
+    await channel.send("Exiting")
+    await client.logout()
+    signal('Exit')
+    exit(0)
+
+async def clear(channel, number):
+    """Clears all messages from this channel.
+Usage: &clear <optionally the number of messages>
+    """
+    try:
+        count = 0
+        while True:
+            is_message=False
+            async for message in channel.history():
+                await message.delete()
+                is_message=True
+                count += 1
+                if number != None and count == int(number):
+                    break
+            else:
+                if not is_message:
+                    break
+            if number != None and count == int(number):
+                break
+    except discord.Forbidden:
+        await channel.send("I'm afraid, I can't do that.")
+    except Exception as ex:
+        await channel.send(f'Exception occured during cleaning:\n```{type(ex)} --> {ex}```')
+
+async def restart(channel, _):
+    """Restarts the server it's running on. (Admin permissions may be needed for this)
+    """
+    await channel.send("Attempting to restart the pc...")
+    try:
+        if os.name == 'nt':
+            command = "shutdown /r /t 5"
+        else:
+            command = "shutdown -r -t 5"
+        if os.system(command) != 0:
+            await channel.send("Permission denied!")
+        else:
+            await client.logout()
+    except Exception as ex:
+        await channel.send(f"Restart failed with the following exception:\n```{type(ex)} -> {str(ex)}```")
+
+async def terminate_process(channel, target):
+    """Terminates the specified process. (Admin permission may be needed for this)
+Usage: &terminate <existing process' name>
+    """
+    if target not in process_list:
+        for p in process_list:
+            if target in p:
+                target = p
+                break
+        else:
+            await channel.send("Target not found, process can't be safely killed!")
+            return
+    for process in psutil.process_iter():
+        try:
+            name = os.path.basename(process.cmdline()[-1])
+            if name.lower() == target:
+                process.kill()
+            break
+        except:
+            pass
+    else: await channel.send(f"Error while stopping {target}!\nManual help needed!")
+
+async def open_browser(channel, link):
+    """Opens a page in the server's browser.
+Usage: &play <url to open>    
+    """
+    global what
+    what = link
+    player.start()
+    await channel.send('Started playing the link')
+
+async def set_bar(channel, value):
+    """Sets the bars' widht to the given value in total character number (the default is 25)
+Usage: &bar <integer value to change to>
+    """
+    global bar_size
+    bar_size = int(what)
+    await channel.send(f"Barsize set to {bar_size}")
+
+linking = {
+    "&status":status_check,
+    "&echo":echo,
+    "&link":send_link,
+    "&add":add_process,
+    "&exit":stop_bot,
+    "&clear":clear,
+    "&restart":restart,
+    "&terminate":terminate_process,
+    "&remove": remove,
+    "&open":open_browser,
+    "&bar":set_bar
+}
+
+async def help(channel, what):
+    """Returns the help text for the avaleable commands
+Usage: &help <optionaly a specific>
+    """
+    if what == None:
+        embed = discord.Embed(title="Help", description=f"Currently {len(linking.keys())} commands are avaleable", color=0x0083fb)
+        embed.set_author(name="Night Key", url="https://github.com/NightKey", icon_url="https://avatars1.githubusercontent.com/u/8132508?s=460&v=4")
+        for key, value in linking.items():
+            txt = value.__doc__
+            if len(txt.split('\n'))>2:
+                key = txt.split('\n')[1].replace('Usage: ', '')
+                txt = txt.split('\n')[0]
+            embed.add_field(name=key, value=txt, inline=False)
+    await channel.send(embed=embed)
+
+linking["&help"] = help
+
 @client.event
 async def on_message(message):
     """This get's called when a message was sent to the server. It checks for all the usable commands, and executes them, if they were sent to the correct channel.
     """
     me = client.get_user(id)
-    if message.author == me:
-        return
-    if str(message.channel) in channels:
-        if message.content == "&echo":
-            await message.channel.send("echo")
-        if message.content == "&status":
-            await status_check(message.channel)
-        if message.content == "&link":
-            text = f"Bot - https://discordapp.com/oauth2/authorize?client_id={id}&scope=bot&permissions=199680"
-            await message.channel.send(text)
-        if message.content.startswith("&add"):
-            name = message.content.replace("&add ", '')
-            add_process(name)
-            await message.channel.send("Updated!")
-        if message.content == "&hush now":
-            await message.channel.send("nini")
-            await client.logout()
-            exit(0)
-        if message.content == "&clear":
-            channel = message.channel
-            try:
-                while True:
-                    is_message=False
-                    async for message in channel.history():
-                        await message.delete()
-                        is_message=True
-                    else:
-                        if not is_message:
-                            break
-            except discord.Forbidden:
-                channel.send("I'm afraid, I can't do that.")
-        if message.content == "&restart":
-            await message.channel.send("Restarting...")
-            os.system("restarter.py bot.py")
-            await client.logout()
-            exit(0)
-        if message.content in ("&restart pc", "&restart server"):
-            await message.channel.send("Attempting to restart the pc...")
-            try:
-                ansv = os.system("shutdown /r /t 5")
-                if ansv != 0:
-                    await message.chanel.send("Permission denied!")
-                else:
-                    f = open("stop.wd", "w")
-                    f.close()
-            except Exception as ex:
-                await message.channel.send(f"Restart failed with the following error:\n```{str(ex)}```")
-        if "&stop " in message.content or "&terminate " in message.content:
-            target = message.content.replace('&stop ', '').replace("&terminate ", '')
-            if target not in process_list:
-                for p in process_list:
-                    if target in p:
-                        target = p
-                        break
-                else:
-                    await message.channel.send("Target not found, process can't be safely killed!")
-                    return
-            for process in psutil.process_iter():
-                try:
-                    name = os.path.basename(process.cmdline()[-1])
-                    if name.lower() == target:
-                        process.kill()
-                    break
-                except:
-                    pass
-            else: await message.channel.send(f"Error while stopping {target}!\nManual help needed!")
-        if message.content == "&help":
-            text = """Every time the bot starts up, it runs a system check for the running program.
-&add <name> - Add a process to the watchlist
-&bar <int> - Change the bar length when showing status
-&clear - Clears the current chanel, if the promission was granted
-&echo - Response test
-&hush now - Stops this bot
-&help - This help list
-&link - Link to invite both bots
-&list - Lists the currently running processes
-&remove <name> - removes the process from the list
-&restart - Restarts the bot.
-&restart pc or &restart server - Attempts to restart the host machine.
-&status - The Key Server's status
-&stop <name> or &terminate <name> - Kills the process with the name from the process list only!
-&update - update the bots, and restart's them"""
-            await message.channel.send(f"```{text}```")
-        if message.content == '&update':
-            await updater(message.channel)
-        if '&remove' in message.content:
-            if not remove(message.content.replace('&remove ', '')):
-                await message.channel.send(f"Couldn't delete the '{message.content.replace('&remove ')}' item.")
-        if message.content == '&list':
-            await processes(message.channel)
-        if '&play' in message.content:
-            global what
-            what = message.content.split(' ')[1]
-            player.start()
-            await message.channel.send('Started playing the link')
-        if "&bar" in message.content:
-            global bar_size
-            bar_size = int(message.content.split(' ')[1])
-            await message.channel.send(f"Barsize set to {bar_size}")
+    if str(message.channel) in channels and message.author != me:
+        cmd = message.content.split(' ')[0]
+        etc = " ".join(message.content.split(' ')[1:]) if len(message.content.split(' ')) > 1 else None
+        await linking[cmd](message.channel, etc)
 
 def disconnect_check(loop):
+    """
+    Restarts the bot, if the disconnected time is greater than one hour
+    """
     while True:
         if was_online and dc_time != None:
             if (datetime.datetime.now() - dc_time) > datetime.timedelta(hours=1):
                 print('Offline for too long. Restarting!')
-                os.system("restarter.py bot.py")
+                loop.create_task(client.logout())
+                sleep(10)
+                signal("Restart")
                 exit(0)
         sleep(2)
 
 def runner(loop):
+    """
+    Runs the needed things in a way, the watchdog can access the bot client.
+    """
     dcc = Thread(target=disconnect_check, args=[loop,])
     dcc.name = "Disconnect checker"
     dcc.start()

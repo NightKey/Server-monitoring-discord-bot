@@ -21,6 +21,12 @@ def main():
                     pass
                 print(f"Restarting...")
                 server = subprocess.Popen([interpreter, 'bot_core.py'])
+            if path.exists('Exit'):  #When the server requires a restart changing it's runmode between developper and normal mode
+                remove('Exit')
+                server.kill()
+                while server.poll() is None:
+                    pass
+                exit(0)
         except:
             pass
         finally:
