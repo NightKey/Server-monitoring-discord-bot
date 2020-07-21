@@ -162,7 +162,7 @@ async def status_check(channel, _=None):
                 embed.add_field(name="Bar", value=value[2])
             elif len(value) > 1:
                 embed.add_field(name="Remaning Battery Life", value=value[0])
-                embed.add_field(name=value[1], value=" ")
+                embed.add_field(name="Power status", value=value[1])
                 embed.add_field(name="Bar", value=value[2])
         await channel.send(embed=embed)
 
