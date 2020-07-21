@@ -16,13 +16,4 @@ This bot, to function properly needs the following permissions:
 * Send Messages
 * Read Messages
 * Manage Messages - Optional for the '&clear' command
-
-## The watchdog
-
-This application is a watchdog application, that checks the running processes every 10 secunds and notifys the designated channel if something stops working.
-
-This bot needs the following permissions:
-
-* Read Text Channels & See Voice Channels
-* Send Messages
 * Mention @everyone, @here, and All Roles
