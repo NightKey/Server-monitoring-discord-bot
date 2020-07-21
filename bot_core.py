@@ -60,9 +60,8 @@ def signal(what):
 player = Thread(target=play)
 player.name = "Player"
 
-async def updater(channel):
-    """
-    Updates the bot, and restarts it after a successfull update.
+async def updater(channel, _=None):
+    """Updates the bot, and restarts it after a successfull update.
     """
     from modules import updater
     if updater.main():
@@ -339,7 +338,8 @@ linking = {
     "&terminate":terminate_process,
     "&remove": remove,
     "&open":open_browser,
-    "&bar":set_bar
+    "&bar":set_bar,
+    "&update":updater
 }
 
 async def help(channel, what):
