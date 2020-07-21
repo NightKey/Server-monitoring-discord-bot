@@ -22,6 +22,12 @@ class watchdog():
         self.client = client
         self.loop = loop
         self._ready = False
+        self.restarted = False
+
+    def was_restarted(self):
+        """Updates the restarted state
+        """
+        self.restarted = True
 
     def update_process_list(self, process_list):
         """Updates the process list to the given argument's value.
@@ -71,5 +77,8 @@ class watchdog():
             if self.error != "":
                 print(self.error)
                 if self._ready:
-                    self.loop.create_task(channel.send(f"@everyone\n{self.error}"))
-                    self.error = ""
+                    if not self.restarted:
+                        self.loop.create_task(channel.send(f"@everyone\n{self.error}"))
+                        self.error = ""
+                    else:
+                        self.restarted = False
