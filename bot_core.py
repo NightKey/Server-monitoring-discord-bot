@@ -365,9 +365,13 @@ async def on_message(message):
     """
     me = client.get_user(id)
     if str(message.channel) in channels and message.author != me:
-        cmd = message.content.split(' ')[0]
-        etc = " ".join(message.content.split(' ')[1:]) if len(message.content.split(' ')) > 1 else None
-        await linking[cmd](message.channel, etc)
+        if message.content.startswith('&'):
+            cmd = message.content.split(' ')[0]
+            etc = " ".join(message.content.split(' ')[1:]) if len(message.content.split(' ')) > 1 else None
+            if cmd in linking.keys():
+                await linking[cmd](message.channel, etc)
+            else:
+                await message.channel.send("Not a valid command!\nUse '&help' for the avaleable commands")
 
 def disconnect_check(loop):
     """
