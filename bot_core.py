@@ -208,7 +208,14 @@ It does a system scann for the running programs.
     global was_online
     for channel in client.get_all_channels():   #Sets the channel to the first valid channel, and runs a scann.
         if str(channel) in channels:
-            if not was_online:
+            if os.path.exists("Offline"):
+                with open("Offline", 'r') as f:
+                    td = f.read(-1)
+                os.remove("Offline")
+                check_process_list()
+                channel.send(f"Bot restarted after being offline for {td}")
+                was_online = True
+            elif not was_online:
                 global last_stop
                 if last_stop != None:
                     await channel.send(f"Unexcepted shutdown!\nError message:\n```Python{last_stop}```")
@@ -387,6 +394,8 @@ def disconnect_check(loop):
                 print('Offline for too long. Restarting!')
                 loop.create_task(client.logout())
                 sleep(10)
+                with open("Offline", "w") as f:
+                    f.write(str(datetime.datetime.now() - dc_time))
                 signal("Restart")
                 exit(0)
         sleep(2)
