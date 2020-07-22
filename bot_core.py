@@ -20,13 +20,6 @@ if trys >= 3:
     input('Exiting... Press return...')
     exit(1)
 
-""" _logger = logging.getLogger('discord')
-_logger.setLevel(logging.DEBUG)
-handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
-handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
-_logger.addHandler(handler) """
-
-
 trys = 0
 token = ""
 process_list = {}
@@ -37,6 +30,7 @@ lg = logger.logger("bot", folder="logs")
 dc_time = None
 what = ""
 bar_size=18
+connections = []
 channels = ["commands"]
 
 def split(text, error=False):
@@ -65,6 +59,13 @@ def signal(what):
 
 player = Thread(target=play)
 player.name = "Player"
+
+def enable_debug_logger():
+    _logger = logging.getLogger('discord')
+    _logger.setLevel(logging.DEBUG)
+    handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+    handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+    _logger.addHandler(handler)
 
 async def updater(channel, _=None):
     """Updates the bot, and restarts it after a successfull update.
@@ -96,6 +97,11 @@ async def processes(channel):
             text = f"{(chr(96) * 3)}\n"
     await channel.send(f'{text}{chr(96)*3}')
 
+def save_cfg():
+    tmp = {"token":token, "id":id, 'connections':connections}
+    with open(os.path.join("data", "bot.cfg"), "w") as f:
+        json.dump(tmp, f)
+
 def load():
     """This function loads in the data, and sets up the program variables. 
     In the case of a missing, or corrupt cfg file, this function requests the data's input through console inpt.
@@ -106,6 +112,7 @@ def load():
         os.mkdir("data")
     global token    #The discord bot's login tocken
     global id      #The discord bots' ID
+    global connections
     print("Loading data...")
     if os.path.exists(os.path.join("data", "bot.cfg")):
         try:
@@ -113,6 +120,10 @@ def load():
                 tmp = json.load(f)
             token = tmp["token"]
             id = tmp["id"]
+            try:
+                connections = tmp['connections']
+            except:
+                connections = []
             print("Data loading finished!")
         except: #incase there is an error, the program deletes the file, and restarts
             os.remove(os.path.join("data", "bot.cfg"))
@@ -124,9 +135,7 @@ def load():
         token = input("Type in the token: ")
         me = int(input("Type in this bot's user id: "))
         id = me
-        tmp = {"token":token, "id":id}
-        with open(os.path.join("data", "bot.cfg"), "w") as f:
-            json.dump(tmp, f)
+        save_cfg()
     del tmp
     check_process_list()
 
@@ -210,6 +219,8 @@ async def on_ready():
     """When the client is all set up, this sectio get's called, and runs once.
 It does a system scann for the running programs.
     """
+    global connections
+    connections.append(datetime.datetime.now())
     print('Startup check ...')
     global was_online
     for channel in client.get_all_channels():   #Sets the channel to the first valid channel, and runs a scann.
@@ -386,27 +397,48 @@ async def on_message(message):
             else:
                 await message.channel.send("Not a valid command!\nUse '&help' for the avaleable commands")
 
-def disconnect_check(loop):
+def disconnect_check(loop, channels):
     """
     Restarts the bot, if the disconnected time is greater than one hour
     """
+    reset_time = 2
+    global connections
+    channel = None
+    for channel in client.get_all_channels():
+        if str(channel) in channels:
+            break
     while True:
         if was_online and dc_time != None:
             if (datetime.datetime.now() - dc_time) > datetime.timedelta(hours=1):
                 print('Offline for too long. Restarting!')
+                save_cfg()
                 loop.create_task(client.logout())
-                sleep(10)
+                loop.create_task(client.close())
+                while not client.is_closed(): pass
                 with open("Offline", "w") as f:
                     f.write(str(datetime.datetime.now() - dc_time))
                 signal("Restart")
                 exit(0)
+        if len(connections) > 0 and (datetime.datetime.now() - connections[0]) >= datetime.timedelta(hours=reset_time):
+            del connections[0]
+        if len(connections) > 50:
+            loop.create_task(channel.send(f"{len(connections)} connections reached within {reset_time} hours!"))
+        if len(connections) > 500:
+            enable_debug_logger()
+            loop.create_task(channel.send(f"@everyone {len(connections)} connections reached within {reset_time} hours!\nDebugger enabled!"))
+        if len(connections) > 990:
+            loop.create_task(channel.send(f"@everyone {len(connections)} connections reached within {reset_time} hours!\nExiting!"))
+            loop.create_task(client.logout())
+            loop.create_task(client.close())
+            while not client.is_closed(): pass
+            signal("Exit")
         sleep(2)
 
 def runner(loop):
     """
     Runs the needed things in a way, the watchdog can access the bot client.
     """
-    dcc = Thread(target=disconnect_check, args=[loop,])
+    dcc = Thread(target=disconnect_check, args=[loop, channels,])
     dcc.name = "Disconnect checker"
     dcc.start()
     wd = Thread(target=_watchdog.run_watchdog, args=[channels,])
@@ -435,4 +467,5 @@ if __name__ == "__main__":
         loop.stop()
         print("Restarting...")
         lg.close()
+        save_cfg()
         signal("Restart")
