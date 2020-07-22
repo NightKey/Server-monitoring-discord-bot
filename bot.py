@@ -26,7 +26,6 @@ def main():
                 server.kill()
                 while server.poll() is None:
                     pass
-                exit(0)
         except:
             pass
         finally:
