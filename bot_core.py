@@ -47,7 +47,7 @@ def split(text, error=False):
 
 writer = writer.writer("Bot")
 print = split   #Changed print to the split function
-client = discord.Client()       #Creates a client instance using the discord  module
+client = discord.Client(heartbeat_timeout=120)       #Creates a client instance using the discord  module
 
 def play():
     """
@@ -242,7 +242,7 @@ It does a system scann for the running programs.
 async def echo(channel, _):
     """Responds with 'echo' and shows the current latency
     """
-    await channel.send(f'echo {int(client.latency)} ms')
+    await channel.send(f'echo {int(client.latency*1000)} ms')
 
 async def send_link(channel, _):
     """Responds with the currently running bot's invite link
@@ -418,9 +418,11 @@ def runner(loop):
 if __name__ == "__main__":
     try:
         load()
-        print("started")
+        print("Creating loop")
         loop = asyncio.get_event_loop()
+        print('Setting up watchdog')
         _watchdog = watchdog.watchdog(loop, client, process_list)
+        print('Starting all processes...')
         runner(loop)
         #client.run(token)
     except Exception as ex:
