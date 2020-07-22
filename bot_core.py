@@ -432,9 +432,11 @@ if __name__ == "__main__":
                 runner(loop)
                 #client.run(token)
             except Exception as ex:
+                loop.create_task(client.logout())
                 print(str(ex), error=True)
                 last_stop = str(ex)
         else:
             print("Restart failed 3 times...")
             print("Exiting...")
+            lg.close()
             break
