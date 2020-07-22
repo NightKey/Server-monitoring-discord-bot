@@ -23,7 +23,7 @@ if trys >= 3:
 _logger = logging.getLogger("discord")
 _logger.setLevel(logging.DEBUG)
 handler = logging.FileHandler("logs/bot_debug.lg", encoding="utf-8", mode="w")
-handler.setFormatter(logging.Formatter("%(asciitime)s:%(lelvelname)s:%(name)s: %(message)s"))
+handler.setFormatter(logging.Formatter("%(asctime)s:%(lelvelname)s:%(name)s: %(message)s"))
 _logger.addHandler(handler)
 
 
