@@ -28,17 +28,15 @@ _logger.addHandler(handler) """
 
 
 trys = 0
-last_stop = None
 token = ""
 process_list = {}
 ptime = 0
-retry = 0
 was_online=False
 id = None
 lg = logger.logger("bot", folder="logs")
 dc_time = None
 what = ""
-bar_size=25
+bar_size=18
 channels = ["commands"]
 
 def split(text, error=False):
@@ -225,12 +223,7 @@ It does a system scann for the running programs.
                 await channel.send(f"Bot restarted after being offline for {td}")
                 was_online = True
             elif not was_online:
-                global last_stop
-                if last_stop != None:
-                    await channel.send(f"Unexcepted shutdown!\nError message:\n```Python{last_stop}```")
-                    last_stop = None
-                else:
-                    await channel.send("Bot started")
+                await channel.send("Bot started")
                 check_process_list()
                 await status_check(channel)
                 was_online = True
@@ -433,7 +426,6 @@ if __name__ == "__main__":
     except Exception as ex:
         print("Logging out...")
         print(str(ex), error=True)
-        last_stop = str(ex)
         loop.create_task(client.logout())
         loop.create_task(client.close())
         while not client.is_closed():
