@@ -2,7 +2,7 @@ from modules import writer, status, logger, watchdog
 from modules.scanner import scann
 from threading import Thread
 from time import sleep
-import datetime, psutil, os, json, webbrowser, asyncio
+import datetime, psutil, os, json, webbrowser, asyncio, logging
 trys = 0
 while trys < 3:
     try:
@@ -19,6 +19,13 @@ if trys >= 3:
     print("Couldn't import something for the 3rd time...")
     input('Exiting... Press return...')
     exit(1)
+
+_logger = logging.getLogger("discord")
+_logger.setLevel(logging.DEBUG)
+handler = logging.FileHandler("logs/bot_debug.lg", encoding="utf-8", mode="w")
+handler.setFormatter(logging.Formatter("%(asciitime)s:%(lelvelname)s:%(name)s: %(message)s"))
+_logger.addHandler(handler)
+
 
 trys = 0
 last_stop = None
