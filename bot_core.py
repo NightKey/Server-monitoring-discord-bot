@@ -20,10 +20,10 @@ if trys >= 3:
     input('Exiting... Press return...')
     exit(1)
 
-_logger = logging.getLogger("discord")
+_logger = logging.getLogger('discord')
 _logger.setLevel(logging.DEBUG)
-handler = logging.FileHandler("logs/bot_debug.lg", encoding="utf-8", mode="w")
-handler.setFormatter(logging.Formatter("%(asctime)s:%(lelvelname)s:%(name)s: %(message)s"))
+handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 _logger.addHandler(handler)
 
 
