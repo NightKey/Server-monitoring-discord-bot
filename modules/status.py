@@ -52,7 +52,7 @@ def get_graphical(bar_size, in_dict=False):
             tmp = round(int(disk[letter]["used"]) / (1024 **3), 2)
             used = f"{tmp} GB"
             if in_dict:
-                d[letter]=[total, used, dbar]
+                d[f"{letter.upper()} drive"]=[total, used, dbar]
             else:
                 string += f"{letter}: Max: {total}, used: {used}\n{dbar}\n"
         except:
