@@ -20,11 +20,11 @@ if trys >= 3:
     input('Exiting... Press return...')
     exit(1)
 
-_logger = logging.getLogger('discord')
+""" _logger = logging.getLogger('discord')
 _logger.setLevel(logging.DEBUG)
 handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
 handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
-_logger.addHandler(handler)
+_logger.addHandler(handler) """
 
 
 trys = 0
@@ -62,6 +62,7 @@ def signal(what):
     """
     Sends a signal to the runner.
     """
+
     with open(what, 'w') as _: pass   
 
 player = Thread(target=play)
@@ -118,7 +119,7 @@ def load():
         except: #incase there is an error, the program deletes the file, and restarts
             os.remove(os.path.join("data", "bot.cfg"))
             print("Error in cfg file... Restarting")
-            os.system("restarter.py bot.py")
+            signal("Restart")
             exit(0)
     else:
         print("Data not found!")
@@ -418,25 +419,26 @@ def runner(loop):
     wd = Thread(target=_watchdog.run_watchdog, args=[channels,])
     wd.name = "Watchdog"
     wd.start()
-    loop.run_until_complete(client.start(token))
+    loop.create_task(client.start(token))
+    loop.run_forever()
 
 if __name__ == "__main__":
-    while True:
-        trys += 1
-        if trys <= 3:
-            try:
-                load()
-                print("started")
-                loop = asyncio.get_event_loop()
-                _watchdog = watchdog.watchdog(loop, client, process_list)
-                runner(loop)
-                #client.run(token)
-            except Exception as ex:
-                loop.create_task(client.logout())
-                print(str(ex), error=True)
-                last_stop = str(ex)
-        else:
-            print("Restart failed 3 times...")
-            print("Exiting...")
-            lg.close()
-            break
+    try:
+        load()
+        print("started")
+        loop = asyncio.get_event_loop()
+        _watchdog = watchdog.watchdog(loop, client, process_list)
+        runner(loop)
+        #client.run(token)
+    except Exception as ex:
+        print("Logging out...")
+        print(str(ex), error=True)
+        last_stop = str(ex)
+        loop.create_task(client.logout())
+        loop.create_task(client.close())
+        while not client.is_closed():
+            pass
+        loop.stop()
+        print("Restarting...")
+        lg.close()
+        signal("Restart")
