@@ -22,6 +22,7 @@ if trys >= 3:
 
 trys = 0
 token = ""
+reset_time = 2  #hours
 process_list = {}
 ptime = 0
 was_online=False
@@ -158,6 +159,7 @@ async def status_check(channel, _=None):
     global process_list
     process_list = scann(process_list, psutil.process_iter())
     embed = discord.Embed(title="Processes", color=0x14f9a2)
+    embed.add_field(name=f"Reconnectoins in the past {reset_time} hours", value=len(connections), inline=False)
     embed.set_author(name="Night Key", url="https://github.com/NightKey", icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
     for key, value in process_list.items():
         embed.add_field(name=key, value=("running" if value[0] else "stopped"), inline=True)
@@ -401,7 +403,6 @@ def disconnect_check(loop, channels):
     """
     Restarts the bot, if the disconnected time is greater than one hour
     """
-    reset_time = 2
     global connections
     channel = None
     for channel in client.get_all_channels():
