@@ -225,6 +225,7 @@ It does a system scann for the running programs.
     connections.append(datetime.datetime.now())
     print('Startup check ...')
     global was_online
+    #print(client.emojis)
     for channel in client.get_all_channels():   #Sets the channel to the first valid channel, and runs a scann.
         if str(channel) in channels:
             if os.path.exists("Offline"):
@@ -260,7 +261,11 @@ async def echo(channel, _):
 async def send_link(channel, _):
     """Responds with the currently running bot's invite link
     """
-    await channel.send(f"Bot - https://discordapp.com/oauth2/authorize?client_id={id}&scope=bot&permissions=199680")
+    embed = discord.Embed()
+    embed.add_field(name="Server monitoring Discord bot", value=f"You can invite this bot to your server on [this](https://discordapp.com/oauth2/authorize?client_id={id}&scope=bot&permissions=199680) link!")
+    embed.add_field(name="Warning!", value="This bot only monitors the server it runs on. If you want it to monitor a server you own, wisit [this](https://github.com/NightKey/Server-monitoring-discord-bot) link instead!")
+    embed.color=0xFF00F3
+    await channel.send(embed=embed)
 
 async def stop_bot(channel, _):
     """Stops the bot.
@@ -395,8 +400,10 @@ async def on_message(message):
             cmd = splt[0]
             etc = " ".join(splt[1:]) if len(splt) > 1 else None
             if cmd in linking.keys():
+                await message.add_reaction("👍")
                 await linking[cmd](message.channel, etc)
             else:
+                await message.add_reaction("👎")
                 await message.channel.send("Not a valid command!\nUse '&help' for the avaleable commands")
 
 def disconnect_check(loop, channels):
