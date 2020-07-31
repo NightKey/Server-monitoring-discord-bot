@@ -126,7 +126,11 @@ def load():
             except:
                 connections = []
             print("Data loading finished!")
-        except: #incase there is an error, the program deletes the file, and restarts
+            del tmp
+        except Exception as ex: #incase there is an error, the program deletes the file, and restarts
+            from datetime import datetime
+            with open("Loading_error", 'a') as f:
+                f.write(f"[{datetime.now()}]: {type(ex)} -> {ex}")
             os.remove(os.path.join("data", "bot.cfg"))
             print("Error in cfg file... Restarting")
             signal("Restart")
@@ -137,7 +141,6 @@ def load():
         me = int(input("Type in this bot's user id: "))
         id = me
         save_cfg()
-    del tmp
     check_process_list()
 
 def check_process_list():
