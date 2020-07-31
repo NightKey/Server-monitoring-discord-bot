@@ -287,6 +287,12 @@ Usage: &clear <optionally the number of messages>
         while True:
             is_message=False
             async for message in channel.history():
+                skip = False
+                for reaction in message.reactions:
+                    if str(reaction) == str("🔒"):
+                        skip = True
+                if skip:
+                    continue
                 await message.delete()
                 is_message=True
                 count += 1
@@ -342,7 +348,7 @@ Usage: &terminate <existing process' name>
 
 async def open_browser(channel, link):
     """Opens a page in the server's browser.
-Usage: &play <url to open>    
+Usage: &open <url to open>    
     """
     global what
     what = link
@@ -357,6 +363,18 @@ Usage: &bar <integer value to change to>
     bar_size = int(value)
     await channel.send(f"Barsize set to {bar_size}")
 
+async def locker(channel, value):
+    """Locks and unlocks the linked message.
+    Usage: &lock <message_id>
+    """
+    msg = await channel.fetch_message(value)
+    for reaction in msg.reactions:
+        if str(reaction) == str("🔒"):
+            async for user in reaction.users():
+                await reaction.remove(user)
+            return
+    await msg.add_reaction("🔒")
+
 linking = {
     "&status":status_check,
     "&echo":echo,
@@ -369,7 +387,8 @@ linking = {
     "&remove": remove,
     "&open":open_browser,
     "&bar":set_bar,
-    "&update":updater
+    "&update":updater,
+    "&lock":locker
 }
 
 async def help(channel, what):
@@ -403,7 +422,7 @@ async def on_message(message):
             cmd = splt[0]
             etc = " ".join(splt[1:]) if len(splt) > 1 else None
             if cmd in linking.keys():
-                await message.add_reaction("👍")
+                await message.add_reaction("dot:577128688433496073")
                 await linking[cmd](message.channel, etc)
             else:
                 await message.add_reaction("👎")
