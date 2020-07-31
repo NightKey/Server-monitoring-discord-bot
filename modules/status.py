@@ -59,12 +59,12 @@ def get_graphical(bar_size, in_dict=False):
             pass
     tmp = round(int(memory["used"]) / (1024 **3), 2)
     used = f"{tmp} GB"
-    tmp = round(int(memory["free"]) / (1024 **3), 2)
-    free = f"{tmp} GB"
+    tmp = round((int(memory["free"]) + int(memory['used'])) / (1024 **3), 2)
+    _max = f"{tmp} GB"
     if in_dict:
-        d["Memory"]=[free, used, memory['bar']]
+        d["Memory"]=[_max, used, memory['bar']]
     else:
-        string += f"Free memory: {free} / Used memory: {used}\n{memory['bar']}\n"
+        string += f"Max memory: {_max} / Used memory: {used}\n{memory['bar']}\n"
     if battery == None:
         if in_dict:
             d['Battery']=["Not detected"]
