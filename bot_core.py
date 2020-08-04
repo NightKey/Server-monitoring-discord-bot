@@ -291,7 +291,8 @@ Usage: &clear [optionally the number of messages or @user]
     """
     try: number = number.replace("<@!", '').replace('>', '')
     except: pass
-    user = client.get_user(int(number))
+    if number is not None:
+        user = client.get_user(int(number))
     if user is not None:
         number = None
     try:
