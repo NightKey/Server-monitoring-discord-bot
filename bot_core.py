@@ -293,6 +293,8 @@ Usage: &clear [optionally the number of messages or @user]
     except: pass
     if number is not None:
         user = client.get_user(int(number))
+    else:
+        user = None
     if user is not None:
         number = None
     try:
@@ -310,17 +312,20 @@ Usage: &clear [optionally the number of messages or @user]
                     elif str(reaction) == str("🛑"):
                         clean = False
                 if skip:
-                    continue
+                    if not clean:
+                        break
+                    else:
+                        continue
                 await message.delete()
                 is_message=True
                 count += 1
                 if number != None and count == int(number):
-                    clean = False
+                    break
             else:
                 if not is_message:
-                    clean = False
+                    break
             if number != None and count == int(number):
-                clean = False
+                break
     except discord.Forbidden:
         await channel.send("I'm afraid, I can't do that.")
     except Exception as ex:
@@ -459,7 +464,10 @@ async def on_message(message):
             etc = " ".join(splt[1:]) if len(splt) > 1 else None
             if cmd in linking.keys():
                 await message.add_reaction("dot:577128688433496073")
-                await linking[cmd](message.channel, etc)
+                try:
+                    await linking[cmd](message.channel, etc)
+                except Exception as ex:
+                    await message.channel.send(f"Error runnig the {cmd} command: {type(ex)} -> {ex}")
             else:
                 await message.add_reaction("👎")
                 await message.channel.send("Not a valid command!\nUse '&help' for the avaleable commands")
