@@ -33,6 +33,8 @@ what = ""
 bar_size=18
 connections = []
 channels = ["commands"]
+dcc = None
+wd = None
 
 def split(text, error=False):
     """Logs to both stdout and a log file, using both the writer, and the logger module
@@ -161,16 +163,20 @@ async def status_check(channel, _=None):
     """
     global process_list
     process_list = scann(process_list, psutil.process_iter())
-    embed = discord.Embed(title="Processes", color=0x14f9a2)
+    embed = discord.Embed(title="Interal status", color=0x14f9a2)
     embed.add_field(name=f"Reconnectoins in the past {reset_time} hours", value=len(connections), inline=False)
+    embed.add_field(name="Warchdog", value=("Active" if wd.is_alive else "Inactive"))
+    embed.add_field(name="Disconnect Checker", value=("Active" if dcc.is_alive else "Inactive"))
     embed.set_author(name="Night Key", url="https://github.com/NightKey", icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
+    await channel.send(embed=embed)
+    embed = discord.Embed(title="Watched processes' status", color=0x14f9a2)
     for key, value in process_list.items():
         embed.add_field(name=key, value=("running" if value[0] else "stopped"), inline=True)
         process_list[key] = [False, False]
     else:
         await channel.send(embed=embed)
-        embed = discord.Embed(title="Status", color=0x14f9a2)
-        embed.set_author(name="Night Key", url="https://github.com/NightKey", icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
+        embed = discord.Embed(title="Server status", color=0x14f9a2)
+        embed.set_footer(text="Created by Night Key @ https://github.com/NightKey", icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
         stts = status.get_graphical(bar_size, True)
         for key, value in stts.items():
             val = ("Status" if len(value) > 1 else value[0])
@@ -273,36 +279,47 @@ async def send_link(channel, _):
 async def stop_bot(channel, _):
     """Stops the bot.
     """
-    await channel.send("Exiting")
-    await client.logout()
-    signal('Exit')
-    exit(0)
+    if str(channel) in channels:
+        await channel.send("Exiting")
+        await client.logout()
+        signal('Exit')
+        exit(0)
 
 async def clear(channel, number):
     """Clears all messages from this channel.
-Usage: &clear <optionally the number of messages>
+Usage: &clear [optionally the number of messages or @user]
     """
+    try: number = number.replace("<@!", '').replace('>', '')
+    except: pass
+    user = client.get_user(int(number))
+    if user is not None:
+        number = None
     try:
         count = 0
-        while True:
+        clean = True
+        while clean:
             is_message=False
             async for message in channel.history():
                 skip = False
+                if user is not None and message.author != user:
+                    skip = True
                 for reaction in message.reactions:
                     if str(reaction) == str("🔒"):
                         skip = True
+                    elif str(reaction) == str("🛑"):
+                        clean = False
                 if skip:
                     continue
                 await message.delete()
                 is_message=True
                 count += 1
                 if number != None and count == int(number):
-                    break
+                    clean = False
             else:
                 if not is_message:
-                    break
+                    clean = False
             if number != None and count == int(number):
-                break
+                clean = False
     except discord.Forbidden:
         await channel.send("I'm afraid, I can't do that.")
     except Exception as ex:
@@ -311,18 +328,19 @@ Usage: &clear <optionally the number of messages>
 async def restart(channel, _):
     """Restarts the server it's running on. (Admin permissions may be needed for this)
     """
-    await channel.send("Attempting to restart the pc...")
-    try:
-        if os.name == 'nt':
-            command = "shutdown /r /t 5"
-        else:
-            command = "shutdown -r -t 5"
-        if os.system(command) != 0:
-            await channel.send("Permission denied!")
-        else:
-            await client.logout()
-    except Exception as ex:
-        await channel.send(f"Restart failed with the following exception:\n```{type(ex)} -> {str(ex)}```")
+    if str(channel) in channels:
+        await channel.send("Attempting to restart the pc...")
+        try:
+            if os.name == 'nt':
+                command = "shutdown /r /t 5"
+            else:
+                command = "shutdown -r -t 5"
+            if os.system(command) != 0:
+                await channel.send("Permission denied!")
+            else:
+                await client.logout()
+        except Exception as ex:
+            await channel.send(f"Restart failed with the following exception:\n```{type(ex)} -> {str(ex)}```")
 
 async def terminate_process(channel, target):
     """Terminates the specified process. (Admin permission may be needed for this)
@@ -375,21 +393,18 @@ async def locker(channel, value):
             return
     await msg.add_reaction("🔒")
 
-linking = {
-    "&status":status_check,
-    "&echo":echo,
-    "&link":send_link,
-    "&add":add_process,
-    "&exit":stop_bot,
-    "&clear":clear,
-    "&restart":restart,
-    "&terminate":terminate_process,
-    "&remove": remove,
-    "&open":open_browser,
-    "&bar":set_bar,
-    "&update":updater,
-    "&lock":locker
-}
+async def stop_at(channel, value):
+    """Creates a stop signal to the clear command on the message linked.
+It will stop AFTER that message. To keep a message, refer to the '&lock' command.
+Usage: &end <message_id>
+    """
+    msg = await channel.fetch_message(value)
+    for reaction in msg.reactions:
+        if str(reaction) == str("🛑"):
+            async for user in reaction.users():
+                await reaction.remove(user)
+            return
+    await msg.add_reaction("🛑")
 
 async def help(channel, what):
     """Returns the help text for the avaleable commands
@@ -400,23 +415,43 @@ Usage: &help <optionaly a specific without the '&' character>
         embed.set_author(name="Night Key", url="https://github.com/NightKey", icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
         for key, value in linking.items():
             txt = value.__doc__
-            if len(txt.split('\n'))>2:
-                key = txt.split('\n')[1].replace('Usage: ', '')
-                txt = txt.split('\n')[0]
+            tmp = txt.split("\n")
+            for a in tmp:
+                if "Usage: " in a:
+                    key = a.replace("Usage: ", '')
+                    tmp.remove(a)
+                    break
+            txt = "\n".join(tmp)
             embed.add_field(name=key, value=txt, inline=False)
     elif f"&{what}" in linking.keys():
         embed = discord.Embed(title=f"Help for the {what} command", description=linking[f"&{what}"].__doc__, color=0xb000ff)
         embed.set_author(name="Night Key", url="https://github.com/NightKey", icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
     await channel.send(embed=embed)
 
-linking["&help"] = help
+linking = {
+    "&add":add_process,
+    "&bar":set_bar,
+    "&clear":clear,
+    "&echo":echo,
+    "&end":stop_at,
+    "&exit":stop_bot,
+    "&help":help,
+    "&status":status_check,
+    "&link":send_link,
+    "&lock":locker,
+    "&open":open_browser,
+    "&remove": remove,
+    "&restart":restart,
+    "&terminate":terminate_process,
+    "&update":updater
+}
 
 @client.event
 async def on_message(message):
     """This get's called when a message was sent to the server. It checks for all the usable commands, and executes them, if they were sent to the correct channel.
     """
     me = client.get_user(id)
-    if str(message.channel) in channels and message.author != me:
+    if message.author != me:
         if message.content.startswith('&'):
             splt = message.content.split(' ')
             cmd = splt[0]
@@ -468,6 +503,8 @@ def runner(loop):
     """
     Runs the needed things in a way, the watchdog can access the bot client.
     """
+    global dcc
+    global wd
     dcc = Thread(target=disconnect_check, args=[loop, channels,])
     dcc.name = "Disconnect checker"
     dcc.start()
