@@ -535,5 +535,4 @@ if __name__ == "__main__":
         loop.stop()
         print("Restarting...")
         lg.close()
-        save_cfg()
         signal("Restart")
