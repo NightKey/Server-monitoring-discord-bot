@@ -319,7 +319,7 @@ Usage: &clear [optionally the number of messages or @user]
                 await message.delete()
                 is_message=True
                 count += 1
-                if number != None and count == int(number):
+                if (number != None and count == int(number)) or skip:
                     break
             else:
                 if not is_message:
