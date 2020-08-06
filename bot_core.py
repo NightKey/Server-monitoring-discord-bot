@@ -7,13 +7,14 @@ trys = 0
 while trys < 3:
     try:
         import discord
+        from fuzzywuzzy import fuzz
         break
     except:
         print("Can't import something, trying to install dependencies....")
         with open("dependencies.txt", 'r') as f:
             dep = f.read(-1).split('\n')
         for d in dep:
-            os.system(f"{os.sys.path} -m pip install --user {d}")
+            os.system(f"pip install --user {d}")
         trys = 1
 if trys >= 3:
     print("Couldn't import something for the 3rd time...")
@@ -231,7 +232,7 @@ async def on_ready():
 It does a system scann for the running programs.
     """
     global connections
-    connections.append(datetime.datetime.now())
+    connections.append(datetime.datetime.now().timestamp())
     print('Startup check ...')
     global was_online
     #print(client.emojis)
@@ -319,7 +320,7 @@ Usage: &clear [optionally the number of messages or @user]
                 await message.delete()
                 is_message=True
                 count += 1
-                if (number != None and count == int(number)) or skip:
+                if (number != None and count == int(number)) or not skip:
                     break
             else:
                 if not is_message:
@@ -470,7 +471,16 @@ async def on_message(message):
                     await message.channel.send(f"Error runnig the {cmd} command: {type(ex)} -> {ex}")
             else:
                 await message.add_reaction("👎")
-                await message.channel.send("Not a valid command!\nUse '&help' for the avaleable commands")
+                mx = {}
+                for key in linking.keys():
+                    tmp=fuzz.ratio(cmd.lower().replace("&", ''), key.lower().replace('&', ''))
+                    if 'value' not in mx or mx["value"] < tmp:
+                        mx["key"] = key
+                        mx["value"] = tmp
+                if mx['value'] > 70:
+                    await message.channel.send(f"Did you mean `{mx['key']}`? Probability: {mx['value']}%")
+                else:
+                    await message.channel.send("Not a valid command!\nUse '&help' for the avaleable commands")
 
 def disconnect_check(loop, channels):
     """
@@ -493,7 +503,7 @@ def disconnect_check(loop, channels):
                     f.write(str(datetime.datetime.now() - dc_time))
                 signal("Restart")
                 exit(0)
-        if len(connections) > 0 and (datetime.datetime.now() - connections[0]) >= datetime.timedelta(hours=reset_time):
+        if len(connections) > 0 and (datetime.datetime.now() - datetime.datetime.fromtimestamp(connections[0])) >= datetime.timedelta(hours=reset_time):
             del connections[0]
         if len(connections) > 50:
             loop.create_task(channel.send(f"{len(connections)} connections reached within {reset_time} hours!"))
