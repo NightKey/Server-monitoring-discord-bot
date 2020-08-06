@@ -6,7 +6,7 @@ def scann(process_list, piter):
     For example:
         Discord's last argument: "path\to\discord\discord.exe"
         This bot's last argument: "path\to\bot\bot.py"
-    If how ever, the program has any argument, it can't bi monitored by this methode.
+    If how ever, the program has any argument, it can't be monitored by this methode.
     """
     for process in piter:
         try:
