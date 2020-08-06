@@ -22,23 +22,45 @@ class watchdog():
         self.client = client
         self.loop = loop
         self._ready = False
-        self.restarted = False
+        self.run = True
 
     def was_restarted(self):
         """Updates the restarted state
         """
-        self.restarted = True
+        self.from_tmp()
 
     def update_process_list(self, process_list):
         """Updates the process list to the given argument's value.
         """
-        self.process_list = deepcopy(process_list)
+        tmp = deepcopy(process_list)
+        for key, value in tmp.items():
+            if key not in self.process_list:
+                self.process_list[key] = value
+        for key in self.process_list.values():
+            if key not in tmp:
+                del self.process_list[key]
 
     def ready(self):
         self._ready = True
 
     def not_ready(self):
         self._ready = False
+
+    def from_tmp(self):
+        """Reads the process list from a file. (Used to handle restarts)
+        """
+        with open("data/wd_list.json", "r") as f:
+            tmp = json.load(f)
+        for key, value in tmp.items():
+            if key in self.process_list:
+                self.process_list[key] = value
+
+    def create_tmp(self):
+        """Saves the process list to a file (Used to handle restarts)
+        """
+        self.run = False
+        with open("data/wd_list.json", "w") as f:
+            json.dump(self.process_list, f)
 
     def run_watchdog(self, channels):
         """This method scanns the system for runing processes, and if no process found, sends a mention message to all of the valid channels.
@@ -51,7 +73,7 @@ class watchdog():
                 break
         print("started")
         n = 5
-        while True:
+        while self.run:
             self.process_list = scann(self.process_list, psutil.process_iter())
             if n % 2 == 0:
                 _, _, battery = status.get_pc_status()
@@ -77,8 +99,5 @@ class watchdog():
             if self.error != "":
                 print(self.error)
                 if self._ready:
-                    if not self.restarted:
-                        self.loop.create_task(channel.send(f"@everyone\n{self.error}"))
-                        self.error = ""
-                    else:
-                        self.restarted = False
+                    self.loop.create_task(channel.send(f"@everyone\n{self.error}"))
+                    self.error = ""

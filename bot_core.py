@@ -499,6 +499,7 @@ def disconnect_check(loop, channels):
                 loop.create_task(client.logout())
                 loop.create_task(client.close())
                 while not client.is_closed(): pass
+                _watchdog.create_tmp()
                 with open("Offline", "w") as f:
                     f.write(str(datetime.datetime.now() - dc_time))
                 signal("Restart")
