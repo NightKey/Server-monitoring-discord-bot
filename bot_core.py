@@ -537,6 +537,9 @@ def runner(loop):
 if __name__ == "__main__":
     try:
         load()
+        if os.sys.argv[-1] == '-al':
+            print("Starting discord logger")
+            enable_debug_logger()
         print("Creating loop")
         loop = asyncio.get_event_loop()
         print('Setting up watchdog')
