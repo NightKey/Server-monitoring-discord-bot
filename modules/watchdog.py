@@ -54,6 +54,7 @@ class watchdog():
         for key, value in tmp.items():
             if key in self.process_list:
                 self.process_list[key] = value
+        os.remove("data/wd_list.json")
 
     def create_tmp(self):
         """Saves the process list to a file (Used to handle restarts)
