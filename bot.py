@@ -1,7 +1,7 @@
 import subprocess
 from platform import system
 from os import system as run
-from os import path, remove
+from os import path, remove, rename
 from sys import argv
 from time import sleep
 
@@ -24,6 +24,8 @@ def main():
                 restart_counter += 1
                 print(f"Restarting...")
                 if restart_counter > 4:
+                    if path.exists("discord.log"):
+                        rename("discord.log", "discord.log.last")
                     server = subprocess.Popen([interpreter, 'bot_core.py' '-al'])
                 else:
                     server = subprocess.Popen([interpreter, 'bot_core.py'])
