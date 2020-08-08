@@ -244,7 +244,8 @@ It does a system scann for the running programs.
                 os.remove("Offline")
                 check_process_list()
                 _watchdog.was_restarted()
-                await channel.send(f"Bot restarted after being offline for {td}")
+                difference = datetime.datetime.now() - datetime.datetime.fromtimestamp(float(td))
+                await channel.send(f"Bot restarted after being offline for {str(difference).split('.')[0]}")
                 was_online = True
             elif not was_online:
                 await channel.send("Bot started")
@@ -501,7 +502,7 @@ def disconnect_check(loop, channels):
                 while not client.is_closed(): pass
                 _watchdog.create_tmp()
                 with open("Offline", "w") as f:
-                    f.write(str(datetime.datetime.now() - dc_time))
+                    f.write(dc_time.timestamp())
                 signal("Restart")
                 exit(0)
         if len(connections) > 0 and (datetime.datetime.now() - datetime.datetime.fromtimestamp(connections[0])) >= datetime.timedelta(hours=reset_time):
