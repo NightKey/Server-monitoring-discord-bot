@@ -16,26 +16,26 @@ def main():
     server = subprocess.Popen([interpreter, 'bot_core.py'])  #Creates a child process with the 'server.py' script
     while server.poll() is None:    #Works while the child process runs
         try:
-            if path.exists('Restart'):  #When the server requires a restart changing it's runmode between developper and normal mode
+            if path.exists('Restart'):  #When the server requires a restart
                 remove('Restart')
                 server.kill()
                 while server.poll() is None:
                     pass
                 restart_counter += 1
                 print(f"Restarting...")
-                if restart_counter > 4:
+                if restart_counter > 2:
                     if path.exists("discord.log"):
                         rename("discord.log", "discord.log.last")
                     server = subprocess.Popen([interpreter, 'bot_core.py' '-al'])
                 else:
                     server = subprocess.Popen([interpreter, 'bot_core.py'])
-            if path.exists('Exit'):  #When the server requires a restart changing it's runmode between developper and normal mode
+            if path.exists('Exit'):
                 remove('Exit')
                 server.kill()
                 while server.poll() is None:
                     pass
-        except:
-            pass
+        except Exception as ex:
+            print(f"{type(ex)} -> {ex}")
         finally:
             sleep(0.2)
 
