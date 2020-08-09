@@ -502,7 +502,7 @@ def disconnect_check(loop, channels):
                 while not client.is_closed(): pass
                 _watchdog.create_tmp()
                 with open("Offline", "w") as f:
-                    f.write(dc_time.timestamp())
+                    f.write(str(dc_time.timestamp()))
                 signal("Restart")
                 exit(0)
         if len(connections) > 0 and (datetime.datetime.now() - datetime.datetime.fromtimestamp(connections[0])) >= datetime.timedelta(hours=reset_time):
