@@ -25,6 +25,7 @@ def main():
                 print(f"Restarting...")
                 if restart_counter > 2:
                     if path.exists("discord.log"):
+                        if path.exists("discord.log.last"): remove("discord.log.last")
                         rename("discord.log", "discord.log.last")
                     server = subprocess.Popen([interpreter, 'bot_core.py', '-al'])
                 else:
