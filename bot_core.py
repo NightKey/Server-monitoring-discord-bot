@@ -219,13 +219,16 @@ Usage: &remove <watched process name>
 async def on_message_edit(before, after):
     await on_message(after)
 
+def offline(is_false):
+    if not is_false:
+        print("Connection lost!")
+        global dc_time
+        dc_time = datetime.datetime.now()
+        _watchdog.not_ready()
+
 @client.event
 async def on_disconnect():
-    print("Connection lost!")
-    global dc_time
-    dc_time = datetime.datetime.now()
-    _watchdog.send_going_offline()
-    _watchdog.not_ready()
+    _watchdog.check_connection(offline)    
 
 @client.event
 async def on_ready():
@@ -506,8 +509,6 @@ def disconnect_check(loop, channels):
                     f.write(str(dc_time.timestamp()))
                 signal("Restart")
                 exit(0)
-            elif ((datetime.datetime.now() - dc_time)) > datetime.timedelta(minutes=30):
-                loop.create_task(_watchdog.send_msg("Offline state for 30 minutes."))
         if len(connections) > 0 and (datetime.datetime.now() - datetime.datetime.fromtimestamp(connections[0])) >= datetime.timedelta(hours=reset_time):
             del connections[0]
         if len(connections) > 50:

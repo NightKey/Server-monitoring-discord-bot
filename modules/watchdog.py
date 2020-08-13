@@ -46,10 +46,11 @@ class watchdog():
     def not_ready(self):
         self._ready = False
 
-    def send_going_offline(self):
+    async def check_connection(self, call_back):
         try:
-            self.loop.create_task(self.send_msg("Went Offline"))
-        except: pass
+            await self.channel.pins()
+            call_back(True)
+        except HTTPException: call_back(False)
 
     async def send_msg(self, msg):
         try: await self.channel.send(msg)
