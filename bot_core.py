@@ -506,6 +506,8 @@ def disconnect_check(loop, channels):
                     f.write(str(dc_time.timestamp()))
                 signal("Restart")
                 exit(0)
+            elif ((datetime.datetime.now() - dc_time)) > datetime.timedelta(minutes=30):
+                loop.create_task(_watchdog.send_msg("Offline state for 30 minutes."))
         if len(connections) > 0 and (datetime.datetime.now() - datetime.datetime.fromtimestamp(connections[0])) >= datetime.timedelta(hours=reset_time):
             del connections[0]
         if len(connections) > 50:
