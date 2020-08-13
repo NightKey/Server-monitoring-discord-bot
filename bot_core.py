@@ -224,6 +224,7 @@ async def on_disconnect():
     print("Connection lost!")
     global dc_time
     dc_time = datetime.datetime.now()
+    _watchdog.send_going_offline()
     _watchdog.not_ready()
 
 @client.event

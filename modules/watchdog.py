@@ -46,6 +46,15 @@ class watchdog():
     def not_ready(self):
         self._ready = False
 
+    def send_going_offline(self):
+        try:
+            self.loop.create_task(self.send_msg("Went Offline"))
+        except: pass
+
+    async def send_msg(self, msg):
+        try: await self.channel.send(msg)
+        except: print(f"Failed sending message '{msg}'")
+
     def from_tmp(self):
         """Reads the process list from a file. (Used to handle restarts)
         """
@@ -72,6 +81,7 @@ class watchdog():
         for channel in self.client.get_all_channels():
             if str(channel) in channels:
                 break
+        self.channel = channel
         print("started")
         n = 5
         while self.run:
