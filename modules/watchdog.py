@@ -50,7 +50,7 @@ class watchdog():
         try:
             await self.channel.pins()
             call_back(True)
-        except HTTPException: call_back(False)
+        except discord.HTTPException: call_back(False)
 
     async def send_msg(self, msg):
         try: await self.channel.send(msg)
