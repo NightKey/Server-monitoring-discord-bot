@@ -258,6 +258,7 @@ It does a system scann for the running programs.
                 was_online = True
             else:
                 now = datetime.datetime.now()
+                if dc_time is None: break
                 if (now - dc_time) > datetime.timedelta(seconds=2):
                     await channel.send("Back online!")
                     await channel.send(f"Was offline for {now - dc_time}")
