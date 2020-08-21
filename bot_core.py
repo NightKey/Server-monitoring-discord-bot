@@ -10,7 +10,7 @@ while trys < 3:
         from fuzzywuzzy import fuzz
         break
     except:
-        print("Can't import something, trying to install dependencies....")
+        print("Can't import something, trying to install dependencies")
         with open("dependencies.txt", 'r') as f:
             dep = f.read(-1).split('\n')
         for d in dep:
@@ -76,11 +76,13 @@ async def updater(channel, _=None):
     """
     from modules import updater
     if updater.main():
-        await channel.send("Restarting...")
+        if channel is not None:
+            await channel.send("Restarting...")
         await client.logout()
         signal('Restart')
     else:
-        await channel.send('Nothing was updated!')
+        if channel is not None:
+            await channel.send('Nothing was updated!')
 
 async def processes(channel):
     text = 'Currently running processes:\n'
@@ -228,7 +230,7 @@ def offline(is_false):
 
 @client.event
 async def on_disconnect():
-    _watchdog.check_connection(offline)    
+    await _watchdog.check_connection(offline)    
 
 @client.event
 async def on_ready():
@@ -539,7 +541,7 @@ def runner(loop):
     wd.start()
     loop.create_task(client.start(token))
     loop.run_forever()
-
+    
 if __name__ == "__main__":
     try:
         load()
@@ -552,7 +554,6 @@ if __name__ == "__main__":
         _watchdog = watchdog.watchdog(loop, client, process_list)
         print('Starting all processes...')
         runner(loop)
-        #client.run(token)
     except Exception as ex:
         print("Logging out...")
         print(str(ex), error=True)
