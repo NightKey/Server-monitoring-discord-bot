@@ -29,6 +29,9 @@ class watchdog():
         """
         self.from_tmp()
 
+    def stop(self):
+        self.run = False
+
     def update_process_list(self, process_list):
         """Updates the process list to the given argument's value.
         """

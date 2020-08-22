@@ -36,6 +36,8 @@ connections = []
 channels = ["commands"]
 dcc = None
 wd = None
+is_running = True
+errors = {}
 
 def split(text, error=False):
     """Logs to both stdout and a log file, using both the writer, and the logger module
@@ -230,7 +232,10 @@ def offline(is_false):
 
 @client.event
 async def on_disconnect():
-    await _watchdog.check_connection(offline)    
+    try:
+        await _watchdog.check_connection(offline)
+    except Exception as ex:
+        errors[datetime.datetime.now()] = f"Exception occured during disconnect event {type(ex)} --> {ex}"
 
 @client.event
 async def on_ready():
@@ -241,7 +246,6 @@ It does a system scann for the running programs.
     connections.append(datetime.datetime.now().timestamp())
     print('Startup check ...')
     global was_online
-    #print(client.emojis)
     for channel in client.get_all_channels():   #Sets the channel to the first valid channel, and runs a scann.
         if str(channel) in channels:
             if os.path.exists("Offline"):
@@ -279,18 +283,24 @@ async def echo(channel, _):
 async def send_link(channel, _):
     """Responds with the currently running bot's invite link
     """
-    embed = discord.Embed()
-    embed.add_field(name="Server monitoring Discord bot", value=f"You can invite this bot to your server on [this](https://discordapp.com/oauth2/authorize?client_id={id}&scope=bot&permissions=199680) link!")
-    embed.add_field(name="Warning!", value="This bot only monitors the server it runs on. If you want it to monitor a server you own, wisit [this](https://github.com/NightKey/Server-monitoring-discord-bot) link instead!")
-    embed.color=0xFF00F3
-    await channel.send(embed=embed)
+    try:
+        embed = discord.Embed()
+        embed.add_field(name="Server monitoring Discord bot", value=f"You can invite this bot to your server on [this](https://discordapp.com/oauth2/authorize?client_id={id}&scope=bot&permissions=199680) link!")
+        embed.add_field(name="Warning!", value="This bot only monitors the server it runs on. If you want it to monitor a server you own, wisit [this](https://github.com/NightKey/Server-monitoring-discord-bot) link instead!")
+        embed.color=0xFF00F3
+        await channel.send(embed=embed)
+    except Exception as ex:
+        errors[datetime.datetime.now()] = f"Exception occured during link sending {type(ex)} --> {ex}"
 
 async def stop_bot(channel, _):
     """Stops the bot.
     """
+    global is_running
     if str(channel) in channels:
         await channel.send("Exiting")
         await client.logout()
+        _watchdog.stop()
+        is_running = False
         signal('Exit')
         exit(0)
 
@@ -347,15 +357,29 @@ async def restart(channel, _):
         await channel.send("Attempting to restart the pc...")
         try:
             if os.name == 'nt':
-                command = "shutdown /r /t 5"
+                command = "shutdown /r /t 15"
             else:
-                command = "shutdown -r -t 5"
+                command = "shutdown -r -t 15"
             if os.system(command) != 0:
                 await channel.send("Permission denied!")
             else:
+                global is_running
+                _watchdog.stop()
+                is_running = False
                 await client.logout()
+                signal("Exit")
         except Exception as ex:
             await channel.send(f"Restart failed with the following exception:\n```{type(ex)} -> {str(ex)}```")
+
+async def send_errors(channel, _=None):
+    """Sends all stored errors to the channel the command was sent to.
+    """
+    global errors
+    msg = ""
+    for date, item in errors:
+        msg += f"{date}: {item}"
+    await channel.send(msg)
+    errors = {}
 
 async def terminate_process(channel, target):
     """Terminates the specified process. (Admin permission may be needed for this)
@@ -375,8 +399,8 @@ Usage: &terminate <existing process' name>
             if name.lower() == target:
                 process.kill()
             break
-        except:
-            pass
+        except Exception as ex:
+            errors[datetime.datetime.now()] = f"Exception occured during terminating process '{target}' {type(ex)} --> {ex}"
     else: await channel.send(f"Error while stopping {target}!\nManual help needed!")
 
 async def open_browser(channel, link):
@@ -398,7 +422,7 @@ Usage: &bar <integer value to change to>
 
 async def locker(channel, value):
     """Locks and unlocks the linked message.
-    Usage: &lock <message_id>
+Usage: &lock <message_id>
     """
     msg = await channel.fetch_message(value)
     for reaction in msg.reactions:
@@ -449,6 +473,7 @@ linking = {
     "&clear":clear,
     "&echo":echo,
     "&end":stop_at,
+    "&errors":send_errors,
     "&exit":stop_bot,
     "&help":help,
     "&status":status_check,
@@ -499,7 +524,7 @@ def disconnect_check(loop, channels):
     for channel in client.get_all_channels():
         if str(channel) in channels:
             break
-    while True:
+    while is_running:
         if was_online and dc_time != None:
             if (datetime.datetime.now() - dc_time) > datetime.timedelta(hours=1):
                 print('Offline for too long. Restarting!')
@@ -555,10 +580,15 @@ if __name__ == "__main__":
         print('Starting all processes...')
         runner(loop)
     except Exception as ex:
-        print("Logging out...")
         print(str(ex), error=True)
+        print("Sending stop signal to discord...")
         loop.create_task(client.logout())
         loop.create_task(client.close())
+        print("Stopping watchdogs")
+        _watchdog.create_tmp()
+        print("Stopping disconnect checker")
+        is_running = False
+        print("Waiting for discord to close...")
         while not client.is_closed():
             pass
         loop.stop()
