@@ -53,7 +53,7 @@ The Status' Json value has the following format:
 {
     "Network":"Avaleable/Unavaleable"[str],
     "SupportingFunctions":{
-        "Watchdog":"Active/Inactive"[str], "Disconnect Checker":"Active/Inactive"[str]
+        "Watchdog":"Active/Inactive"[str], "DisconnectChecker":"Active/Inactive"[str]
     },
     "Ping":"ping delay in ms"[int]
 }
