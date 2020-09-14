@@ -34,10 +34,10 @@ The messages should be sent in two parts. First for the command, and the secund,
 |Create<sup><sub>2</sub></sup> |Boolean       |If the function was added successfully         |
 
 #### Usages:
-###### <sup><sub>1</sub></sup>
-: Send {value_to_send [string]}
- -  <sup><sub>2</sub></sup>: Create {name [string], help_text [string], call_back [function], user_value* [bool]}
-<sub>The * values are optional</sub>
+ -  <sub>1</sub>: Send {value_to_send [string]}
+ -  <sub>2</sub>: Create {name [string], help_text [string], call_back [function], user_value* [bool]}
+ 
+<sub>* The value is optional, default is False</sub>
 
 The `help_text` value can be a long text, but if you want to use any specifications on the input it should look the following:
 
