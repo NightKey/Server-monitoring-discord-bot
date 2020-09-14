@@ -34,7 +34,7 @@ The messages should be sent in two parts. First for the command, and the secund,
 |Create<sup><sub>2</sub></sup> |Boolean       |If the function was added successfully         |
 
 #### Usages:
- -  <sup><sub>1</sub></sup>: Send {value_to_send [string]}
+###### <sup><sub>1</sub></sup>: Send {value_to_send [string]}
  -  <sup><sub>2</sub></sup>: Create {name [string], help_text [string], call_back [function], user_value* [bool]}
 <sub>The * values are optional</sub>
 
