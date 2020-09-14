@@ -1,18 +1,18 @@
 # Server-monitoring-discord-bot
 
 This bot monitors the server that it's running on.
-For it to woek, you will need to create at least one [Discord bot accont](https://discordapp.com/developers/applications/).
-Both the watchdog, and the bot is capable of running without one an other.
+For it to work, you will need to create at least one [Discord bot accont](https://discordapp.com/developers/applications/).
+Both the watchdog, and the bot is capable of running without one another.
 
 *This version is a Windows only version!*
 
 ## The bot
 
-This application is a chat-bot, that is capable of telling the status of the computer, and the watchlist's status (what application is and is not running), however, it can't send notification message of a process suddenly stopping.
+This application is a chat-bot, that is capable of telling the status of the computer, and the watchlist's status (what application is and is not running), it can send a notification message of a process suddenly stopping (If the watchdog process is running).
 
 This bot, to function properly needs the following permissions:
 
-* Read Tex Channels & See Voice Channels
+* Read Text Channels & See Voice Channels
 * Send Messages
 * Read Messages
 * Manage Messages - Optional for the '&clear' command
@@ -20,33 +20,29 @@ This bot, to function properly needs the following permissions:
 
 ## API
 
-The bot uses a tcp server as it's API, where plaintext messages will yield resoults. 
-The API can be turned on with the `-api` switch.
+The bot uses a tcp server as it's API, where plaintext messages will yield results. The API can be turned on with the `-api` switch.
  -  default port: `9600`
  -  default IP: `127.0.0.1`
 
-The messages should be sent in two parts. First for the command, and the secund, and optional, for the other values. A message should be sent in two parts, first a one byte long length value for the length of the message, and after the message itself. The responses will be sent the same way.
+The messages should be sent in two parts. First for the command, and a list of paramaters. These parameters must be in the given order to work. A message should be sent in two parts:
+ -  first a one byte long length value for the length of the message
+ -  and after the message itself. 
+The responses will be sent the same way.
 
-|Request                       |Return Value  |Content                                        |
-|:-----------------------------|:-------------|:---------------------------------------------:|
-|Status                        |Json          |The PC's status as it get's sent to the servers|
-|Send<sup><sub>1</sub></sup>   |Boolean       |If the message was sent successfully           |
-|Create<sup><sub>2</sub></sup> |Boolean       |If the function was added successfully         |
+|Request                                  |Return Value  |Content                                        |
+|:----------------------------------------|:-------------|:---------------------------------------------:|
+|[Status](#Status)                        |Json          |The PC's status as it get's sent to the servers|
+|[Send](#Send)<sup><sub>1</sub></sup>     |Boolean       |If the message was sent successfully           |
+|[Create](#Create)<sup><sub>2</sub></sup> |Boolean       |If the function was added successfully         |
 
-#### Usages:
- -  <sub>1</sub>: Send {value_to_send [string]}
- -  <sub>2</sub>: Create {name [string], help_text [string], call_back [function], user_value* [bool]}
- 
-<sub>* The value is optional, default is False</sub>
+#### Keys:
+ -  <sub>1</sub>: Send {text_to_send [string], user_name* [string]}
+ -  <sub>2</sub>: Create {name [string], help_text [string], call_back [string], user_value** [bool]}
 
-The `help_text` value can be a long text, but if you want to use any specifications on the input it should look the following:
+<sub>* Optional</sub>
+<sub>** Optional, default value: `False`</sub>
 
-```
-Help text goes here. This will be displayed, when the help command is used.
-With linebreak, it will still be displayed, how ever, you should only use '\n' as linebreak, not actually break a line.
-Usage: &{command_name} <optional input with explanation>
-The 'Usage: ' line is optional, but if present, it should be formated like that, and be on it's own line.
-```
+## Status
 
 The Status' Json value has the following format:
 
@@ -58,4 +54,25 @@ The Status' Json value has the following format:
     },
     "Ping":"ping delay in ms"[int]
 }
+```
+
+## Send
+
+This command allows the program to send messages to the servers the bot is connected to, or to individual users. This message can be formatted, but can only be string message.
+
+## Create
+
+When using the `Create` command, the parameters will describe the following:
+ -  name - The name to call on Discord
+ -  help_text - The text to show in the help command
+ -  call_back - The value to send to the program (along side with the value from the user, if it's required)
+ -  user_value - Whether to send a user value with the command.
+
+The `help_text` value can be a long text, but if you want to use any specifications on the input it should look the following:
+
+```
+Help text goes here. This will be displayed, when the help command is used.
+With linebreak, it will still be displayed, however, you should only use '\n' as linebreak, not actually break a line.
+Usage: &{command_name} <optional input with explanation>
+The 'Usage: ' line is optional, but if present, it should be formated like that, and be on it's own line.
 ```
