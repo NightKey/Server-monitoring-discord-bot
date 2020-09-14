@@ -20,7 +20,8 @@ This bot, to function properly needs the following permissions:
 
 ## API
 
-The bot uses a tcp server as it's API, where plaintext messages will yield resoults. The API can be turned on with the `-api` switch.
+The bot uses a tcp server as it's API, where plaintext messages will yield resoults. 
+The API can be turned on with the `-api` switch.
  -  default port: `9600`
  -  default IP: `127.0.0.1`
 
