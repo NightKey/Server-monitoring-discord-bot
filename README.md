@@ -29,24 +29,30 @@ The messages should be sent in two parts. First for the command, and a list of p
  -  and after the message itself. 
 The responses will be sent the same way.
 
+Upon connections the bot can respond in two ways:
+ -  Accepted - When the connection was acepted, and the client was added to the client list.
+ -  Denied - The second message will contain the reason: 'Bad API Key' or 'Already connected'.
+
 |Request                                  |Return Value  |Content                                        |
 |:----------------------------------------|:-------------|:---------------------------------------------:|
 |[Status](#Status)                        |Json          |The PC's status as it get's sent to the servers|
 |[Send](#Send)<sup><sub>1</sub></sup>     |Boolean       |If the message was sent successfully           |
 |[Create](#Create)<sup><sub>2</sub></sup> |Boolean       |If the function was added successfully         |
 
+The messages are case sensitive, and 'Bad request' message will be sent, when a message is not applicable.
+
 #### Keys:
  -  <sub>1</sub>: Send {text_to_send [string], user_name* [string]}
  -  <sub>2</sub>: Create {name [string], help_text [string], call_back [string], user_value** [bool]}
 
-<sub>* Optional</sub>
+<sub>* Optional, format: @username#1234 or @everyone/@here</sub>
 <sub>** Optional, default value: `False`</sub>
 
 ## Status
 
 The Status' Json value has the following format:
 
-```python
+```javascript
 {
     "Network":"Avaleable/Unavaleable"[str],
     "SupportingFunctions":{
@@ -74,5 +80,16 @@ The `help_text` value can be a long text, but if you want to use any specificati
 Help text goes here. This will be displayed, when the help command is used.
 With linebreak, it will still be displayed, however, you should only use '\n' as linebreak, not actually break a line.
 Usage: &{command_name} <optional input with explanation>
+Category: {a category from the list below}
 The 'Usage: ' line is optional, but if present, it should be formated like that, and be on it's own line.
 ```
+
+### Categories
+
+|Category name     |What comes here                                                        |
+|:----------------:|:----------------------------------------------------------------------|
+|HARDWARE          |Anything that interacts with the host machine.                         |
+|SERVER            |Anything that interacts with the discord server.                       |
+|NETWORK           |Anything that interacts with the host's network.                       |
+|SOFTWARE          |Anything that interacts with the programs running on the host machine. |
+|BOT               |Anything that interacts with the bot's workings.                       |
