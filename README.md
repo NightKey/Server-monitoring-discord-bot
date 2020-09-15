@@ -45,7 +45,7 @@ The messages are case sensitive, and 'Bad request' message will be sent, when a 
  -  <sub>1</sub>: Send {text_to_send [string], user_name* [string]}
  -  <sub>2</sub>: Create {name [string], help_text [string], call_back [string], user_value** [bool]}
 
-<sub>* Optional, format: @username#1234 or @everyone/@here</sub>
+<sub>* Optional, format: username#1234</sub>
 <sub>** Optional, default value: `False`</sub>
 
 ## Status
