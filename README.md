@@ -1,6 +1,6 @@
 # Server-monitoring-discord-bot
 
-This bot monitors the server that it's running on.
+This bot monitors the computer that it's running on.
 For it to work, you will need to create at least one [Discord bot accont](https://discordapp.com/developers/applications/).
 Both the watchdog, and the bot is capable of running without one another.
 
@@ -54,7 +54,7 @@ The Status' Json value has the following format:
 
 ```javascript
 {
-    "Network":"Avaleable/Unavaleable"[str],
+    "Network":"Available/Unavailable"[str],
     "SupportingFunctions":{
         "Watchdog":"Active/Inactive"[str], "DisconnectChecker":"Active/Inactive"[str]
     },
