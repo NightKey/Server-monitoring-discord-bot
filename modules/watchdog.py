@@ -4,12 +4,12 @@ from . import writer, logger, status
 from .scanner import scann
 from time import sleep
 
-def split(text, error=False):
+lg = logger.logger("watchdog", folder="logs")
+def split(text, error=False, log_only=False, print_only=False):
     """Logs to both stdout and a log file, using both the writer, and the logger module
     """
-    writer.write(text)
-    lg = logger.logger("watchdog", folder="logs")
-    lg.log(text, error=error)
+    if not log_only: writer.write(text)
+    if not print_only: lg.log(text, error=error)
 
 writer = writer.writer("Watchdog")
 print = split   #Changed print to the split function
@@ -96,7 +96,7 @@ class watchdog():
                     if not battery["power_plugged"]:
                         if not self.battery_warning:
                             if self._ready:
-                                print('Power Disconnected!')
+                                print('Power Disconnected!', log_only=True)
                                 self.loop.create_task(channel.send(f"@everyone The Battery is not plugged in!"))
                                 self.battery_warning = True
                     elif self.battery_warning:
