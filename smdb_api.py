@@ -24,6 +24,7 @@ def enablePrint():
     sys.stdout = sys.__stdout__
 
 class API:
+    """API for the 'Server monitoring Discord bot' application."""
     def __init__(self, name, key, ip="127.0.0.1", port=9600):
         """Initialises an API that connects to the 'ip' ip and to the 'port' port with the 'name' name and the 'key' api key
         """
@@ -76,7 +77,11 @@ class API:
     def validate(self):
         """Validates with the bot, and starts the listener loop, if validation is finished
         """
-        self.socket.connect((self.ip, self.port))
+        while True:
+            try:
+                self.socket.connect((self.ip, self.port))
+                break
+            except ConnectionRefusedError: pass
         self.send(self.name)
         self.send(self.key)
         ansvear = self.retrive()
