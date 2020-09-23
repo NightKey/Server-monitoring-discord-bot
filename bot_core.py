@@ -696,6 +696,7 @@ def runner(loop):
     global dcc
     global wd
     global srv
+    global hb
     dcc = Thread(target=disconnect_check, args=[loop, channels,])
     dcc.name = "Disconnect checker"
     dcc.start()
