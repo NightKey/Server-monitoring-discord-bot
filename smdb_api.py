@@ -132,7 +132,7 @@ class API:
         """Listens for incoming messages, and stops when the program stops running
         """
         while self.running:
-            while self.valid and process_time() - self.last_heartbeat < 0.12:
+            while self.valid and process_time() - self.last_heartbeat < 1:
                 if not self.running: break
                 msg = self.retrive()
                 #print(msg)
@@ -154,7 +154,7 @@ class API:
                     else:
                         self.call_list[msg](msg2)
 
-            if process_time() - self.last_heartbeat > 0.11:
+            if process_time() - self.last_heartbeat >= 1:
                 self.connection_alive = False
                 self.valid = False
                 raise ConnectionError(f"The heartbeat stopped.\nLast hearth beat {process_time() - self.last_heartbeat} secunds aggo")
