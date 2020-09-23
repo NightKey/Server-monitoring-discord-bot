@@ -38,6 +38,7 @@ channels = ["commands"]
 dcc = None
 wd = None
 srv = None
+hb = None
 is_running = True
 errors = {}
 
@@ -185,7 +186,9 @@ Category: SOFTWARE
     embed.add_field(name=f"Reconnectoins in the past {reset_time} hours", value=len(connections), inline=False)
     if wd is not None: embed.add_field(name="Warchdog", value=("Active" if wd.is_alive else "Inactive"))
     embed.add_field(name="Disconnect Checker", value=("Active" if dcc.is_alive else "Inactive"))
-    if srv is not None: embed.add_field(name="API Server", value=("Active" if srv.is_alive else "Inactive"))
+    if srv is not None:
+        embed.add_field(name="API Server", value=("Active" if srv.is_alive else "Inactive"))
+        embed.add_field(name="API Hearth Beat", value=("Active" if hb.is_alive else "Inactive"))
     embed.set_author(name="Night Key", url="https://github.com/NightKey", icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
     await channel.send(embed=embed)
     embed = discord.Embed(title="Watched processes' status", color=0x14f9a2)
