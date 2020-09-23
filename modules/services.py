@@ -1,8 +1,7 @@
-import socket, select
 from . import writer, logger
+import socket, select, json
 from hashlib import sha256
 from sys import getsizeof
-import json
 from time import sleep, process_time
 
 lg = logger.logger("api_server", folder="logs")
@@ -33,28 +32,39 @@ class server:
         self.functions = {}
     
     def start(self):
+        """Starts the API server
+        """
         self.commands = {
             'Status':self.get_status_command,
             'Send':self.send_command,
-            'Create':self.create_command
+            'Create':self.create_command,
+            'Remove':self.remove_command
         }
         self.socket.listen()
         print("API Server started")
         self.loop()
 
     def create_command(self, socket):
+        """Creates a command in the discord bot
+        """
         data = self.retrive(socket)
         self.send(self.create_function(self.clients[socket], *data), socket)
 
     def get_status_command(self, socket):
+        """Returns the status to the socket
+        """
         status = self.get_status()
         self.send(status, socket)
 
     def send_command(self, socket):
+        """Sends the message retrived from the socket to the bot.
+        """
         msg = self.retrive(socket)
         self.send(self.send_message(*msg), socket)
 
     def retrive(self, socket):
+        """Retrives a message from the socket. Every message is '\n' terminated
+        """
         ret = ""
         try:
             while True: 
@@ -62,6 +72,8 @@ class server:
                 data = socket.recv(size).decode(encoding="utf-8")
                 if data == '\n':
                     break
+                if data == None:
+                    return None
                 ret += data
             return json.loads(ret)
         except Exception as ex:
@@ -69,6 +81,8 @@ class server:
             return None
     
     def send(self, msg, socket):
+        """Sends a message to the socket. Every message is '\n' terminated
+        """
         try:
             if isinstance(socket, str):
                 for key, value in self.clients.items():
@@ -81,17 +95,17 @@ class server:
                 if len(msg) > 9:
                     tmp = msg[9:]
                     msg = msg[:9]
-                socket.send(str(len(msg)).encode(encoding='utf-8'))
-                socket.send(msg.encode(encoding="utf-8"))
-                if tmp == '': break
+                self.socket.send(str(len(msg)).encode(encoding='utf-8'))
+                self.socket.send(msg.encode(encoding="utf-8"))
+                if tmp == '': tmp = '\n'
+                if msg == '\n': break
                 msg = tmp
-            msg = '\n'
-            socket.send(str(len(msg)).encode(encoding='utf-8'))
-            socket.send(msg.encode(encoding="utf-8"))
         except ConnectionError:
             self.client_lost(socket)
 
     def get_api_key_for(self, name):
+        """Returns the correct API key for a 'name' named program
+        """
         return sha256(f"{self.key}{name}".encode('utf-8')).hexdigest()
 
     def create_function(self, creator, name, help_text, call_back, user_value=False):
@@ -116,7 +130,19 @@ class server:
         self.functions[creator].append(name)
         return True
 
+    def remove_command(self, socket):
+        """Removes a function. Removes all functions, if empty message was sent instead of a function name!
+        """
+        socket.settimeout(2)
+        socket.setblocking(False)
+        name = self.retrive(socket)
+        socket.setblocking(True)
+        if name == "": name = None
+        self.send(self.remove_function(self.clients[socket], name), socket)
+
     def remove_function(self, creator, name=None):
+        """Removes a function from the created functions
+        """
         if creator not in self.functions:
             return False
         if name is None:
@@ -130,6 +156,8 @@ class server:
         return True
 
     def hearth_beat(self):
+        """Sends hearth beat message every 10 secund
+        """
         while self.run:
             start = process_time()
             for client in self.clients:
@@ -141,7 +169,7 @@ class server:
         """Handles the clients.
         """
         while self.run:
-            read_socket, _, exceptio_socket = select.select(self.socket_list, [], self.socket_list)
+            read_socket, _, exception_socket = select.select(self.socket_list, [], self.socket_list)
             for notified_socket in read_socket:
                 if notified_socket == self.socket:
                     self.new_client()
@@ -155,11 +183,13 @@ class server:
                         self.command_retrived(msg, notified_socket)
                     else:
                         print("Error in retriving message")
-            for notified_socket in exceptio_socket:
+            for notified_socket in exception_socket:
                 self.client_lost(notified_socket)
         self.socket.close()
 
     def command_retrived(self, msg, socket):
+        """Retrives commands
+        """
         if msg not in self.commands:
             self.send('Bad request', socket)
             return
@@ -167,6 +197,8 @@ class server:
         self.commands[msg](socket)
     
     def client_lost(self, socket):
+        """Handles loosing connections
+        """
         print("Connection closed")
         if self.remove_function(self.clients[socket]):
             print("Functions removed!", log_only=True)
@@ -175,6 +207,8 @@ class server:
         return
 
     def new_client(self):
+        """handles new clinets
+        """
         client_socket, client_address = self.socket.accept()
         print(f"Incoming connection from {client_address[0]}:{client_address[1]}", log_only=True)
         name = self.retrive(client_socket)
