@@ -63,7 +63,7 @@ class server:
         self.send(self.send_message(*msg), socket)
 
     def retrive(self, socket):
-        """Retrives a message from the socket. Every message is '\n' terminated
+        r"""Retrives a message from the socket. Every message is '\n' terminated
         """
         ret = ""
         try:
@@ -81,7 +81,7 @@ class server:
             return None
     
     def send(self, msg, socket):
-        """Sends a message to the socket. Every message is '\n' terminated
+        r"""Sends a message to the socket. Every message is '\n' terminated
         """
         try:
             if isinstance(socket, str):
@@ -95,8 +95,8 @@ class server:
                 if len(msg) > 9:
                     tmp = msg[9:]
                     msg = msg[:9]
-                self.socket.send(str(len(msg)).encode(encoding='utf-8'))
-                self.socket.send(msg.encode(encoding="utf-8"))
+                socket.send(str(len(msg)).encode(encoding='utf-8'))
+                socket.send(msg.encode(encoding="utf-8"))
                 if tmp == '': tmp = '\n'
                 if msg == '\n': break
                 msg = tmp
