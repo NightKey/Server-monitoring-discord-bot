@@ -157,7 +157,7 @@ class API:
             if process_time() - self.last_heartbeat > 0.11:
                 self.connection_alive = False
                 self.valid = False
-                raise ConnectionError("The heartbeat stopped!")
+                raise ConnectionError(f"The heartbeat stopped.\nLast hearth beat {process_time() - self.last_heartbeat} secunds aggo")
 
     def close(self):
         """Closes the socket, and stops the listener loop.
