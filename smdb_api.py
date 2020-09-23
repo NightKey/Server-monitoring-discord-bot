@@ -39,7 +39,7 @@ class API:
         self.sending = False
         self.running = True
         self.connection_alive = True
-        self.last_hearth_beat = None
+        self.last_heartbeat = None
 
     def send(self, msg):
         """Sends a socket message
@@ -93,7 +93,7 @@ class API:
         else:
             self.socket.setblocking(False)
             self.socket.settimeout(2)
-            self.last_hearth_beat = process_time()
+            self.last_heartbeat = process_time()
             self.valid = True
             self.th = threading.Thread(target=self.listener)
             self.th.name = "Listener Thread"
@@ -132,15 +132,15 @@ class API:
         """Listens for incoming messages, and stops when the program stops running
         """
         while self.running:
-            while self.valid and process_time() - self.last_hearth_beat < 0.12:
+            while self.valid and process_time() - self.last_heartbeat < 0.12:
                 if not self.running: break
                 msg = self.retrive()
                 #print(msg)
                 if msg == None: 
                     sleep(0.01)
                     continue
-                if msg == "hearth beat":
-                    self.last_hearth_beat = process_time()
+                if msg == "heartbeat":
+                    self.last_heartbeat = process_time()
                 if self.sending:
                     self.buffer.append(msg)
                     continue
@@ -154,10 +154,10 @@ class API:
                     else:
                         self.call_list[msg](msg2)
 
-            if process_time() - self.last_hearth_beat > 0.11:
+            if process_time() - self.last_heartbeat > 0.11:
                 self.connection_alive = False
                 self.valid = False
-                raise ConnectionError("The hearth beat stopped!")
+                raise ConnectionError("The heartbeat stopped!")
 
     def close(self):
         """Closes the socket, and stops the listener loop.

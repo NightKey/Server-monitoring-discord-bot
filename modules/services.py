@@ -155,13 +155,13 @@ class server:
             self.functions[creator].remove(name)
         return True
 
-    def hearth_beat(self):
-        """Sends hearth beat message every 10 secund
+    def heartbeat(self):
+        """Sends heartbeat message every 10 secund
         """
         while self.run:
             start = process_time()
             for client in self.clients:
-                self.send('hearth beat', client)
+                self.send('heartbeat', client)
             finish = process_time()
             sleep(10-(finish-start))            
 
