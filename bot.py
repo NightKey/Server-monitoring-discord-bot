@@ -2,18 +2,24 @@ import subprocess
 from platform import system
 from os import system as run
 from os import path, remove, rename
-from sys import argv
+from sys import argv, gettrace
 from time import sleep
 
 interpreter = 'python' if system() == 'Windows' else 'python3'
 restart_counter = 0
+
+def is_debugger():
+    return gettrace() is not None
 
 def main():
     """
     Main loop that handdles starting the server, and deciding what to do after an update.
     """
     global restart_counter
-    server = subprocess.Popen([interpreter, 'bot_core.py'])  #Creates a child process with the 'server.py' script
+    param = []
+    param .extend(argv[1:])
+    if is_debugger(): param.extend(['-nowd', '-api'])
+    server = subprocess.Popen([interpreter, 'bot_core.py', *param])  #Creates a child process with the 'server.py' script
     while server.poll() is None:    #Works while the child process runs
         try:
             if path.exists('Restart'):  #When the server requires a restart
@@ -27,9 +33,9 @@ def main():
                     if path.exists("discord.log"):
                         if path.exists("discord.log.last"): remove("discord.log.last")
                         rename("discord.log", "discord.log.last")
-                    server = subprocess.Popen([interpreter, 'bot_core.py', '-al'])
+                    server = subprocess.Popen([interpreter, 'bot_core.py', '-al', *param])
                 else:
-                    server = subprocess.Popen([interpreter, 'bot_core.py'])
+                    server = subprocess.Popen([interpreter, 'bot_core.py', *param])
             if path.exists('Exit'):
                 remove('Exit')
                 server.kill()
