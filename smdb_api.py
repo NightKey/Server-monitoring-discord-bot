@@ -30,7 +30,7 @@ INPUT_AND_SENDER = 3
 
 class API:
     """API for the 'Server monitoring Discord bot' application."""
-    def __init__(self, name, key, ip="127.0.0.1", port=9600):
+    def __init__(self, name, key, ip="127.0.0.1", port=9600, max_delay = 1):
         """Initialises an API that connects to the 'ip' ip and to the 'port' port with the 'name' name and the 'key' api key
         """
         self.ip = ip
@@ -45,6 +45,7 @@ class API:
         self.running = True
         self.connection_alive = True
         self.last_heartbeat = None
+        self.max_delay = max_delay
 
     def send(self, msg):
         """Sends a socket message
@@ -138,7 +139,7 @@ class API:
         """
         retrived_call=[]
         while self.running:
-            while self.valid and process_time() - self.last_heartbeat < 1:
+            while self.valid and process_time() - self.last_heartbeat < self.max_delay:
                 if not self.running: break
                 msg = self.retrive()
                 if msg == "heartbeat":
@@ -160,7 +161,7 @@ class API:
                     continue
                 if not self.running: break
 
-            if process_time() - self.last_heartbeat >= 1:
+            if process_time() - self.last_heartbeat >= self.max_delay:
                 self.connection_alive = False
                 self.valid = False
                 raise ConnectionError(f"The heartbeat stopped.\nLast hearth beat {process_time() - self.last_heartbeat} secunds aggo")
