@@ -23,6 +23,11 @@ def blockPrint():
 def enablePrint():
     sys.stdout = sys.__stdout__
 
+NOTHING = 0
+USER_INPUT = 1
+SENDER = 2
+INPUT_AND_SENDER = 3
+
 class API:
     """API for the 'Server monitoring Discord bot' application."""
     def __init__(self, name, key, ip="127.0.0.1", port=9600):
@@ -131,28 +136,29 @@ class API:
     def listener(self):
         """Listens for incoming messages, and stops when the program stops running
         """
+        retrived_call=[]
         while self.running:
             while self.valid and process_time() - self.last_heartbeat < 1:
                 if not self.running: break
                 msg = self.retrive()
-                #print(msg)
-                if msg == None: 
-                    sleep(0.01)
-                    continue
                 if msg == "heartbeat":
                     self.last_heartbeat = process_time()
+                if msg == None:
+                    if retrived_call != []:
+                        self.call_list[retrived_call[0]](*retrived_call[1:])
+                        retrived_call = []
+                    sleep(0.01)
+                    continue
                 if self.sending:
                     self.buffer.append(msg)
                     continue
-                if not self.running: break
-                msg2 = self.retrive()
-                #print(msg2)
-                if not self.running or self.sending: break
                 if msg in self.call_list:
-                    if msg2 == "":
-                        self.call_list[msg]()
-                    else:
-                        self.call_list[msg](msg2)
+                    retrived_call.append(msg)
+                    continue
+                if retrived_call != []:
+                    retrived_call.append(msg)
+                    continue
+                if not self.running: break
 
             if process_time() - self.last_heartbeat >= 1:
                 self.connection_alive = False
@@ -165,7 +171,7 @@ class API:
         self.socket.close()
         self.running = False
 
-    def create_function(self, name, help_text, call_back, user_value=False):
+    def create_function(self, name, help_text, call_back, user_value=NOTHING):
         """Creates a function in the connected bot.
         """
         if self.valid:
@@ -191,11 +197,12 @@ if __name__ == "__main__":
     print('Status finished')
     api.send_message("Test", user="Night Key#7326")
     print('Message finished')
-    def sst(msg):
+    def sst(usr, msg):
+        print(usr)
         print(msg)
     api.create_function("SuperSecretTest",
     "It's a super secret test option!\nUsage: &SuperSecretTest <You can say aaaanything>\nCategory: SOFTWARE",
-    sst, True)
+    sst, INPUT_AND_SENDER)
     print('Function created')
     input("Press return to exit")
     api.close()
