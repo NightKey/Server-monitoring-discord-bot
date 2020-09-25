@@ -43,10 +43,10 @@ The messages are case sensitive, and 'Bad request' message will be sent, when a 
 
 #### Keys:
  -  <sub>1</sub>: Send {text_to_send [string], user_name* [string]}
- -  <sub>2</sub>: Create {name [string], help_text [string], call_back [string], user_value** [bool]}
+ -  <sub>2</sub>: Create {name [string], help_text [string], call_back [string], user_value** [integer]}
 
 <sub>* Optional, format: username#1234</sub>
-<sub>** Optional, default value: `False`</sub>
+<sub>** Optional, default value: NOTHING</sub>
 
 ## Status
 
@@ -72,7 +72,16 @@ When using the `Create` command, the parameters will describe the following:
  -  name - The name to call on Discord
  -  help_text - The text to show in the help command
  -  call_back - The value to send to the program (along side with the value from the user, if it's required)
- -  user_value - Whether to send a user value with the command.
+ -  user_value - What to send back with the command.
+
+#### Options to user_value
+
+|Key              |Value|What's sent back with the command                                          |
+|:----------------|:---:|:--------------------------------------------------------------------------|
+|NOTHING          |0    |Nothing                                                                    |
+|USER_INPUT       |1    |Text after the '&<command>' part of the call.                              |
+|SENDER           |2    |Only the sender's username in the following format [name]#[discriminator]. |
+|INPUT_AND_SENDER |3    |Both the text and the sender's name.                                       |
 
 The `help_text` value can be a long text, but if you want to use any specifications on the input it should look the following:
 
