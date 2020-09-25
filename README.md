@@ -1,16 +1,16 @@
 # Server-monitoring-discord-bot
 
 This bot monitors the computer that it's running on.
-For it to work, you will need to create at least one [Discord bot accont](https://discordapp.com/developers/applications/).
+For it to work, you will need to create one [Discord bot account](https://discordapp.com/developers/applications/).
 Both the watchdog, and the bot is capable of running without one another.
 
 *This version is a Windows only version!*
 
 ## The bot
 
-This application is a chat-bot, that is capable of telling the status of the computer, and the watchlist's status (what application is and is not running), it can send a notification message of a process suddenly stopping (If the watchdog process is running).
+This application is a chat-bot that is capable of telling the status of the computer, the watchlist's status (what application is and isn't running), and it can send a notification message of a process suddenly stopping (If the watchdog process is running).
 
-This bot, to function properly needs the following permissions:
+This bot, needs the following permissions to function properly:
 
 * Read Text Channels & See Voice Channels
 * Send Messages
@@ -24,18 +24,18 @@ The bot uses a tcp server as it's API, where plaintext messages will yield resul
  -  default port: `9600`
  -  default IP: `127.0.0.1`
 
-The messages should be sent in two parts. First for the command, and a list of paramaters. These parameters must be in the given order to work. A message should be sent in two parts:
- -  first a one byte long length value for the length of the message
- -  and after the message itself. 
+The messages should be sent in two parts. First for the command, then a list of paramaters. These parameters must be in the given order to work. A message should be sent in two parts:
+ -  first a one byte long value for the length of the message
+ -  the message itself. 
 The responses will be sent the same way.
 
-Upon connections the bot can respond in two ways:
- -  Accepted - When the connection was acepted, and the client was added to the client list.
- -  Denied - The second message will contain the reason: 'Bad API Key' or 'Already connected'.
+Upon validation, the bot can respond in two ways:
+ -  'Accepted' - When the connection was accepted, and the client was added to the client list.
+ -  'Denied' - The second message will contain the reason: 'Bad API Key' or 'Already connected'.
 
 |Request                                  |Return Value  |Content                                        |
 |:----------------------------------------|:-------------|:---------------------------------------------:|
-|[Status](#Status)                        |Json          |The PC's status as it get's sent to the servers|
+|[Status](#Status)                        |Json          |The PC's status as it gets sent to the servers|
 |[Send](#Send)<sup><sub>1</sub></sup>     |Boolean       |If the message was sent successfully           |
 |[Create](#Create)<sup><sub>2</sub></sup> |Boolean       |If the function was added successfully         |
 
@@ -71,7 +71,7 @@ This command allows the program to send messages to the servers the bot is conne
 When using the `Create` command, the parameters will describe the following:
  -  name - The name to call on Discord
  -  help_text - The text to show in the help command
- -  call_back - The value to send to the program (along side with the value from the user, if it's required)
+ -  call_back - The value to send to the program (alongside with the value from the user, if it's required)
  -  user_value - What to send back with the command.
 
 #### Options to user_value
@@ -79,14 +79,14 @@ When using the `Create` command, the parameters will describe the following:
 |Key              |Value|What's sent back with the command                                          |
 |:----------------|:---:|:--------------------------------------------------------------------------|
 |NOTHING          |0    |Nothing                                                                    |
-|USER_INPUT       |1    |Text after the '&<command>' part of the call.                              |
+|USER_INPUT       |1    |Text after the '&[command]' part of the call.                              |
 |SENDER           |2    |Only the sender's username in the following format [name]#[discriminator]. |
 |INPUT_AND_SENDER |3    |Both the text and the sender's name.                                       |
 
 The `help_text` value can be a long text, but if you want to use any specifications on the input it should look the following:
 
 ```
-Help text goes here. This will be displayed, when the help command is used.
+Help text goes here. This will be displayed when the help command is used.
 With linebreak, it will still be displayed, however, you should only use '\n' as linebreak, not actually break a line.
 Usage: &{command_name} <optional input with explanation>
 Category: {a category from the list below}
