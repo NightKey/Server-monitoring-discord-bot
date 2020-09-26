@@ -121,7 +121,8 @@ class server:
     \"\"\"{help_text}\"\"\"
     self.send('{call_back}', '{creator}')
     {usr}
-    {uv}"""
+    {uv}
+    self.send(None, '{creator}')"""
         try:
             exec(body)
         except Exception as ex:
