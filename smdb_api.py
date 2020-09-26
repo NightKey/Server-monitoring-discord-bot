@@ -44,8 +44,8 @@ class API:
         self.sending = False
         self.running = True
         self.connection_alive = True
-        self.last_heartbeat = None
         self.max_delay = max_delay
+        self.socket_list = []
 
     def send(self, msg):
         """Sends a socket message
@@ -67,16 +67,16 @@ class API:
         """
         ret = ""
         try:
-            blockPrint()
             while True: 
+                blockPrint()
                 size = int(self.socket.recv(1).decode('utf-8'))
                 data = self.socket.recv(size).decode('utf-8')
-                if data == '\n':
-                    break
+                enablePrint()
+                if data == '\n': break
                 ret += data
-            enablePrint()
             return json.loads(ret)
         except Exception as ex:
+            enablePrint()
             print(ex)
             return None
     
@@ -97,10 +97,8 @@ class API:
         elif ansvear == None:
             raise ValueError("Bad value retrived from socket.")
         else:
-            self.socket.setblocking(False)
-            self.socket.settimeout(2)
-            self.last_heartbeat = process_time()
             self.valid = True
+            self.socket_list.append(self.socket)
             self.th = threading.Thread(target=self.listener)
             self.th.name = "Listener Thread"
             self.th.start()
@@ -139,32 +137,25 @@ class API:
         """
         retrived_call=[]
         while self.running:
-            while self.valid and process_time() - self.last_heartbeat < self.max_delay:
-                if not self.running: break
-                msg = self.retrive()
-                if msg == "heartbeat":
-                    self.last_heartbeat = process_time()
-                if msg == None:
-                    if retrived_call != []:
+            while self.valid and self.connection_alive:
+                read_socket, _, exception_socket = select.select(self.socket_list, [], self.socket_list)
+                if read_socket != []:
+                    msg = self.retrive()
+                    if self.sending:
+                        self.buffer.append(msg)
+                    elif msg in self.call_list:
+                        retrived_call.append(msg)
+                    elif msg is None and retrived_call != []:
                         self.call_list[retrived_call[0]](*retrived_call[1:])
                         retrived_call = []
-                    sleep(0.01)
-                    continue
-                if self.sending:
-                    self.buffer.append(msg)
-                    continue
-                if msg in self.call_list:
-                    retrived_call.append(msg)
-                    continue
-                if retrived_call != []:
-                    retrived_call.append(msg)
-                    continue
-                if not self.running: break
+                    elif retrived_call != []:
+                        retrived_call.append(msg)
+                if exception_socket != []:
+                    self.connection_alive = False
+                    self.socket_list = []
 
-            if process_time() - self.last_heartbeat >= self.max_delay:
-                self.connection_alive = False
-                self.valid = False
-                raise ConnectionError(f"The heartbeat stopped.\nLast hearth beat {process_time() - self.last_heartbeat} secunds aggo")
+            try: self.validate()
+            except: pass
 
     def close(self):
         """Closes the socket, and stops the listener loop.
