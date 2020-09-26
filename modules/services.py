@@ -116,7 +116,7 @@ class server:
         print(f'Creating function with the call back {call_back}')
         print(f'Creating function with the creator as {creator}')
         uv=f"self.send(_input, '{creator}')" if user_value in [1,3] else ''
-        usr=f"self.send('#'.join((sender.name, (str)(sender.discriminator))), '{creator}')" if user_value in [2,3] else ''
+        usr=f"self.send(sender, '{creator}')" if user_value in [2,3] else ''
         body = f"""def {name}(self, sender, _input):
     \"\"\"{help_text}\"\"\"
     self.send('{call_back}', '{creator}')

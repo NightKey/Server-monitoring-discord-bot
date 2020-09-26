@@ -619,7 +619,7 @@ async def on_message(message):
                 await message.add_reaction("dot:577128688433496073")
                 try:
                     if cmd in linking.keys(): await linking[cmd](message.channel, etc)
-                    else: outside_options[cmd](_server, message.author, etc)
+                    else: outside_options[cmd](_server, (str)(message.author.id), etc)
                 except Exception as ex:
                     await message.channel.send(f"Error runnig the {cmd} command: {type(ex)} -> {ex}")
             else:
@@ -678,7 +678,7 @@ def send_message(msg, user=None):
         return True
     else:
         for usr in client.users:
-            if usr.name == user.split('#')[0] and usr.discriminator == user.split('#')[1]:
+            if (str)(usr.id) == user:
                 if usr.dm_channel is not None:
                     loop.create_task(usr.dm_channel.send(msg))
                     return True

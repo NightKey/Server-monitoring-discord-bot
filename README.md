@@ -42,7 +42,7 @@ Upon validation, the bot can respond in two ways:
 The messages are case sensitive, and 'Bad request' message will be sent, when a message is not applicable.
 
 #### Keys:
- -  <sub>1</sub>: Send {text_to_send [string], user_name* [string]}
+ -  <sub>1</sub>: Send {text_to_send [string], user_id* [string]}
  -  <sub>2</sub>: Create {name [string], help_text [string], call_back [string], user_value** [integer]}
 
 <sub>* Optional, format: username#1234</sub>
@@ -65,6 +65,7 @@ The Status' Json value has the following format:
 ## Send
 
 This command allows the program to send messages to the servers the bot is connected to, or to individual users. This message can be formatted, but can only be string message.
+To send message to a specific user, the user's ID must be provided in the 'user_id'. For specific channels, the channel ID must be provided.
 
 ## Create
 
@@ -76,12 +77,12 @@ When using the `Create` command, the parameters will describe the following:
 
 #### Options to user_value
 
-|Key              |Value|What's sent back with the command                                          |
-|:----------------|:---:|:--------------------------------------------------------------------------|
-|NOTHING          |0    |Nothing                                                                    |
-|USER_INPUT       |1    |Text after the '&[command]' part of the call.                              |
-|SENDER           |2    |Only the sender's username in the following format [name]#[discriminator]. |
-|INPUT_AND_SENDER |3    |Both the text and the sender's name.                                       |
+|Key              |Value|What's sent back with the command               |
+|:----------------|:---:|:-----------------------------------------------|
+|NOTHING          |0    |Nothing                                         |
+|USER_INPUT       |1    |Text after the '&[command]' part of the call.   |
+|SENDER           |2    |Only the sender's user ID.                      |
+|INPUT_AND_SENDER |3    |Both the text and the sender's name.            |
 
 The `help_text` value can be a long text, but if you want to use any specifications on the input it should look the following:
 
