@@ -31,7 +31,6 @@ was_online=False
 id = None
 lg = logger.logger("bot", folder="logs")
 dc_time = None
-what = ""
 bar_size=18
 connections = []
 channels = ["commands"]
@@ -51,12 +50,12 @@ writer = writer.writer("Bot")
 print = split   #Changed print to the split function
 client = discord.Client(heartbeat_timeout=120)       #Creates a client instance using the discord  module
 
-def play():
+def play(link):
     """Opens an URL in the default browser
 Category: SERVER
     """
-    print(f"The url was {what}", print_only=True)
-    webbrowser.open(what)
+    print(f"The url was {link}", print_only=True)
+    webbrowser.open(link)
 
 def signal(what):
     """
@@ -65,9 +64,6 @@ def signal(what):
     try: _server.run = False
     except: pass
     with open(what, 'w') as _: pass   
-
-player = Thread(target=play)
-player.name = "Player"
 
 def enable_debug_logger():
     _logger = logging.getLogger('discord')
@@ -445,10 +441,8 @@ async def open_browser(channel, link):
 Usage: &open <url to open>
 Category: SOFTWARE   
     """
-    global what
-    what = link
-    player.start()
-    await channel.send('Started playing the link')
+    if play(link): await channel.send('Started playing the link')
+    else:   await channel.send("Couldn't open the link")
 
 async def set_bar(channel, value):
     """Sets the bars' widht to the given value in total character number (the default is 25)
