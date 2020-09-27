@@ -154,23 +154,25 @@ class API:
         retrived_call=[]
         while self.running:
             while self.valid and self.connection_alive:
-                read_socket, _, exception_socket = select.select(self.socket_list, [], self.socket_list)
-                if read_socket != []:
-                    msg = self.retrive()
-                    if self.sending:
-                        self.buffer.append(msg)
-                    elif msg in self.call_list:
-                        retrived_call.append(msg)
-                    elif msg is None and retrived_call != []:
-                        call = threading.Thread(target=self.call_list[retrived_call[0]], args=[*retrived_call[1:], ])
-                        call.name = self.call_list[retrived_call[0]]
-                        retrived_call = []
-                        call.start()
-                    elif retrived_call != []:
-                        retrived_call.append(msg)
-                if exception_socket != []:
-                    self.connection_alive = False
-                    self.socket_list = []
+                try:
+                    read_socket, _, exception_socket = select.select(self.socket_list, [], self.socket_list)
+                    if read_socket != []:
+                        msg = self.retrive()
+                        if self.sending:
+                            self.buffer.append(msg)
+                        elif msg in self.call_list:
+                            retrived_call.append(msg)
+                        elif msg is None and retrived_call != []:
+                            call = threading.Thread(target=self.call_list[retrived_call[0]], args=[*retrived_call[1:], ])
+                            call.name = self.call_list[retrived_call[0]]
+                            retrived_call = []
+                            call.start()
+                        elif retrived_call != []:
+                            retrived_call.append(msg)
+                    if exception_socket != []:
+                        self.connection_alive = False
+                        self.socket_list = []
+                except: pass
 
             try: self.validate()
             except: pass
@@ -180,6 +182,8 @@ class API:
         """
         self.socket.close()
         self.running = False
+        self.valid = False
+        self.connection_alive = False
 
     def create_function(self, name, help_text, call_back, user_value=NOTHING):
         """Creates a function in the connected bot.
