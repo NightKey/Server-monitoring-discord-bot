@@ -16,7 +16,7 @@ writer = writer.writer("API")
 print = split   #Changed print to the split function
 
 class server:
-    def __init__(self, linking_editor, get_status, send_message, ip='127.0.0.1', port=9600):
+    def __init__(self, linking_editor, get_status, send_message, get_user, ip='127.0.0.1', port=9600):
         self.ip = ip
         self.port = port
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -30,6 +30,7 @@ class server:
         self.get_status = get_status
         self.send_message = send_message
         self.functions = {}
+        self.get_user = get_user
     
     def start(self):
         """Starts the API server
@@ -38,7 +39,8 @@ class server:
             'Status':self.get_status_command,
             'Send':self.send_command,
             'Create':self.create_command,
-            'Remove':self.remove_command
+            'Remove':self.remove_command,
+            'UserName':self.return_usrname
         }
         self.socket.listen()
         print("API Server started")
@@ -160,15 +162,9 @@ class server:
             self.functions[creator].remove(name)
         return True
 
-    def heartbeat(self):
-        """Sends heartbeat message every 10 secund
-        """
-        while self.run:
-            start = process_time()
-            for client in self.clients:
-                self.send('heartbeat', client)
-            finish = process_time()
-            sleep(10-(finish-start))            
+    def return_usrname(self, socket):
+        key = self.retrive(socket)
+        self.send(self.get_user(key), socket)
 
     def loop(self):
         """Handles the clients.

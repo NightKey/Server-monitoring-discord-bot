@@ -117,6 +117,17 @@ class API:
             return tmp
         else: raise NotValidatedError()
     
+    def get_user_name(self, key):
+        self.sending = True
+        self.send('UserName')
+        self.send(key)
+        while self.buffer == []:
+            sleep(0.1)
+        self.sending = False
+        tmp = self.buffer[0]
+        self.buffer = []
+        return tmp if tmp is not None else "unknown"
+
     def send_message(self, message, user=None):
         """Sends a message trough the discord bot
         """
@@ -146,8 +157,10 @@ class API:
                     elif msg in self.call_list:
                         retrived_call.append(msg)
                     elif msg is None and retrived_call != []:
-                        self.call_list[retrived_call[0]](*retrived_call[1:])
+                        call = threading.Thread(target=self.call_list[retrived_call[0]], args=[*retrived_call[1:], ])
+                        call.name = self.call_list[retrived_call[0]]
                         retrived_call = []
+                        call.start()
                     elif retrived_call != []:
                         retrived_call.append(msg)
                 if exception_socket != []:
@@ -187,11 +200,12 @@ if __name__ == "__main__":
     print('Validation finished')
     print(api.get_status())
     print('Status finished')
-    api.send_message("Test", user="Night Key#7326")
+    api.send_message("Test", user="165892968283242497")
     print('Message finished')
     def sst(usr, msg):
-        print(usr)
+        print(api.get_user_name(usr))
         print(msg)
+        api.send_message(msg, usr)
     api.create_function("SuperSecretTest",
     "It's a super secret test option!\nUsage: &SuperSecretTest <You can say aaaanything>\nCategory: SOFTWARE",
     sst, INPUT_AND_SENDER)

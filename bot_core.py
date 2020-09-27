@@ -604,6 +604,11 @@ categories = {
     'BOT':"Anything that interacts with the bot's workings."
 }
 
+def get_user(key):
+    for usr in client.users:
+        if (str)(usr.id) == key:
+            return usr.name
+
 @client.event
 async def on_message(message):
     """This get's called when a message was sent to the server. It checks for all the usable commands, and executes them, if they were sent to the correct channel.
@@ -685,9 +690,11 @@ def send_message(msg, user=None):
                 else:
                     loop.create_task(usr.create_dm())
                     while usr.dm_channel is None:
-                        sleep(0.1)
+                        sleep(0.01)
                     loop.create_task(usr.dm_channel.send(msg))
                     return True
+        else:
+            return False
 
 def runner(loop):
     """Runs the needed things in a way, the watchdog can access the bot client."""
@@ -722,7 +729,7 @@ if __name__ == "__main__":
         _watchdog = watchdog.watchdog(loop, client, process_list)
         if "-api" in os.sys.argv:
             print("Setting up the services")
-            _server = server(edit_linking, get_status, send_message)
+            _server = server(edit_linking, get_status, send_message, get_user)
         print('Starting all processes', print_only=True)
         runner(loop)
     except Exception as ex:
