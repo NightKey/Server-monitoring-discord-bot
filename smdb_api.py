@@ -46,6 +46,7 @@ class API:
         self.connection_alive = True
         self.max_delay = max_delay
         self.socket_list = []
+        self.created_function_list=[]
 
     def send(self, msg):
         """Sends a socket message
@@ -102,6 +103,10 @@ class API:
             self.th = threading.Thread(target=self.listener)
             self.th.name = "Listener Thread"
             self.th.start()
+            if not self.connection_alive:
+                self.connection_alive = True
+                for item in self.created_function_list:
+                    self.create_function(*item)
 
     def get_status(self):
         """Gets the bot's status
@@ -180,6 +185,7 @@ class API:
         """Creates a function in the connected bot.
         """
         if self.valid:
+            self.created_function_list.append([name, help_text, call_back, user_value])
             self.sending = True
             self.send("Create")
             self.send([name, help_text, name, user_value])
