@@ -50,6 +50,8 @@ class server:
         """Creates a command in the discord bot
         """
         data = self.retrive(socket)
+        if data is None:
+            return
         self.send(self.create_function(self.clients[socket], *data), socket)
 
     def get_status_command(self, socket):
@@ -62,6 +64,8 @@ class server:
         """Sends the message retrived from the socket to the bot.
         """
         msg = self.retrive(socket)
+        if msg is None:
+            return
         self.send(self.send_message(*msg), socket)
 
     def retrive(self, socket):
@@ -71,6 +75,10 @@ class server:
         try:
             while True: 
                 size = int(socket.recv(1).decode('utf-8'))
+                try: int(size)
+                except: 
+                    self.client_lost(socket)
+                    return None
                 data = socket.recv(size).decode(encoding="utf-8")
                 if data == '\n':
                     break
@@ -141,9 +149,8 @@ class server:
         """Removes a function. Removes all functions, if empty message was sent instead of a function name!
         """
         socket.settimeout(2)
-        socket.setblocking(False)
         name = self.retrive(socket)
-        socket.setblocking(True)
+        socket.settimeout(30)
         if name == "": name = None
         self.send(self.remove_function(self.clients[socket], name), socket)
 
@@ -164,6 +171,8 @@ class server:
 
     def return_usrname(self, socket):
         key = self.retrive(socket)
+        if key is None:
+            return
         self.send(self.get_user(key), socket)
 
     def loop(self):
@@ -211,6 +220,7 @@ class server:
         """handles new clinets
         """
         client_socket, client_address = self.socket.accept()
+        client_socket.settimeout(30)
         print(f"Incoming connection from {client_address[0]}:{client_address[1]}", log_only=True)
         name = self.retrive(client_socket)
         key = self.retrive(client_socket)
