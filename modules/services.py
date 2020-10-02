@@ -74,9 +74,9 @@ class server:
         ret = ""
         try:
             while True: 
-                size = int(socket.recv(1).decode('utf-8'))
-                try: int(size)
-                except: 
+                size = socket.recv(1).decode('utf-8')
+                try: size = int(size)
+                except:
                     self.client_lost(socket)
                     return None
                 data = socket.recv(size).decode(encoding="utf-8")
@@ -209,6 +209,7 @@ class server:
     def client_lost(self, socket):
         """Handles loosing connections
         """
+        if socket not in self.clients: return
         print("Connection closed")
         if self.remove_function(self.clients[socket]):
             print("Functions removed!", log_only=True)
