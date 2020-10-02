@@ -20,9 +20,6 @@ def main():
     param = []
     param .extend(argv[1:])
     if is_debugger(): param.extend(['-nowd', '-api'])
-    print("Checking for updates....")
-    run(f"git pull > {dnull}")
-    print("Starting Discordbot.....")
     server = subprocess.Popen([interpreter, 'bot_core.py', *param])  #Creates a child process with the 'server.py' script
     while server.poll() is None:    #Works while the child process runs
         try:

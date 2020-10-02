@@ -713,6 +713,7 @@ if __name__ == "__main__":
     try:
         print('---------------------------------------------------------------------', log_only=True)
         print('Program started', log_only=True)
+        updater(None)
         load()
         if '-al' in os.sys.argv:
             print("Starting discord logger", print_only=True)
