@@ -34,11 +34,9 @@ dc_time = None
 bar_size=18
 connections = []
 channels = ["commands"]
-dcc = None
-wd = None
-srv = None
 is_running = True
 errors = {}
+threads = {}
 
 def split(text, error=False, log_only=False, print_only=False):
     """Logs to both stdout and a log file, using both the writer, and the logger module
@@ -55,7 +53,7 @@ def play(link):
 Category: SERVER
     """
     print(f"The url was {link}", print_only=True)
-    webbrowser.open(link)
+    return webbrowser.open(link)
 
 def signal(what):
     """
@@ -167,7 +165,7 @@ def get_status():
     """Callback function for services.py. Returns the bot's inner status"""
     status = {}
     status['Network'] = "Available" if is_running else "Unavailable"
-    status["SupportingFunctions"] = {"Watchdog":"Active" if wd is not None and wd.is_alive else "Inactive", "DisconnectChecker":"Active" if dcc.is_alive else "Inactive"}
+    status["SupportingFunctions"] = {name:("Active" if thread.is_alive else "Inactive") for name, thread in threads}
     status["Ping"] = int(client.latency*1000)
     return status
 
@@ -179,10 +177,8 @@ Category: SOFTWARE
     process_list = scann(process_list, psutil.process_iter())
     embed = discord.Embed(title="Interal status", color=0x14f9a2)
     embed.add_field(name=f"Reconnectoins in the past {reset_time} hours", value=len(connections), inline=False)
-    if wd is not None: embed.add_field(name="Warchdog", value=("Active" if wd.is_alive else "Inactive"))
-    embed.add_field(name="Disconnect Checker", value=("Active" if dcc.is_alive else "Inactive"))
-    if srv is not None:
-        embed.add_field(name="API Server", value=("Active" if srv.is_alive else "Inactive"))
+    for name, thread in threads:
+        embed.add_field(name=name, value=("Active" if thread.is_alive else "Inactive"))
     embed.set_author(name="Night Key", url="https://github.com/NightKey", icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
     await channel.send(embed=embed)
     embed = discord.Embed(title="Watched processes' status", color=0x14f9a2)
@@ -690,22 +686,24 @@ def send_message(msg, user=None):
         else:
             return False
 
+def start_thread(name):
+    global threads
+    if name == "Watchdog":
+        threads[name] = Thread(target=_watchdog.run_watchdog, args=[channels,])
+    elif name == "API Server":
+        threads[name] = Thread(target=_server.start)
+    elif name == "Disconnect checker":
+        threads[name] = Thread(target=disconnect_check, args=[loop, channels,])
+    threads[name].name = name
+    threads[name].start()
+
 def runner(loop):
     """Runs the needed things in a way, the watchdog can access the bot client."""
-    global dcc
-    global wd
-    global srv
-    dcc = Thread(target=disconnect_check, args=[loop, channels,])
-    dcc.name = "Disconnect checker"
-    dcc.start()
+    start_thread("Disconnect checker")
     if '-nowd' not in os.sys.argv:
-        wd = Thread(target=_watchdog.run_watchdog, args=[channels,])
-        wd.name = "Watchdog"
-        wd.start()
+        start_thread("Watchdog")
     if "-api" in os.sys.argv:
-        srv = Thread(target=_server.start)
-        srv.name = "API Server"
-        srv.start()
+        start_thread("API Server")
     loop.create_task(client.start(token))
     loop.run_forever()
     
