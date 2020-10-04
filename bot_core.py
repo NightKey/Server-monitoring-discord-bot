@@ -165,7 +165,7 @@ def get_status():
     """Callback function for services.py. Returns the bot's inner status"""
     status = {}
     status['Network'] = "Available" if is_running else "Unavailable"
-    status["SupportingFunctions"] = {name:("Active" if thread.is_alive else "Inactive") for name, thread in threads}
+    status["SupportingFunctions"] = {name:("Active" if thread.is_alive else "Inactive") for name, thread in threads.items()}
     status["Ping"] = int(client.latency*1000)
     return status
 
@@ -177,7 +177,7 @@ Category: SOFTWARE
     process_list = scann(process_list, psutil.process_iter())
     embed = discord.Embed(title="Interal status", color=0x14f9a2)
     embed.add_field(name=f"Reconnectoins in the past {reset_time} hours", value=len(connections), inline=False)
-    for name, thread in threads:
+    for name, thread in threads.items():
         embed.add_field(name=name, value=("Active" if thread.is_alive else "Inactive"))
     embed.set_author(name="Night Key", url="https://github.com/NightKey", icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
     await channel.send(embed=embed)
