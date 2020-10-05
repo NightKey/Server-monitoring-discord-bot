@@ -37,6 +37,9 @@ channels = ["commands"]
 is_running = True
 errors = {}
 threads = {}
+loop = None
+_watchdog = None
+_server = None
 
 def split(text, error=False, log_only=False, print_only=False):
     """Logs to both stdout and a log file, using both the writer, and the logger module
@@ -78,7 +81,8 @@ Category: BOT
     if updater.main():
         if channel is not None:
             await channel.send("Restarting...")
-        await client.logout()
+        try: await client.logout()
+        except: pass
         signal('Restart')
     else:
         if channel is not None:
@@ -264,18 +268,20 @@ It does a system scann for the running programs.
                 os.remove("Offline")
                 check_process_list()
                 _watchdog.was_restarted()
-                difference = datetime.datetime.now() - datetime.datetime.fromtimestamp(float(td))
-                await channel.send(f"Bot restarted after being offline for {str(difference).split('.')[0]}")
+                if '--scilent' not in os.sys.argv:
+                    difference = datetime.datetime.now() - datetime.datetime.fromtimestamp(float(td))
+                    await channel.send(f"Bot restarted after being offline for {str(difference).split('.')[0]}")
                 was_online = True
             elif not was_online:
-                await channel.send("Bot started")
-                check_process_list()
-                await status_check(channel)
+                if '--scilent' not in os.sys.argv:
+                    await channel.send("Bot started")
+                    check_process_list()
+                    await status_check(channel)
                 was_online = True
             else:
                 now = datetime.datetime.now()
                 if dc_time is None: break
-                if (now - dc_time) > datetime.timedelta(seconds=2):
+                if (now - dc_time) > datetime.timedelta(seconds=2) and '--scilent' not in os.sys.argv:
                     await channel.send("Back online!")
                     await channel.send(f"Was offline for {now - dc_time}")
             break
@@ -700,27 +706,31 @@ def start_thread(name):
 def runner(loop):
     """Runs the needed things in a way, the watchdog can access the bot client."""
     start_thread("Disconnect checker")
-    if '-nowd' not in os.sys.argv:
+    if '--nowd' not in os.sys.argv:
         start_thread("Watchdog")
-    if "-api" in os.sys.argv:
+    if "--api" in os.sys.argv:
         start_thread("API Server")
     loop.create_task(client.start(token))
     loop.run_forever()
     
-if __name__ == "__main__":
+def Main(_loop):
     try:
+        global loop
+        global _watchdog
+        global _server
+        global is_running
         print('---------------------------------------------------------------------', log_only=True)
         print('Program started', log_only=True)
-        updater(None)
+        print("Creating loop")
+        loop = _loop
+        loop.create_task(updater(None))
         load()
-        if '-al' in os.sys.argv:
+        if '--al' in os.sys.argv:
             print("Starting discord logger", print_only=True)
             enable_debug_logger()
-        print("Creating loop")
-        loop = asyncio.get_event_loop()
         print('Setting up watchdog')
         _watchdog = watchdog.watchdog(loop, client, process_list)
-        if "-api" in os.sys.argv:
+        if "--api" in os.sys.argv:
             print("Setting up the services")
             _server = server(edit_linking, get_status, send_message, get_user)
         print('Starting all processes', print_only=True)
@@ -741,3 +751,10 @@ if __name__ == "__main__":
         print("Restarting...")
         lg.close()
         signal("Restart")
+
+if __name__ == "__main__":
+    print("Creating bot thread...")
+    Bot = Thread(target=Main, args=[asyncio.get_event_loop(), ])
+    Bot.name = "Bot thread"
+    print("Starting bot thread...")
+    Bot.start()

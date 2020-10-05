@@ -19,7 +19,7 @@ def main():
     global restart_counter
     param = []
     param .extend(argv[1:])
-    if is_debugger(): param.extend(['-nowd', '-api'])
+    if is_debugger(): param.extend(['--nowd', '--api', '--scilent'])
     server = subprocess.Popen([interpreter, 'bot_core.py', *param])  #Creates a child process with the 'server.py' script
     while server.poll() is None:    #Works while the child process runs
         try:
@@ -34,7 +34,7 @@ def main():
                     if path.exists("discord.log"):
                         if path.exists("discord.log.last"): remove("discord.log.last")
                         rename("discord.log", "discord.log.last")
-                    server = subprocess.Popen([interpreter, 'bot_core.py', '-al', *param])
+                    server = subprocess.Popen([interpreter, 'bot_core.py', '--al', *param])
                 else:
                     server = subprocess.Popen([interpreter, 'bot_core.py', *param])
             if path.exists('Exit'):
