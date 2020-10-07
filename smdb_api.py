@@ -81,14 +81,18 @@ class API:
             print(ex)
             return None
     
-    def validate(self):
-        """Validates with the bot, and starts the listener loop, if validation is finished
+    def validate(self, timeout=None):
+        """Validates with the bot, and starts the listener loop, if validation is finished.
+        Time out can be set, so it won't halt the program for ever, if no bot is present. (The timeout will only work for the first validation.)
         """
+        start = process_time()
         while True:
             try:
                 self.socket.connect((self.ip, self.port))
                 break
             except ConnectionRefusedError: pass
+            if timeout is not None and process_time() - start > timeout:
+                return False
         self.send(self.name)
         self.send(self.key)
         ansvear = self.retrive()
@@ -100,9 +104,10 @@ class API:
         else:
             self.valid = True
             self.socket_list.append(self.socket)
-            self.th = threading.Thread(target=self.listener)
-            self.th.name = "Listener Thread"
-            self.th.start()
+            if self.connection_alive:
+                self.th = threading.Thread(target=self.listener)
+                self.th.name = "Listener Thread"
+                self.th.start()
             if not self.connection_alive:
                 self.connection_alive = True
                 for item in self.created_function_list:
@@ -134,7 +139,7 @@ class API:
         return tmp if tmp is not None else "unknown"
 
     def send_message(self, message, user=None):
-        """Sends a message trough the discord bot
+        """Sends a message trough the discord bot.
         """
         if self.valid:
             self.sending = True
@@ -175,7 +180,7 @@ class API:
                 except: pass
 
             try: self.validate()
-            except: pass
+            except Exception as ex: print(f"{type(ex)} -> {ex}")
 
     def close(self):
         """Closes the socket, and stops the listener loop.
