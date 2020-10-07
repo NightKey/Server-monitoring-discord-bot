@@ -81,6 +81,16 @@ class API:
             print(ex)
             return None
     
+    def re_init_commands(self):
+        while not self.connection_alive:
+            pass
+        from copy import deepcopy
+        tmp = deepcopy(self.created_function_list)
+        for item in tmp:
+            self.create_function(*item)
+        del self.tmp
+        del tmp
+
     def validate(self, timeout=None):
         """Validates with the bot, and starts the listener loop, if validation is finished.
         Time out can be set, so it won't halt the program for ever, if no bot is present. (The timeout will only work for the first validation.)
@@ -109,9 +119,9 @@ class API:
                 self.th.name = "Listener Thread"
                 self.th.start()
             if not self.connection_alive:
-                self.connection_alive = True
-                for item in self.created_function_list:
-                    self.create_function(*item)
+                self.tmp = threading.Thread(target=self.re_init_commands)
+                self.tmp.start()
+                
 
     def get_status(self):
         """Gets the bot's status
@@ -174,12 +184,21 @@ class API:
                             call.start()
                         elif retrived_call != []:
                             retrived_call.append(msg)
+                        elif msg is None:
+                            self.connection_alive = False
+                            self.socket.close()
+                            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                            self.socket_list = []
                     if exception_socket != []:
                         self.connection_alive = False
+                        self.socket.close()
+                        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                         self.socket_list = []
                 except: pass
 
-            try: self.validate()
+            try: 
+                self.validate()
+                self.connection_alive = True
             except Exception as ex: print(f"{type(ex)} -> {ex}")
 
     def close(self):
