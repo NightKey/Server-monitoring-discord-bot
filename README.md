@@ -50,7 +50,7 @@ The messages are case sensitive, and 'Bad request' message will be sent, when a 
  -  <sub>4</sub>: Remove {command_name** [string]}
 
 <sub>* Optional, format: username#1234</sub>
-<sub>** Optional, default value: NOTHING</sub>
+<sub>** Optional, default value: [NOTHING]</sub>
 
 ## Status
 
@@ -77,7 +77,7 @@ When using the `Create` command, the parameters will describe the following:
  -  name - The name to call on Discord
  -  help_text - The text to show in the help command
  -  call_back - The value to send to the program (alongside with the value from the user, if it's required)
- -  user_value - What to send back with the command.
+ -  user_value - What to send back with the command. It excepts a list of values (if nothing, then a list containing 0) of what needs to be returned.
 
 #### Options to user_value
 
@@ -86,7 +86,7 @@ When using the `Create` command, the parameters will describe the following:
 |NOTHING          |0    |Nothing                                         |
 |USER_INPUT       |1    |Text after the '&[command]' part of the call.   |
 |SENDER           |2    |Only the sender's user ID.                      |
-|INPUT_AND_SENDER |3    |Both the text and the sender's name.            |
+|CHANNEL          |4    |The cannel's ID get's returned.                 |
 
 The `help_text` value can be a long text, but if you want to use any specifications on the input it should look the following:
 
