@@ -26,7 +26,7 @@ def enablePrint():
 NOTHING = 0
 USER_INPUT = 1
 SENDER = 2
-INPUT_AND_SENDER = 3
+CHANNEL = 4
 
 class API:
     """API for the 'Server monitoring Discord bot' application."""
@@ -209,11 +209,11 @@ class API:
         self.valid = False
         self.connection_alive = False
 
-    def create_function(self, name, help_text, call_back, user_value=NOTHING):
+    def create_function(self, name, help_text, call_back, user_value=[NOTHING]):
         """Creates a function in the connected bot.
         """
         if self.valid:
-            self.created_function_list.append([name, help_text, call_back, user_value])
+            self.created_function_list.append([name, help_text, call_back, sum(user_value)])
             self.sending = True
             self.send("Create")
             self.send([name, help_text, name, user_value])
@@ -242,7 +242,7 @@ if __name__ == "__main__":
         api.send_message(msg, usr)
     api.create_function("SuperSecretTest",
     "It's a super secret test option!\nUsage: &SuperSecretTest <You can say aaaanything>\nCategory: SOFTWARE",
-    sst, INPUT_AND_SENDER)
+    sst, [USER_INPUT, SENDER, CHANNEL])
     print('Function created')
     input("Press return to exit")
     api.close()

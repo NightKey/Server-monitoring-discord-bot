@@ -120,19 +120,19 @@ class server:
 
     def create_function(self, creator, name, help_text, call_back, user_value=0):
         """Creates a function with the given parameters, and stores it in the self.functions dictionary, with the 'name' as key
-        user_value: 0 - None, 1 - user_input, 2 - sender name#descriminator, 3 - both
+        user_value: 0 - None, 1 - user_input, 2 - sender name#descriminator, 4 - channel, 3 - 1+2, 5 - 1+4, 6 - 2+4, 7 - 1+2+4
         """
         print(f'Creating function with the name {name}')
         print(f'Creating function with the call back {call_back}')
         print(f'Creating function with the creator as {creator}')
-        uv=f"self.send(_input, '{creator}')" if user_value in [1,3] else ''
-        usr=f"self.send(sender, '{creator}')" if user_value in [2,3] else ''
-        body = f"""def {name}(self, sender, _input):
+        stuff = ''
+        stuff += f"self.send(_input, '{creator}')\n    " if user_value in [1,3, 5, 7] else ''
+        stuff += f"self.send(sender, '{creator}')\n    " if user_value in [2, 3, 6, 7] else ''
+        stuff += f"self.send(channel, '{creator}')\n    " if user_value in [4, 5, 6, 7] else ''
+        body = f"""def {name}(self, channel, sender, _input):
     \"\"\"{help_text}\"\"\"
     self.send('{call_back}', '{creator}')
-    {usr}
-    {uv}
-    self.send(None, '{creator}')"""
+    {stuff}self.send(None, '{creator}')"""
         try:
             exec(body)
         except Exception as ex:
