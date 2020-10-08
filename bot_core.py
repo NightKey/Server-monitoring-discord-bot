@@ -73,22 +73,22 @@ def enable_debug_logger():
     handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
     _logger.addHandler(handler)
 
-async def updater(channel, _=None):
+async def updater(message, _=None):
     """Updates the bot, and restarts it after a successfull update.
 Category: BOT
     """
     from modules import updater
     if updater.main():
-        if channel is not None:
-            await channel.send("Restarting...")
+        if message is not None:
+            await message.channel.send("Restarting...")
         try: await client.logout()
         except: pass
         signal('Restart')
     else:
-        if channel is not None:
-            await channel.send('Nothing was updated!')
+        if message is not None:
+            await message.channel.send('Nothing was updated!')
 
-async def processes(channel):
+async def processes(message):
     text = 'Currently running processes:\n'
     text += f"{(chr(96) * 3)}\n"
     for process in psutil.process_iter():
@@ -103,9 +103,9 @@ async def processes(channel):
         except:
             pass
         if len(text) > 1900:
-            await channel.send(f"{text}{chr(96)*3}")
+            await message.channel.send(f"{text}{chr(96)*3}")
             text = f"{(chr(96) * 3)}\n"
-    await channel.send(f'{text}{chr(96)*3}')
+    await message.channel.send(f'{text}{chr(96)*3}')
 
 def save_cfg():
     tmp = {"token":token, "id":id, 'connections':connections}
@@ -173,7 +173,7 @@ def get_status():
     status["Ping"] = int(client.latency*1000)
     return status
 
-async def status_check(channel, _=None):
+async def status_check(message, _=None):
     """Scanns the system for the running applications, and creates a message depending on the resoults.
 Category: SOFTWARE
     """
@@ -184,13 +184,13 @@ Category: SOFTWARE
     for name, thread in threads.items():
         embed.add_field(name=name, value=("Active" if thread.is_alive() else "Inactive"))
     embed.set_author(name="Night Key", url="https://github.com/NightKey", icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
-    await channel.send(embed=embed)
+    await message.channel.send(embed=embed)
     embed = discord.Embed(title="Watched processes' status", color=0x14f9a2)
     for key, value in process_list.items():
         embed.add_field(name=key, value=("running" if value[0] else "stopped"), inline=True)
         process_list[key] = [False, False]
     else:
-        await channel.send(embed=embed)
+        await message.channel.send(embed=embed)
         embed = discord.Embed(title="Host status", color=0x14f9a2)
         embed.set_footer(text="Created by Night Key @ https://github.com/NightKey", icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
         stts = status.get_graphical(bar_size, True)
@@ -205,9 +205,9 @@ Category: SOFTWARE
                 embed.add_field(name="Battery life", value=value[0])
                 embed.add_field(name="Power status", value=value[1])
                 embed.add_field(name="Status", value=value[2])
-        await channel.send(embed=embed)
+        await message.channel.send(embed=embed)
 
-async def add_process(channel, name):
+async def add_process(message, name):
     """Adds a process to the watchlist. The watchdog automaticalli gets updated with the new list.
 Usage: &add <existing process name>
 Category: BOT
@@ -216,9 +216,9 @@ Category: BOT
     process_list[name] = [False, False]
     with open(os.path.join("data", "process_list.json"), "w") as f:
         json.dump(process_list, f)
-    await channel.send('Process added')
+    await message.channel.send('Process added')
 
-async def remove(channel, name):
+async def remove(message, name):
     """Removes the given program from the watchlist
 Usage: &remove <watched process name>
 Category: BOT
@@ -227,10 +227,28 @@ Category: BOT
     try:
         del process_list[name]
     except:
-        await channel.send(f"Couldn't delete the '{name}' item.")
+        await message.channel.send(f"Couldn't delete the '{name}' item.")
     with open(os.path.join("data", "process_list.json"), "w") as f:
         json.dump(process_list, f)
     
+async def roll(message, value):
+    """Rolls the dice specifyed.
+Usage: &roll <(# of dices)d(# of sides)>
+Category: SERVER
+    """
+    import random
+    if value is None:
+        await message.channel.send("Called incorrectly")
+        return
+    num = int(value.split('d')[0])
+    sides = int(value.split('d')[1])
+    res = []
+    res_s = []
+    for _ in range(num):
+        n = random.randint(1, sides)
+        res.append(n)
+        res_s.append(str(n))
+    await message.channel.send(f"{message.author.name} rolled {sum(res)}")
 
 @client.event
 async def on_message_edit(before, after):
@@ -293,13 +311,13 @@ It does a system scann for the running programs.
     trys = 0
     print("Bot started up correctly!")      #The bot totally started up, and ready.
 
-async def echo(channel, _):
+async def echo(message, _):
     """Responds with 'echo' and shows the current latency
 Category: SERVER
     """
-    await channel.send(f'echo {int(client.latency*1000)} ms')
+    await message.channel.send(f'echo {int(client.latency*1000)} ms')
 
-async def send_link(channel, _):
+async def send_link(message, _):
     """Responds with the currently running bot's invite link
 Category: SERVER
     """
@@ -308,24 +326,24 @@ Category: SERVER
         embed.add_field(name="Server monitoring Discord bot", value=f"You can invite this bot to your server on [this](https://discordapp.com/oauth2/authorize?client_id={id}&scope=bot&permissions=199680) link!")
         embed.add_field(name="Warning!", value="This bot only monitors the server it runs on. If you want it to monitor a server you own, wisit [this](https://github.com/NightKey/Server-monitoring-discord-bot) link instead!")
         embed.color=0xFF00F3
-        await channel.send(embed=embed)
+        await message.channel.send(embed=embed)
     except Exception as ex:
         errors[datetime.datetime.now()] = f"Exception occured during link sending {type(ex)} --> {ex}"
 
-async def stop_bot(channel, _):
+async def stop_bot(message, _):
     """Stops the bot.
 Category: BOT
     """
     global is_running
-    if str(channel) in channels:
-        await channel.send("Exiting")
+    if str(message.channel) in channels:
+        await message.channel.send("Exiting")
         await client.logout()
         _watchdog.stop()
         is_running = False
         signal('Exit')
         exit(0)
 
-async def clear(channel, number):
+async def clear(message, number):
     """Clears all messages from this channel.
 Usage: &clear [optionally the number of messages or @user]
 Category: SERVER
@@ -343,7 +361,7 @@ Category: SERVER
         clean = True
         while clean:
             is_message=False
-            async for message in channel.history():
+            async for message in message.channel.history():
                 skip = False
                 if user is not None and message.author != user:
                     skip = True
@@ -368,30 +386,30 @@ Category: SERVER
             if number != None and count == int(number):
                 break
     except discord.Forbidden:
-        await channel.send("I'm afraid, I can't do that.")
+        await message.channel.send("I'm afraid, I can't do that.")
     except Exception as ex:
-        await channel.send(f'Exception occured during cleaning:\n```{type(ex)} --> {ex}```')
+        await message.channel.send(f'Exception occured during cleaning:\n```{type(ex)} --> {ex}```')
 
-async def get_api_key(channel, name):
+async def get_api_key(message, name):
     """Creates an API key for the given application name.
 Usage: &API <name of the application the key will be created to>
 Category: SOFTWARE
     """
-    await channel.send(_server.get_api_key_for(name))
+    await message.channel.send(_server.get_api_key_for(name))
 
-async def restart(channel, _):
+async def restart(message, _):
     """Restarts the server it's running on. (Admin permissions may be needed for this)
 Category: HARDWARE
     """
-    if str(channel) in channels:
-        await channel.send("Attempting to restart the pc...")
+    if str(message.channel) in channels:
+        await message.channel.send("Attempting to restart the pc...")
         try:
             if os.name == 'nt':
                 command = "shutdown /r /t 15"
             else:
                 command = "shutdown -r -t 15"
             if os.system(command) != 0:
-                await channel.send("Permission denied!")
+                await message.channel.send("Permission denied!")
             else:
                 global is_running
                 _watchdog.stop()
@@ -399,9 +417,9 @@ Category: HARDWARE
                 await client.logout()
                 signal("Exit")
         except Exception as ex:
-            await channel.send(f"Restart failed with the following exception:\n```{type(ex)} -> {str(ex)}```")
+            await message.channel.send(f"Restart failed with the following exception:\n```{type(ex)} -> {str(ex)}```")
 
-async def send_errors(channel, _=None):
+async def send_errors(message, _=None):
     """Sends all stored errors to the channel the command was sent to.
 Category: BOT
     """
@@ -410,12 +428,12 @@ Category: BOT
     for date, item in errors:
         msg += f"{date}: {item}"
     if msg != "":
-        await channel.send(msg)
+        await message.channel.send(msg)
     else:
-        await channel.send("No errors saved")
+        await message.channel.send("No errors saved")
     errors = {}
 
-async def terminate_process(channel, target):
+async def terminate_process(message, target):
     """Terminates the specified process. (Admin permission may be needed for this)
 Usage: &terminate <existing process' name>
 Category: SOFTWARE
@@ -426,7 +444,7 @@ Category: SOFTWARE
                 target = p
                 break
         else:
-            await channel.send("Target not found, process can't be safely killed!")
+            await message.channel.send("Target not found, process can't be safely killed!")
             return
     for process in psutil.process_iter():
         try:
@@ -436,31 +454,31 @@ Category: SOFTWARE
             break
         except Exception as ex:
             errors[datetime.datetime.now()] = f"Exception occured during terminating process '{target}' {type(ex)} --> {ex}"
-    else: await channel.send(f"Error while stopping {target}!\nManual help needed!")
+    else: await message.channel.send(f"Error while stopping {target}!\nManual help needed!")
 
-async def open_browser(channel, link):
+async def open_browser(message, link):
     """Opens a page in the server's browser.
 Usage: &open <url to open>
 Category: SOFTWARE   
     """
-    if play(link): await channel.send('Started playing the link')
-    else:   await channel.send("Couldn't open the link")
+    if play(link): await message.channel.send('Started playing the link')
+    else:   await message.channel.send("Couldn't open the link")
 
-async def set_bar(channel, value):
+async def set_bar(message, value):
     """Sets the bars' widht to the given value in total character number (the default is 25)
 Usage: &bar <integer value to change to>
 Category: BOT
     """
     global bar_size
     bar_size = int(value)
-    await channel.send(f"Barsize set to {bar_size}")
+    await message.channel.send(f"Barsize set to {bar_size}")
 
-async def locker(channel, value):
+async def locker(message, value):
     """Locks and unlocks the linked message.
 Usage: &lock <message_id>
 Category: SERVER
     """
-    msg = await channel.fetch_message(value)
+    msg = await message.channel.fetch_message(value)
     for reaction in msg.reactions:
         if str(reaction) == str("🔒"):
             async for user in reaction.users():
@@ -468,13 +486,13 @@ Category: SERVER
             return
     await msg.add_reaction("🔒")
 
-async def stop_at(channel, value):
+async def stop_at(message, value):
     """Creates a stop signal to the clear command on the message linked.
 It will stop AFTER that message. To keep a message, refer to the '&lock' command.
 Usage: &end <message_id>
 Category: SERVER
     """
-    msg = await channel.fetch_message(value)
+    msg = await message.channel.fetch_message(value)
     for reaction in msg.reactions:
         if str(reaction) == str("🛑"):
             async for user in reaction.users():
@@ -482,7 +500,7 @@ Category: SERVER
             return
     await msg.add_reaction("🛑")
 
-async def help(channel, what):
+async def help(message, what):
     """Returns the help text for the avaleable commands
 Usage: &help <optionaly a specific without the '&' character>
 Category: BOT
@@ -560,8 +578,8 @@ Category: BOT
         embed = discord.Embed(title=f"Help for the {what} command", description=linking[what].__doc__, color=0xb000ff)
         embed.set_author(name="Night Key", url="https://github.com/NightKey", icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
     try:
-        await channel.send(embed=embed)
-    except: await channel.send(f"{what} was not found!")
+        await message.channel.send(embed=embed)
+    except: await message.channel.send(f"{what} was not found!")
 
 linking = {
     "add":add_process,
@@ -579,6 +597,7 @@ linking = {
     "open":open_browser,
     "remove": remove,
     "restart":restart,
+    "roll":roll,
     "terminate":terminate_process,
     "update":updater
 }
@@ -619,8 +638,8 @@ async def on_message(message):
             if cmd in linking.keys() or cmd in outside_options.keys():
                 await message.add_reaction("dot:577128688433496073")
                 try:
-                    if cmd in linking.keys(): await linking[cmd](message.channel, etc)
-                    else: outside_options[cmd](_server, (str)(message.author.id), etc)
+                    if cmd in linking.keys(): await linking[cmd](message, etc)
+                    else: outside_options[cmd](_server, str(message.channel.id), (str)(message.author.id), etc)
                 except Exception as ex:
                     await message.channel.send(f"Error runnig the {cmd} command: {type(ex)} -> {ex}")
             else:
@@ -689,8 +708,11 @@ def send_message(msg, user=None):
                         sleep(0.01)
                     loop.create_task(usr.dm_channel.send(msg))
                     return True
-        else:
-            return False
+        for chn in client.get_all_channels():
+            if (str)(chn.id) == user:
+                chn.send(msg)
+                return True
+        return False
 
 def start_thread(name):
     global threads
