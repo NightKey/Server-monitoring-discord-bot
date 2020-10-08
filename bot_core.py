@@ -178,10 +178,10 @@ async def status_check(message, _=None):
 Category: SOFTWARE
     """
     global process_list
-    if isinstance(message, discord.Message):
+    try:
+        channel = message.channel
+    except:
         channel = message
-    else:
-        channel = channel
     process_list = scann(process_list, psutil.process_iter())
     embed = discord.Embed(title="Interal status", color=0x14f9a2)
     embed.add_field(name=f"Reconnectoins in the past {reset_time} hours", value=len(connections), inline=False)
