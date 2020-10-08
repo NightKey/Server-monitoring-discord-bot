@@ -178,19 +178,23 @@ async def status_check(message, _=None):
 Category: SOFTWARE
     """
     global process_list
+    if isinstance(message, discord.Message):
+        channel = message
+    else:
+        channel = channel
     process_list = scann(process_list, psutil.process_iter())
     embed = discord.Embed(title="Interal status", color=0x14f9a2)
     embed.add_field(name=f"Reconnectoins in the past {reset_time} hours", value=len(connections), inline=False)
     for name, thread in threads.items():
         embed.add_field(name=name, value=("Active" if thread.is_alive() else "Inactive"))
     embed.set_author(name="Night Key", url="https://github.com/NightKey", icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
-    await message.channel.send(embed=embed)
+    await channel.send(embed=embed)
     embed = discord.Embed(title="Watched processes' status", color=0x14f9a2)
     for key, value in process_list.items():
         embed.add_field(name=key, value=("running" if value[0] else "stopped"), inline=True)
         process_list[key] = [False, False]
     else:
-        await message.channel.send(embed=embed)
+        await channel.send(embed=embed)
         embed = discord.Embed(title="Host status", color=0x14f9a2)
         embed.set_footer(text="Created by Night Key @ https://github.com/NightKey", icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
         stts = status.get_graphical(bar_size, True)
@@ -205,7 +209,7 @@ Category: SOFTWARE
                 embed.add_field(name="Battery life", value=value[0])
                 embed.add_field(name="Power status", value=value[1])
                 embed.add_field(name="Status", value=value[2])
-        await message.channel.send(embed=embed)
+        await channel.send(embed=embed)
 
 async def add_process(message, name):
     """Adds a process to the watchlist. The watchdog automaticalli gets updated with the new list.
