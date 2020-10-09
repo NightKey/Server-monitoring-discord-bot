@@ -45,7 +45,7 @@ The messages are case sensitive, and 'Bad request' message will be sent, when a 
 
 #### Keys:
  -  <sub>1</sub>: Send {text_to_send [string], user_id* [string]}
- -  <sub>2</sub>: Create {name [string], help_text [string], call_back [string], user_value** [integer]}
+ -  <sub>2</sub>: Create {name [string], help_text [string], call_back [string], return_key** [integer]}
  -  <sub>3</sub>: UserName {user_id [string]}
  -  <sub>4</sub>: Remove {command_name** [string]}
 
@@ -77,9 +77,9 @@ When using the `Create` command, the parameters will describe the following:
  -  name - The name to call on Discord
  -  help_text - The text to show in the help command
  -  call_back - The value to send to the program (alongside with the value from the user, if it's required)
- -  user_value - What to send back with the command. It excepts a list of values (if nothing, then a list containing 0) of what needs to be returned.
+ -  return_key - What to send back with the command. It excepts a list of values (if nothing, then a list containing 0) of what needs to be returned.
 
-#### Options to user_value
+#### Options to return_key
 
 |Key              |Value|What's sent back with the command               |
 |:----------------|:---:|:-----------------------------------------------|

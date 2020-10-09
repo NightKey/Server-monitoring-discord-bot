@@ -209,14 +209,16 @@ class API:
         self.valid = False
         self.connection_alive = False
 
-    def create_function(self, name, help_text, call_back, user_value=[NOTHING]):
+    def create_function(self, name, help_text, call_back, return_key=[NOTHING]):
         """Creates a function in the connected bot.
         """
         if self.valid:
-            self.created_function_list.append([name, help_text, call_back, sum(user_value)])
+            if isinstance(return_key, (tuple, list)):
+                self.created_function_list.append([name, help_text, call_back, sum(return_key)])
+                return_key = sum(return_key)
             self.sending = True
             self.send("Create")
-            self.send([name, help_text, name, user_value])
+            self.send([name, help_text, name, return_key])
             while self.buffer == []:
                 sleep(0.1)
             tmp = self.buffer[0]
