@@ -77,9 +77,9 @@ When using the `Create` command, the parameters will describe the following:
  -  name - The name to call on Discord
  -  help_text - The text to show in the help command
  -  call_back - The value to send to the program (alongside with the value from the user, if it's required)
- -  return_key - What to send back with the command. It excepts a list of values (if nothing, then a list containing 0) of what needs to be returned.
+ -  return_value - What to send back with the command. It excepts a list of values (if nothing, then a list containing 0) of what needs to be returned.
 
-#### Options to return_key
+#### Options to return_value
 
 |Key              |Value|What's sent back with the command               |
 |:----------------|:---:|:-----------------------------------------------|

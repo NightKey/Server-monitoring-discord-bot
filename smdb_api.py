@@ -209,17 +209,17 @@ class API:
         self.valid = False
         self.connection_alive = False
 
-    def create_function(self, name, help_text, call_back, return_key=[NOTHING]):
+    def create_function(self, name, help_text, call_back, return_value=[NOTHING]):
         """Creates a function in the connected bot.
-        Return order: ChannelID, UserID, UserInput. The returned value depends on the return key, but the order is the same.
+        Return order: ChannelID, UserID, UserInput. The returned value depends on the return value, but the order is the same.
         """
         if self.valid:
-            if isinstance(return_key, (tuple, list)):
-                self.created_function_list.append([name, help_text, call_back, sum(return_key)])
-                return_key = sum(return_key)
+            if isinstance(return_value, (tuple, list)):
+                self.created_function_list.append([name, help_text, call_back, sum(return_value)])
+                return_value = sum(return_value)
             self.sending = True
             self.send("Create")
-            self.send([name, help_text, name, return_key])
+            self.send([name, help_text, name, return_value])
             while self.buffer == []:
                 sleep(0.1)
             tmp = self.buffer[0]
