@@ -108,6 +108,14 @@ The 'Usage: ' line is optional, but if present, it should be formated like that,
 |SOFTWARE          |Anything that interacts with the programs running on the host machine. |
 |BOT               |Anything that interacts with the bot's workings.                       |
 
+### Returns
+
+When it's called, it returns with the following values, in the following order:
+ - The name given in the create call
+ - Channel ID, if required
+ - User ID, if required
+ - User Input, if required
+
 ## UserName
 
 Returns the current name of the selected user, where the user's ID is match the given ID.
