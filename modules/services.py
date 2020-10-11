@@ -126,11 +126,12 @@ class server:
         print(f'Creating function with the call back {call_back}')
         print(f'Creating function with the creator as {creator}')
         stuff = ''
-        stuff += f"self.send(_input, '{creator}')\n    " if user_value in [1,3, 5, 7] else ''
-        stuff += f"self.send(sender, '{creator}')\n    " if user_value in [2, 3, 6, 7] else ''
         stuff += f"self.send(channel, '{creator}')\n    " if user_value in [4, 5, 6, 7] else ''
+        stuff += f"self.send(sender, '{creator}')\n    " if user_value in [2, 3, 6, 7] else ''
+        stuff += f"self.send(_input, '{creator}')\n    " if user_value in [1,3, 5, 7] else ''
         body = f"""def {name}(self, channel, sender, _input):
     \"\"\"{help_text}\"\"\"
+    if _input is None: _input = ""
     self.send('{call_back}', '{creator}')
     {stuff}self.send(None, '{creator}')"""
         try:
