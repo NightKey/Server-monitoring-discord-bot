@@ -211,6 +211,7 @@ class API:
 
     def create_function(self, name, help_text, call_back, return_key=[NOTHING]):
         """Creates a function in the connected bot.
+        Return order: ChannelID, UserID, UserInput. The returned value depends on the return key, but the order is the same.
         """
         if self.valid:
             if isinstance(return_key, (tuple, list)):
@@ -241,10 +242,11 @@ if __name__ == "__main__":
     def sst(usr, msg):
         print(api.get_user_name(usr))
         print(msg)
+        if msg == "": msg = "Empty message"
         api.send_message(msg, usr)
     api.create_function("SuperSecretTest",
     "It's a super secret test option!\nUsage: &SuperSecretTest <You can say aaaanything>\nCategory: SOFTWARE",
-    sst, [USER_INPUT, SENDER, CHANNEL])
+    sst, [USER_INPUT, SENDER])
     print('Function created')
     input("Press return to exit")
     api.close()
