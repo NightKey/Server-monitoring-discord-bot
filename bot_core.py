@@ -37,6 +37,7 @@ channels = ["commands"]
 is_running = True
 errors = {}
 threads = {}
+admins = []
 loop = None
 _watchdog = None
 _server = None
@@ -123,6 +124,7 @@ def load():
     global token    #The discord bot's login tocken
     global id      #The discord bots' ID
     global connections
+    global admins
     print("Loading data...")
     if os.path.exists(os.path.join("data", "bot.cfg")):
         try:
@@ -134,6 +136,7 @@ def load():
                 connections = tmp['connections']
             except:
                 connections = []
+            admins = tmp["admins"]
             print("Data loading finished!")
             del tmp
         except Exception as ex: #incase there is an error, the program deletes the file, and restarts
@@ -148,6 +151,7 @@ def load():
         print("Data not found!")
         token = input("Type in the token: ")
         me = int(input("Type in this bot's user id: "))
+        admins = str(input("Type in the admin user's ID, separated by a coma (,): ")).split(',')
         id = me
         save_cfg()
     check_process_list()
@@ -339,7 +343,7 @@ async def stop_bot(message, _):
 Category: BOT
     """
     global is_running
-    if str(message.channel) in channels:
+    if str(message.channel) in channels or str(message.author.id) in admins:
         await message.channel.send("Exiting")
         await client.logout()
         _watchdog.stop()
@@ -405,7 +409,7 @@ async def restart(message, _):
     """Restarts the server it's running on. (Admin permissions may be needed for this)
 Category: HARDWARE
     """
-    if str(message.channel) in channels:
+    if str(message.channel) in channels or str(message.author.id) in admins:
         await message.channel.send("Attempting to restart the pc...")
         try:
             if os.name == 'nt':
@@ -635,7 +639,7 @@ async def on_message(message):
     global _server
     me = client.get_user(id)
     if message.author != me:
-        if message.content.startswith('&'):
+        if message.content.startswith('&') or message.channel.type == discord.ChannelType.private:
             splt = message.content.replace('&', '').split(' ')
             cmd = splt[0]
             etc = " ".join(splt[1:]) if len(splt) > 1 else None
