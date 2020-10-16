@@ -109,7 +109,7 @@ async def processes(message):
     await message.channel.send(f'{text}{chr(96)*3}')
 
 def save_cfg():
-    tmp = {"token":token, "id":id, 'connections':connections}
+    tmp = {"token":token, "id":id, 'connections':connections, "admins":admins}
     with open(os.path.join("data", "bot.cfg"), "w") as f:
         json.dump(tmp, f)
 
