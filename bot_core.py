@@ -641,7 +641,7 @@ async def on_message(message):
     if message.author != me:
         if message.content.startswith('&') or message.channel.type == discord.ChannelType.private:
             splt = message.content.replace('&', '').split(' ')
-            cmd = splt[0]
+            cmd = splt[0].lower()
             etc = " ".join(splt[1:]) if len(splt) > 1 else None
             if cmd in linking.keys() or cmd in outside_options.keys():
                 await message.add_reaction("dot:577128688433496073")
