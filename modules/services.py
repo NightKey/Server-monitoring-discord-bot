@@ -31,6 +31,9 @@ class server:
         self.send_message = send_message
         self.functions = {}
         self.get_user = get_user
+
+    def get_api_status(self):
+        return {"connections":self.clients.values(), "commands":self.functions.values()}
     
     def start(self):
         """Starts the API server

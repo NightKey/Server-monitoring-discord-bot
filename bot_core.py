@@ -199,6 +199,15 @@ Category: SOFTWARE
         process_list[key] = [False, False]
     else:
         await channel.send(embed=embed)
+        embed = discord.Embed(title="API Status", color=0x14f9a2)
+        api_status = _server.get_api_status()
+        for key, values in api_status.items():
+            if list(values) == []: continue
+            embed.add_field(name=key, value="\u200B", inline=False)
+            for item in values:
+                embed.add_field(value="\u200B", name=item, inline=True)
+        if embed.fields != []:
+            await channel.send(embed=embed)
         embed = discord.Embed(title="Host status", color=0x14f9a2)
         embed.set_footer(text="Created by Night Key @ https://github.com/NightKey", icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
         stts = status.get_graphical(bar_size, True)
