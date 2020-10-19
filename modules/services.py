@@ -123,9 +123,9 @@ class server:
         """Creates a function with the given parameters, and stores it in the self.functions dictionary, with the 'name' as key
         user_value: 0 - None, 1 - user_input, 2 - sender name#descriminator, 4 - channel, 3 - 1+2, 5 - 1+4, 6 - 2+4, 7 - 1+2+4
         """
-        print(f'Creating function with the name {name}')
-        print(f'Creating function with the call back {call_back}')
-        print(f'Creating function with the creator as {creator}')
+        print(f'Creating function with the name {name}', log_only=True)
+        print(f'Creating function with the call back {call_back}', log_only=True)
+        print(f'Creating function with the creator as {creator}', log_only=True)
         stuff = ''
         stuff += f"self.send(channel, '{creator}')\n    " if user_value in [4, 5, 6, 7] else ''
         stuff += f"self.send(sender, '{creator}')\n    " if user_value in [2, 3, 6, 7] else ''
@@ -208,7 +208,7 @@ class server:
         if msg not in self.commands:
             self.send('Bad request', socket)
             return
-        print(f'Command: {msg}')
+        #print(f'Command: {msg}')
         self.commands[msg](socket)
     
     def disconnect(self, socket):
@@ -216,7 +216,7 @@ class server:
         if reason is not None:
             print(f"{self.clients[socket]} disconnected with the following reason: {reason}")
         else:
-            print(f"v disconnected with no reason given.")
+            print(f"{self.clients[socket]} disconnected with no reason given.")
         self.client_lost(socket, called=True)
 
     def client_lost(self, socket, called = False):
@@ -228,7 +228,7 @@ class server:
             print("Functions removed!", log_only=True)
         del self.clients[socket]
         self.socket_list.remove(socket)
-        print("Client removed!")
+        print("Client removed!", log_only=True)
         if called: socket.close()
         return
 
@@ -251,6 +251,6 @@ class server:
             client_socket.close()
             return
         self.send('Accepted', client_socket)
-        print(f"Adding {name} to the connections")
+        print(f"Adding {name} to the connections", log_only=True)
         self.socket_list.append(client_socket)
         self.clients[client_socket] = name
