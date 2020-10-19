@@ -153,23 +153,26 @@ class server:
         socket.settimeout(2)
         name = self.retrive(socket)
         socket.settimeout(30)
-        if name == "": name = None
-        self.send(self.remove_function(self.clients[socket], name), socket)
+        if not name in self.functions[self.clients[socket]]: name = None
+        self.send(self.remove_function(creator=self.clients[socket], name=name), socket)
 
     def remove_function(self, creator, name=None):
         """Removes a function from the created functions
         """
-        if creator not in self.functions:
-            return False
-        if name is None:
-            for name in self.functions[creator]:
+        try:
+            if creator not in self.functions:
+                return False
+            if name is None:
+                for name in self.functions[creator]:
+                    delattr(self, name)
+                del self.functions[creator]
+            else:
+                self.linking_editor(name, True)
                 delattr(self, name)
-            del self.functions[creator]
-        else:
-            self.linking_editor(name, True)
-            delattr(self, name)
-            self.functions[creator].remove(name)
-        return True
+                self.functions[creator].remove(name)
+            return True
+        except Exception as ex:
+            print(f"{type(ex)} -> {ex}")
 
     def return_usrname(self, socket):
         key = self.retrive(socket)
@@ -221,7 +224,7 @@ class server:
         """
         if socket not in self.clients: return
         if not called: print(f"{self.clients[socket]} closed connection.")
-        if self.remove_function(self.clients[socket]):
+        if self.remove_function(creator=self.clients[socket]):
             print("Functions removed!", log_only=True)
         del self.clients[socket]
         self.socket_list.remove(socket)
