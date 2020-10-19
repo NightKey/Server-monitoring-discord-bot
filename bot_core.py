@@ -202,7 +202,7 @@ Category: SOFTWARE
         embed = discord.Embed(title="API Status", color=0x14f9a2)
         api_status = _server.get_api_status()
         for key, values in api_status.items():
-            if list(values) == []: continue
+            if values == []: continue
             embed.add_field(name=key, value="\u200B", inline=False)
             for item in values:
                 embed.add_field(value="\u200B", name=item, inline=True)
