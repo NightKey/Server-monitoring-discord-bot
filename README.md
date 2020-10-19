@@ -33,13 +33,14 @@ Upon validation, the bot can respond in two ways:
  -  'Accepted' - When the connection was accepted, and the client was added to the client list.
  -  'Denied' - The second message will contain the reason: 'Bad API Key' or 'Already connected'.
 
-|Request                                      |Return Value  |Content                                        |
-|:--------------------------------------------|:-------------|:---------------------------------------------:|
-|[Status](#Status)                            |Json          |The PC's status as it gets sent to the servers |
-|[Send](#Send)<sup><sub>1</sub></sup>         |Boolean       |If the message was sent successfully           |
-|[Create](#Create)<sup><sub>2</sub></sup>     |Boolean       |If the function was added successfully         |
-|[UserName](#Username)<sup><sub>3</sub></sup> |String        |Returns the username connected to the ID       |
-|[Remove](#Remove)<sup><sub>4</sub></sup>     |Boolean       |Rempves the selected command from the list     |
+|Request                                          |Return Value  |Content                                        |
+|:------------------------------------------------|:-------------|:---------------------------------------------:|
+|[Status](#Status)                                |Json          |The PC's status as it gets sent to the servers |
+|[Send](#Send)<sup><sub>1</sub></sup>             |Boolean       |If the message was sent successfully           |
+|[Create](#Create)<sup><sub>2</sub></sup>         |Boolean       |If the function was added successfully         |
+|[UserName](#Username)<sup><sub>3</sub></sup>     |String        |Returns the username connected to the ID       |
+|[Remove](#Remove)<sup><sub>4</sub></sup>         |Boolean       |Rempves the selected command from the list     |
+|[Disconnect](#Disconnect)<sup><sub>5</sub></sup> |Nothing       |Safely disconnect, with an optional reason     |
 
 The messages are case sensitive, and 'Bad request' message will be sent, when a message is not applicable.
 
@@ -48,9 +49,11 @@ The messages are case sensitive, and 'Bad request' message will be sent, when a 
  -  <sub>2</sub>: Create {name [string], help_text [string], call_back [string], return_key** [integer]}
  -  <sub>3</sub>: UserName {user_id [string]}
  -  <sub>4</sub>: Remove {command_name** [string]}
+ -  <sub>5</sub>: Disconnect {reason***}
 
 <sub>* Optional, format: username#1234</sub>
 <sub>** Optional, default value: [NOTHING]</sub>
+<sub>*** Optional, default value: None</sub>
 
 ## Status
 
@@ -123,3 +126,7 @@ Returns the current name of the selected user, where the user's ID is match the 
 ## Remove
 
 Can be called with or without a specific name. If called with a command name, it attempts to remove the selected function. When called without any name, removes all functions linked to the socket it was called from.
+
+## Disconnect
+
+Can be used to remove every created command from the server, and close the connection between the server, and the client.

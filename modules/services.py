@@ -40,7 +40,8 @@ class server:
             'Send':self.send_command,
             'Create':self.create_command,
             'Remove':self.remove_command,
-            'UserName':self.return_usrname
+            'UserName':self.return_usrname,
+            'Disconnect':self.disconnect
         }
         self.socket.listen()
         print("API Server started")
@@ -207,15 +208,25 @@ class server:
         print(f'Command: {msg}')
         self.commands[msg](socket)
     
-    def client_lost(self, socket):
+    def disconnect(self, socket):
+        reason = self.retrive(socket)
+        if reason is not None:
+            print(f"{self.clients[socket]} disconnected with the following reason: {reason}")
+        else:
+            print(f"v disconnected with no reason given.")
+        self.client_lost(socket, called=True)
+
+    def client_lost(self, socket, called = False):
         """Handles loosing connections
         """
         if socket not in self.clients: return
-        print("Connection closed")
+        if not called: print(f"{self.clients[socket]} closed connection.")
         if self.remove_function(self.clients[socket]):
             print("Functions removed!", log_only=True)
         del self.clients[socket]
         self.socket_list.remove(socket)
+        print("Client removed!")
+        if called: socket.close()
         return
 
     def new_client(self):

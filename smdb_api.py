@@ -196,18 +196,21 @@ class API:
                         self.socket_list = []
                 except: pass
 
-            try: 
-                self.validate()
-                self.connection_alive = True
+            try:
+                if self.running: 
+                    self.validate()
+                    self.connection_alive = True
             except Exception as ex: print(f"{type(ex)} -> {ex}")
 
-    def close(self):
+    def close(self, reason=None):
         """Closes the socket, and stops the listener loop.
         """
-        self.socket.close()
         self.running = False
         self.valid = False
         self.connection_alive = False
+        self.send("Disconnect")
+        self.send(reason)
+        self.socket.close()
 
     def create_function(self, name, help_text, call_back, return_value=[NOTHING]):
         """Creates a function in the connected bot.
@@ -249,4 +252,4 @@ if __name__ == "__main__":
     sst, [USER_INPUT, SENDER])
     print('Function created')
     input("Press return to exit")
-    api.close()
+    api.close("it's the end of the word!")
