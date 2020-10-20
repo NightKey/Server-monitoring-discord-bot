@@ -194,8 +194,9 @@ def get_status():
     status["Ping"] = int(client.latency*1000)
     return status
 
-async def status_check(message, _=None):
+async def status_check(message, stype="short"):
     """Scanns the system for the running applications, and creates a message depending on the resoults.
+Usage: &status <long if you want to see the API status too>
 Category: SOFTWARE
     """
     global process_list
@@ -216,15 +217,16 @@ Category: SOFTWARE
         process_list[key] = [False, False]
     else:
         await channel.send(embed=embed)
-        embed = discord.Embed(title="API Status", color=0x14f9a2)
-        api_status = _server.get_api_status()
-        for key, values in api_status.items():
-            if values == []: continue
-            embed.add_field(name=key, value="\u200B", inline=False)
-            for item in values:
-                embed.add_field(value="\u200B", name=item, inline=True)
-        if embed.fields != []:
-            await channel.send(embed=embed)
+        if stype.lower() == "long":
+            embed = discord.Embed(title="API Status", color=0x14f9a2)
+            api_status = _server.get_api_status()
+            for key, values in api_status.items():
+                if values == []: continue
+                embed.add_field(name=key, value="\u200B", inline=False)
+                for item in list(values):
+                    embed.add_field(value="\u200B", name=item, inline=True)
+            if embed.fields != []:
+                await channel.send(embed=embed)
         embed = discord.Embed(title="Host status", color=0x14f9a2)
         embed.set_footer(text="Created by Night Key @ https://github.com/NightKey", icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
         stts = status.get_graphical(bar_size, True)
