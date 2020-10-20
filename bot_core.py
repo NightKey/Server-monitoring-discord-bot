@@ -627,8 +627,11 @@ Category: BOT
         save_cfg()
     elif str(message.author.id) in admins and '<@!' in key:
         key = key.replace('<@!', '').replace(">", '')
-        admins.append(key)
-        await message.channel.send(f"{client.get_user(int(key)).split('#')[0]} is now an admin!")
+        if key not in admins:
+            admins.append(key)
+            await message.channel.send(f"{str(client.get_user(int(key))).split('#')[0]} is now an admin!")
+        else:
+            await message.channel.send(f"{str(client.get_user(int(key))).split('#')[0]} is already an admin!")
         save_cfg()
 
 linking = {
