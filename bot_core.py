@@ -41,6 +41,7 @@ admins = []
 loop = None
 _watchdog = None
 _server = None
+admin_key = None
 
 def split(text, error=False, log_only=False, print_only=False):
     """Logs to both stdout and a log file, using both the writer, and the logger module
@@ -108,8 +109,18 @@ async def processes(message):
             text = f"{(chr(96) * 3)}\n"
     await message.channel.send(f'{text}{chr(96)*3}')
 
+def get_passcode():
+    from hashlib import sha256
+    from random import randint
+    passcode = ""
+    for _ in range(60):
+        passcode += chr(randint(33, 126))
+    key = sha256(passcode.encode(encoding="utf-8")).hexdigest()
+    print(f"Your key is {key}")
+    return key
+
 def save_cfg():
-    tmp = {"token":token, "id":id, 'connections':connections, "admins":admins}
+    tmp = {"token":token, "id":id, 'connections':connections, "admins":admins, "admin key": admin_key}
     with open(os.path.join("data", "bot.cfg"), "w") as f:
         json.dump(tmp, f)
 
@@ -125,6 +136,7 @@ def load():
     global id      #The discord bots' ID
     global connections
     global admins
+    global admin_key
     print("Loading data...")
     if os.path.exists(os.path.join("data", "bot.cfg")):
         try:
@@ -137,6 +149,11 @@ def load():
             except:
                 connections = []
             admins = tmp["admins"]
+            try:
+                admin_key = tmp['admin key']
+            except:
+                admin_key = get_passcode()
+                save_cfg()
             print("Data loading finished!")
             del tmp
         except Exception as ex: #incase there is an error, the program deletes the file, and restarts
@@ -348,7 +365,7 @@ Category: SERVER
         errors[datetime.datetime.now()] = f"Exception occured during link sending {type(ex)} --> {ex}"
 
 async def stop_bot(message, _):
-    """Stops the bot.
+    """Stops the bot. To use this command, you need to be an admin, or need to call it from a selected channel!
 Category: BOT
     """
     global is_running
@@ -415,7 +432,8 @@ Category: SOFTWARE
     await message.channel.send(_server.get_api_key_for(name))
 
 async def restart(message, _):
-    """Restarts the server it's running on. (Admin permissions may be needed for this)
+    """Restarts the server it's running on. Admin permissions may be needed for this on the host.
+To use this command, you need to be an admin, or need to call it from a selected channel!
 Category: HARDWARE
     """
     if str(message.channel) in channels or str(message.author.id) in admins:
@@ -598,8 +616,24 @@ Category: BOT
         await message.channel.send(embed=embed)
     except: await message.channel.send(f"{what} was not found!")
 
+async def add_admin(message, key):
+    """Adds an admin using either the admin key, or if an admin uses it, and the other is a user, it adds the user as an admin.
+Usage: &admin <admin key or mention a user>
+Category: BOT
+    """
+    if key == admin_key and str(message.author.id) not in admins:
+        admins.append(str(message.author.id))
+        await message.channel.send("You are now an admin!")
+        save_cfg()
+    elif str(message.author.id) in admins and '<@!' in key:
+        key = key.replace('<@!', '').replace(">", '')
+        admins.append(key)
+        await message.channel.send(f"{client.get_user(int(key)).split('#')[0]} is now an admin!")
+        save_cfg()
+
 linking = {
     "add":add_process,
+    "admin":add_admin,
     "API":get_api_key,
     "bar":set_bar,
     "clear":clear,
