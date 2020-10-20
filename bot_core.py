@@ -614,6 +614,9 @@ Category: BOT
     elif f"{what}" in linking.keys():
         embed = discord.Embed(title=f"Help for the {what} command", description=linking[what].__doc__, color=0xb000ff)
         embed.set_author(name="Night Key", url="https://github.com/NightKey", icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
+    elif f"{what}" in outside_options.keys():
+        embed = discord.Embed(title=f"Help for the {what} command", description=linking[what].__doc__, color=0xb000ff)
+        embed.set_author(name="Night Key", url="https://github.com/NightKey", icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
     try:
         await message.channel.send(embed=embed)
     except: await message.channel.send(f"{what} was not found!")
