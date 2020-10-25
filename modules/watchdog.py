@@ -43,6 +43,9 @@ class watchdog():
             if key not in tmp:
                 del self.process_list[key]
 
+    def is_ready(self):
+        return self._ready
+
     def ready(self):
         self._ready = True
 

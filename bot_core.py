@@ -290,8 +290,8 @@ Category: SERVER
 async def on_message_edit(before, after):
     await on_message(after)
 
-def offline(is_false):
-    if not is_false:
+def offline(online):
+    if not online:
         print("Connection lost!")
         global dc_time
         dc_time = datetime.datetime.now()
@@ -818,16 +818,17 @@ def Main(_loop):
         runner(loop)
     except Exception as ex:
         print(str(ex), error=True)
-        print("Sending stop signal to discord...")
-        loop.create_task(client.logout())
-        loop.create_task(client.close())
+        if _watchdog.is_ready():
+            print("Sending stop signal to discord...")
+            loop.create_task(client.logout())
+            loop.create_task(client.close())
+            print("Waiting for discord to close...")
+            while not client.is_closed():
+                pass
         print("Stopping watchdogs")
         _watchdog.create_tmp()
         print("Stopping disconnect checker")
         is_running = False
-        print("Waiting for discord to close...")
-        while not client.is_closed():
-            pass
         loop.stop()
         print("Restarting...")
         lg.close()
