@@ -16,21 +16,61 @@ writer = writer.writer("API")
 print = split   #Changed print to the split function
 
 class server:
-    def __init__(self, linking_editor, get_status, send_message, get_user, ip='127.0.0.1', port=9600):
-        self.ip = ip
-        self.port = port
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.socket.bind((self.ip, self.port))
-        self.socket_list = [self.socket]
+    def __init__(self, linking_editor, get_status, send_message, get_user):
         self.clients = {}
-        self.key = f"{self.ip}{self.port}"
         self.run = True
         self.linking_editor = linking_editor
         self.get_status = get_status
         self.send_message = send_message
         self.functions = {}
         self.get_user = get_user
+        self._load_settings()
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.socket.bind((self.ip, self.port))
+        self.socket_list = [self.socket]
+
+    def change_ip_port(self, ip, port):
+        self.ip = ip
+        self.port = port
+        self.key = self._generate_key()
+        self._save_settings()
+
+    def _load_settings(self):
+        from os import path
+        settings_path = path.join("data", "server.cfg")
+        if path.exists(settings_path):
+            try:
+                with open(settings_path, "r") as settings_file:
+                    settings = json.load(settings_file)
+                self.ip = settings["ip"]
+                self.port = settings["port"]
+                self.key = settings["key"]
+                self.settings = "custom"
+            except:
+                self._save_settings("default")
+        else:
+            self._save_settings("default")
+
+    def _generate_key(self):
+        return f'{self.ip}{self.port}'
+
+    def _save_settings(self, key="current"):
+        from os import path
+        settings_path = path.join("data", "server.cfg")
+        settings = {}
+        if key == "current":
+            settings["ip"] = self.ip
+            settings["port"] = self.port
+            settings["key"] = self.key
+        elif key == "default":
+            settings["ip"] = '127.0.0.1'
+            settings["port"] = 9600
+            settings["key"] = '127.0.0.19600'
+            self.settings = "default"
+        with open(settings_path, "w") as settings_file:
+            json.dump(settings, settings_file)
+
 
     def get_api_status(self):
         return {"connections":list(self.clients.values()), "commands":list(self.functions.values())}
