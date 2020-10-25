@@ -1,6 +1,6 @@
 # Server monitoring Discord bot API
 
-This API can be used to interface with the server monitoring Discord bot, if the API is enabled on it. For this, the bot needs to run on the same PC, or the API needs to be set up to allow outside connections.
+This API can be used to interface with the server monitoring Discord bot only if the API is enabled on it. For this, the bot needs to run on the same PC, or the API needs to be set up to allow outside connections.
 
 ## Usage
 
@@ -22,7 +22,7 @@ def my_callback(user_input):
 
 API.create_function("MyScript", "Shome text to help\nUsage: &MyCommand <User input>\nCategory: SERVER", my_callback, return_value=[smbd_api.USER_INPUT])
 ```
-To send message to someone, use the 'send_message' command:
+To send a message to someone, use the 'send_message' command:
 
 ```
 [...]
@@ -31,22 +31,22 @@ API.send_message("Test message to a channel", discordId)
 print(f"I sent a message to {my_user_name = API.get_username(discordId)}!")
 ```
 
-Closing the connection safely, is easi with the 'close' command.
+Closing the connection safely is easy with the 'close' command.
 
 ```
 [...]
 API.close("Some reason for the bot logger.")
 ```
 
-## Avaleable commands
+## Available commands
 
 ### validate
 
-This function connect to the API server, and validates with it. If the validation was successfull, it starts a listener thread.
+This function connects to the API server and validates itself with it. If the validation was successful, it starts a listener thread.
 
 ### get_status
 
-This function retrives the bot's status, and returns it in a dictionary.
+This function retrieves the bot's status and returns it in a dictionary.
 
 ### get_username
 
@@ -54,7 +54,7 @@ This command returns the given Discord ID's username.
 
 ### send_message
 
-This command allows you to send messages in the bot's name to selected users/channels, or the default channel.
+This command allows you to send messages in the bot's name to selected users/channels or the default channel.
 
 ### create_function
 
