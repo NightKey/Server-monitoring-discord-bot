@@ -38,7 +38,7 @@ Upon validation, the bot can respond in two ways:
 |[Status](#Status)                                |Json          |The PC's status as it gets sent to the servers |
 |[Send](#Send)<sup><sub>1</sub></sup>             |Boolean       |If the message was sent successfully           |
 |[Create](#Create)<sup><sub>2</sub></sup>         |Boolean       |If the function was added successfully         |
-|[UserName](#Username)<sup><sub>3</sub></sup>     |String        |Returns the username connected to the ID       |
+|[Username](#Username)<sup><sub>3</sub></sup>     |String        |Returns the username connected to the ID       |
 |[Remove](#Remove)<sup><sub>4</sub></sup>         |Boolean       |Rempves the selected command from the list     |
 |[Disconnect](#Disconnect)<sup><sub>5</sub></sup> |Nothing       |Safely disconnect, with an optional reason     |
 
@@ -46,8 +46,8 @@ The messages are case sensitive, and 'Bad request' message will be sent, when a 
 
 #### Keys:
  -  <sub>1</sub>: Send {text_to_send [string], user_id* [string]}
- -  <sub>2</sub>: Create {name [string], help_text [string], call_back [string], return_key** [integer]}
- -  <sub>3</sub>: UserName {user_id [string]}
+ -  <sub>2</sub>: Create {name [string], help_text [string], callback [string], return_key** [integer]}
+ -  <sub>3</sub>: Username {user_id [string]}
  -  <sub>4</sub>: Remove {command_name** [string]}
  -  <sub>5</sub>: Disconnect {reason***}
 
@@ -79,7 +79,7 @@ To send message to a specific user, the user's ID must be provided in the 'user_
 When using the `Create` command, the parameters will describe the following:
  -  name - The name to call on Discord
  -  help_text - The text to show in the help command
- -  call_back - The value to send to the program (alongside with the value from the user, if it's required)
+ -  callback - The value to send to the program (alongside with the value from the user, if it's required)
  -  return_value - What to send back with the command. It excepts a list of values (if nothing, then a list containing 0) of what needs to be returned.
 
 #### Options to return_value
@@ -119,7 +119,7 @@ When it's called, it returns with the following values, in the following order:
  - User ID, if required
  - User Input, if required
 
-## UserName
+## Username
 
 Returns the current name of the selected user, where the user's ID is match the given ID.
 

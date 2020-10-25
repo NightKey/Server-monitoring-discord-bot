@@ -43,7 +43,7 @@ class server:
             'Send':self.send_command,
             'Create':self.create_command,
             'Remove':self.remove_command,
-            'UserName':self.return_usrname,
+            'Username':self.return_usrname,
             'Disconnect':self.disconnect
         }
         self.socket.listen()
@@ -122,12 +122,12 @@ class server:
         """
         return sha256(f"{self.key}{name}".encode('utf-8')).hexdigest()
 
-    def create_function(self, creator, name, help_text, call_back, user_value=0):
+    def create_function(self, creator, name, help_text, callback, user_value=0):
         """Creates a function with the given parameters, and stores it in the self.functions dictionary, with the 'name' as key
         user_value: 0 - None, 1 - user_input, 2 - sender name#descriminator, 4 - channel, 3 - 1+2, 5 - 1+4, 6 - 2+4, 7 - 1+2+4
         """
         print(f'Creating function with the name {name}', log_only=True)
-        print(f'Creating function with the call back {call_back}', log_only=True)
+        print(f'Creating function with the call back {callback}', log_only=True)
         print(f'Creating function with the creator as {creator}', log_only=True)
         stuff = ''
         stuff += f"self.send(channel, '{creator}')\n    " if user_value in [4, 5, 6, 7] else ''
@@ -136,7 +136,7 @@ class server:
         body = f"""def {name}(self, channel, sender, _input):
     \"\"\"{help_text}\"\"\"
     if _input is None: _input = ""
-    self.send('{call_back}', '{creator}')
+    self.send('{callback}', '{creator}')
     {stuff}self.send(None, '{creator}')"""
         try:
             exec(body)
