@@ -642,7 +642,7 @@ Category: BOT
 linking = {
     "add":add_process,
     "admin":add_admin,
-    "API":get_api_key,
+    "api":get_api_key,
     "bar":set_bar,
     "clear":clear,
     "echo":echo,
