@@ -65,12 +65,14 @@ class server:
             settings["key"] = self.key
         elif key == "default":
             settings["ip"] = '127.0.0.1'
+            self.ip = '127.0.0.1'
             settings["port"] = 9600
+            self.port = 9600
             settings["key"] = '127.0.0.19600'
+            self.key = '127.0.0.19600'
             self.settings = "default"
         with open(settings_path, "w") as settings_file:
             json.dump(settings, settings_file)
-
 
     def get_api_status(self):
         return {"connections":list(self.clients.values()), "commands":list(self.functions.values())}
