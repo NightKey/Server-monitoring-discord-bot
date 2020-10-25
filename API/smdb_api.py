@@ -48,7 +48,7 @@ class API:
         self.socket_list = []
         self.created_function_list=[]
 
-    def send(self, msg):
+    def _send(self, msg):
         """Sends a socket message
         """
         msg = json.dumps(msg)
@@ -57,13 +57,13 @@ class API:
             if len(msg) > 9:
                 tmp = msg[9:]
                 msg = msg[:9]
-            self.socket.send(str(len(msg)).encode(encoding='utf-8'))
-            self.socket.send(msg.encode(encoding="utf-8"))
+            self.socket._send(str(len(msg)).encode(encoding='utf-8'))
+            self.socket._send(msg.encode(encoding="utf-8"))
             if tmp == '': tmp = '\n'
             if msg == '\n': break
             msg = tmp
 
-    def retrive(self):
+    def _retrive(self):
         """Retrives a socket message
         """
         ret = ""
@@ -81,7 +81,7 @@ class API:
             print(ex)
             return None
     
-    def re_init_commands(self):
+    def _re_init_commands(self):
         while not self.connection_alive:
             pass
         from copy import deepcopy
@@ -103,11 +103,11 @@ class API:
             except ConnectionRefusedError: pass
             if timeout is not None and process_time() - start > timeout:
                 return False
-        self.send(self.name)
-        self.send(self.key)
-        ansvear = self.retrive()
+        self._send(self.name)
+        self._send(self.key)
+        ansvear = self._retrive()
         if ansvear == 'Denied':
-            reason = self.retrive()
+            reason = self._retrive()
             raise ValidationError(reason)
         elif ansvear == None:
             raise ValueError("Bad value retrived from socket.")
@@ -115,11 +115,11 @@ class API:
             self.valid = True
             self.socket_list.append(self.socket)
             if self.connection_alive:
-                self.th = threading.Thread(target=self.listener)
+                self.th = threading.Thread(target=self._listener)
                 self.th.name = "Listener Thread"
                 self.th.start()
             if not self.connection_alive:
-                self.tmp = threading.Thread(target=self.re_init_commands)
+                self.tmp = threading.Thread(target=self._re_init_commands)
                 self.tmp.start()
                 
 
@@ -128,7 +128,7 @@ class API:
         """
         if self.valid:
             self.sending = True
-            self.send("Status")
+            self._send("Status")
             while self.buffer == []:
                 sleep(0.1)
             tmp = self.buffer[0]
@@ -137,10 +137,10 @@ class API:
             return tmp
         else: raise NotValidatedError()
     
-    def get_user_name(self, key):
+    def get_username(self, key):
         self.sending = True
-        self.send('UserName')
-        self.send(key)
+        self._send('Username')
+        self._send(key)
         while self.buffer == []:
             sleep(0.1)
         self.sending = False
@@ -148,13 +148,13 @@ class API:
         self.buffer = []
         return tmp if tmp is not None else "unknown"
 
-    def send_message(self, message, user=None):
+    def send_message(self, message, destination=None):
         """Sends a message trough the discord bot.
         """
         if self.valid:
             self.sending = True
-            self.send("Send")
-            self.send([message, user])
+            self._send("Send")
+            self._send([message, destination])
             while self.buffer == []:
                 sleep(0.1)
             tmp = self.buffer[0]
@@ -163,7 +163,7 @@ class API:
             if not tmp: raise ActionFailed("Send message")
         else: raise NotValidatedError()
 
-    def listener(self):
+    def _listener(self):
         """Listens for incoming messages, and stops when the program stops running
         """
         retrived_call=[]
@@ -172,7 +172,7 @@ class API:
                 try:
                     read_socket, _, exception_socket = select.select(self.socket_list, [], self.socket_list)
                     if read_socket != []:
-                        msg = self.retrive()
+                        msg = self._retrive()
                         if self.sending:
                             self.buffer.append(msg)
                         elif msg in self.call_list:
@@ -208,28 +208,28 @@ class API:
         self.running = False
         self.valid = False
         self.connection_alive = False
-        self.send("Disconnect")
-        self.send(reason)
+        self._send("Disconnect")
+        self._send(reason)
         self.socket.close()
 
-    def create_function(self, name, help_text, call_back, return_value=[NOTHING]):
+    def create_function(self, name, help_text, callback, return_value=[NOTHING]):
         """Creates a function in the connected bot.
         Return order: ChannelID, UserID, UserInput. The returned value depends on the return value, but the order is the same.
         """
         if self.valid:
             if isinstance(return_value, (tuple, list)):
-                self.created_function_list.append([name, help_text, call_back, sum(return_value)])
+                self.created_function_list.append([name, help_text, callback, sum(return_value)])
                 return_value = sum(return_value)
             self.sending = True
-            self.send("Create")
-            self.send([name, help_text, name, return_value])
+            self._send("Create")
+            self._send([name, help_text, name, return_value])
             while self.buffer == []:
                 sleep(0.1)
             tmp = self.buffer[0]
             self.buffer = []
             self.sending = False
             if tmp:
-                self.call_list[name] = call_back
+                self.call_list[name] = callback
             else: raise ActionFailed("Create")
         else: raise NotValidatedError()
 
@@ -240,10 +240,10 @@ if __name__ == "__main__":
     print('Validation finished')
     print(api.get_status())
     print('Status finished')
-    api.send_message("Test", user="165892968283242497")
+    api.send_message("Test", destination="165892968283242497")
     print('Message finished')
     def sst(usr, msg):
-        print(api.get_user_name(usr))
+        print(api.get_username(usr))
         print(msg)
         if msg == "": msg = "Empty message"
         api.send_message(msg, usr)
