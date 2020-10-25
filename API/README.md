@@ -28,7 +28,7 @@ To send a message to someone, use the 'send_message' command:
 [...]
 discordId="##################"
 API.send_message("Test message to a channel", discordId)
-print(f"I sent a message to {my_user_name = API.get_username(discordId)}!")
+print(f"I sent a message to {API.get_username(discordId)}!")
 ```
 
 Closing the connection safely is easy with the 'close' command.
