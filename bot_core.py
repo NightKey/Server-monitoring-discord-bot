@@ -694,11 +694,13 @@ async def on_message(message):
             splt = message.content.replace('&', '').split(' ')
             cmd = splt[0]
             etc = " ".join(splt[1:]) if len(splt) > 1 else None
-            if cmd in linking.keys() or cmd in outside_options.keys():
+            if cmd in linking.keys() or cmd.lower() in linking.keys() or cmd in outside_options.keys() or cmd.lower() in outside_options.keys():
                 await message.add_reaction("dot:577128688433496073")
                 try:
                     if cmd in linking.keys(): await linking[cmd](message, etc)
-                    else: outside_options[cmd](_server, str(message.channel.id), (str)(message.author.id), etc)
+                    elif cmd.lower() in linking.keys(): await linking[cmd.lower()](message, etc)
+                    elif cmd in outside_options.keys(): outside_options[cmd](_server, str(message.channel.id), (str)(message.author.id), etc)
+                    else: outside_options[cmd.lower()](_server, str(message.channel.id), (str)(message.author.id), etc)
                 except Exception as ex:
                     await message.channel.send(f"Error runnig the {cmd} command: {type(ex)} -> {ex}")
             else:
