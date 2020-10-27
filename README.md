@@ -110,6 +110,7 @@ The 'Usage: ' line is optional, but if present, it should be formated like that,
 |NETWORK           |Anything that interacts with the host's network.                       |
 |SOFTWARE          |Anything that interacts with the programs running on the host machine. |
 |BOT               |Anything that interacts with the bot's workings.                       |
+|USER              |Anything that interacts with the users.                                |
 
 ### Returns
 

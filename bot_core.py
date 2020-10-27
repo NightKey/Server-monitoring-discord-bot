@@ -675,7 +675,8 @@ categories = {
     'SERVER':'Anything that interacts with the discord server.',
     'NETWORK':"Anything that interacts with the host's network.",
     'SOFTWARE':'Anything that interacts with the programs running on the host machine.',
-    'BOT':"Anything that interacts with the bot's workings."
+    'BOT':"Anything that interacts with the bot's workings.",
+    'USER': "Anything that interacts with the users."
 }
 
 def get_user(key):
