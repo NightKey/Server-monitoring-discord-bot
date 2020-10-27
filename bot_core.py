@@ -217,7 +217,7 @@ Category: SOFTWARE
         process_list[key] = [False, False]
     else:
         await channel.send(embed=embed)
-        if stype.lower() == "long":
+        if stype is not None and stype.lower() == "long":
             embed = discord.Embed(title="API Status", color=0x14f9a2)
             api_status = _server.get_api_status()
             for key, values in api_status.items():
