@@ -30,7 +30,7 @@ CHANNEL = 4
 
 class API:
     """API for the 'Server monitoring Discord bot' application."""
-    def __init__(self, name, key, ip="127.0.0.1", port=9600, max_delay = 1):
+    def __init__(self, name, key, ip="127.0.0.1", port=9600):
         """Initialises an API that connects to the 'ip' ip and to the 'port' port with the 'name' name and the 'key' api key
         """
         self.ip = ip
@@ -44,7 +44,6 @@ class API:
         self.sending = False
         self.running = True
         self.connection_alive = True
-        self.max_delay = max_delay
         self.socket_list = []
         self.created_function_list=[]
 
