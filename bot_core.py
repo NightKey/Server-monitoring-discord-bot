@@ -284,6 +284,7 @@ Category: SERVER
         n = random.randint(1, sides)
         res.append(n)
         res_s.append(str(n))
+    await message.delete()
     await message.channel.send(f"{message.author.name} rolled {sum(res)}")
 
 @client.event
