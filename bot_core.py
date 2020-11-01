@@ -696,15 +696,11 @@ async def on_message(message):
             splt = message.content.replace('&', '').split(' ')
             cmd = splt[0]
             etc = " ".join(splt[1:]) if len(splt) > 1 else None
-            if cmd in linking.keys() or cmd.lower() in linking.keys() or cmd.upper() in linking.keys() or cmd in outside_options.keys() or cmd.lower() in outside_options.keys() or cmd.upper() in outside_options.keys():
+            if cmd in linking.keys() or cmd in outside_options.keys():
                 await message.add_reaction("dot:577128688433496073")
                 try:
                     if cmd in linking.keys(): await linking[cmd](message, etc)
-                    elif cmd.lower() in linking.keys(): await linking[cmd.lower()](message, etc)
-                    elif cmd.upper() in linking.keys(): await linking[cmd.upper()](message, etc)
                     elif cmd in outside_options.keys(): outside_options[cmd](_server, str(message.channel.id), (str)(message.author.id), etc)
-                    elif cmd.upper() in outside_options.keys(): outside_options[cmd.upper()](_server, str(message.channel.id), (str)(message.author.id), etc)
-                    else: outside_options[cmd.lower()](_server, str(message.channel.id), (str)(message.author.id), etc)
                 except Exception as ex:
                     await message.channel.send(f"Error runnig the {cmd} command: {type(ex)} -> {ex}")
             else:
@@ -715,10 +711,31 @@ async def on_message(message):
                     if 'value' not in mx or mx["value"] < tmp:
                         mx["key"] = key
                         mx["value"] = tmp
-                if mx['value'] > 70:
+                if mx['value'] == 100:
+                    try:
+                        await linking[mx["key"]](message, etc)
+                        await message.add_reaction("dot:577128688433496073")
+                        await message.remove_reaction("👎", me)
+                    except Exception as ex: await message.channel.send(f"Error runnig the {cmd} command: {type(ex)} -> {ex}")
+                elif mx['value'] > 70:
                     await message.channel.send(f"Did you mean `{mx['key']}`? Probability: {mx['value']}%")
                 else:
-                    await message.channel.send("Not a valid command!\nUse '&help' for the avaleable commands")
+                    mx = {}
+                    for key in outside_options.keys():
+                        tmp=fuzz.ratio(cmd.lower(), key.lower())
+                        if 'value' not in mx or mx["value"] < tmp:
+                            mx["key"] = key
+                            mx["value"] = tmp
+                    if mx['value'] == 100:
+                        try:
+                            outside_options[mx["key"]](_server, str(message.channel.id), (str)(message.author.id), etc)
+                            await message.add_reaction("dot:577128688433496073")
+                            await message.remove_reaction("👎", me)
+                        except Exception as ex: await message.channel.send(f"Error runnig the {cmd} command: {type(ex)} -> {ex}")
+                    elif mx['value'] > 70:
+                        await message.channel.send(f"Did you mean `{mx['key']}`? Probability: {mx['value']}%")
+                    else:
+                        await message.channel.send("Not a valid command!\nUse '&help' for the avaleable commands")
 
 def disconnect_check(loop, channels):
     """Restarts the bot, if the disconnected time is greater than one hour"""
