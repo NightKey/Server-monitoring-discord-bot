@@ -1,6 +1,6 @@
 from sys import getsizeof
 import os, sys, select, socket, json, threading
-from time import sleep, process_time
+from time import sleep, time
 
 class ValidationError(Exception):
     """Get's raised, when validation failes"""
@@ -94,22 +94,20 @@ class API:
         """Validates with the bot, and starts the listener loop, if validation is finished.
         Time out can be set, so it won't halt the program for ever, if no bot is present. (The timeout will only work for the first validation.)
         """
-        start = process_time()
+        start = time()
         while True:
             try:
                 self.socket.connect((self.ip, self.port))
                 break
             except ConnectionRefusedError: pass
-            if timeout is not None and process_time() - start > timeout:
+            if timeout is not None and time() - start > timeout:
                 return False
-        self._send(self.name)
-        self._send(self.key)
+        self._send({"Command":self.name, "Value": self.key})
         ansvear = self._retrive()
-        if ansvear == 'Denied':
-            reason = self._retrive()
-            raise ValidationError(reason)
-        elif ansvear == None:
+        if not isinstance(ansvear, dict):
             raise ValueError("Bad value retrived from socket.")
+        elif ansvear["Response"] == 'Denied':
+            raise ValidationError(ansvear["Data"])
         else:
             self.valid = True
             self.socket_list.append(self.socket)
@@ -121,13 +119,25 @@ class API:
                 self.tmp = threading.Thread(target=self._re_init_commands)
                 self.tmp.start()
                 
+    def is_admin(self, uid):
+        if self.valid:
+            self.sending = True
+            self._send({"Command":"Is Admin", "Value":uid})
+            while self.buffer == []:
+                sleep(0.1)
+            self.sending = False
+            tmp = self.buffer[0]
+            self.buffer = []
+            if tmp["Response"] == "Success":
+                return tmp["Data"]
+        else: NotValidatedError()
 
     def get_status(self):
         """Gets the bot's status
         """
         if self.valid:
             self.sending = True
-            self._send("Status")
+            self._send({"Command":"Status", "Value":None})
             while self.buffer == []:
                 sleep(0.1)
             tmp = self.buffer[0]
@@ -138,28 +148,27 @@ class API:
     
     def get_username(self, key):
         self.sending = True
-        self._send('Username')
-        self._send(key)
+        self._send({"Command":'Username', "Value":key})
         while self.buffer == []:
             sleep(0.1)
         self.sending = False
         tmp = self.buffer[0]
         self.buffer = []
-        return tmp if tmp is not None else "unknown"
+        return tmp["Data"] if tmp["Response"] == "Success" else "unknown"
 
     def send_message(self, message, destination=None):
         """Sends a message trough the discord bot.
         """
         if self.valid:
             self.sending = True
-            self._send("Send")
-            self._send([message, destination])
+            self._send({"Command":"Send", 'Value': [message, destination]})
             while self.buffer == []:
                 sleep(0.1)
             tmp = self.buffer[0]
             self.buffer = []
             self.sending = False
-            if not tmp: raise ActionFailed("Send message")
+            if tmp["Response"] == "Bad request": raise ActionFailed(tmp["Data"])
+            elif tmp["Response"] == "Internal error": print(tmp["Data"])
         else: raise NotValidatedError()
 
     def _listener(self):
@@ -207,8 +216,7 @@ class API:
         self.running = False
         self.valid = False
         self.connection_alive = False
-        self._send("Disconnect")
-        self._send(reason)
+        self._send({"Command":"Disconnect", "Value": reason})
         self.socket.close()
 
     def create_function(self, name, help_text, callback, return_value=[NOTHING]):
@@ -220,27 +228,27 @@ class API:
                 self.created_function_list.append([name, help_text, callback, sum(return_value)])
                 return_value = sum(return_value)
             self.sending = True
-            self._send("Create")
-            self._send([name, help_text, name, return_value])
+            self._send({"Command":"Create", "Value": [name, help_text, name, return_value]})
             while self.buffer == []:
                 sleep(0.1)
             tmp = self.buffer[0]
             self.buffer = []
             self.sending = False
-            if tmp:
+            if tmp["Response"] == "Success":
                 self.call_list[name] = callback
-            else: raise ActionFailed("Create")
+            elif tmp["Response"] == "Internal error": print(tmp["Data"])
+            else: raise ActionFailed(tmp["Data"])
         else: raise NotValidatedError()
 
 if __name__ == "__main__":
     api = API("Test", "80716cbfd9f90428cd308acc193b4b58519a4f10a7440b97aaffecf75e63ecec")
-    input("Press return to start...")
     api.validate()
     print('Validation finished')
     print(api.get_status())
     print('Status finished')
     api.send_message("Test", destination="165892968283242497")
     print('Message finished')
+    print(f"User is{' ' if api.is_admin('165892968283242497') else ' not '}admin")
     def sst(usr, msg):
         print(api.get_username(usr))
         print(msg)

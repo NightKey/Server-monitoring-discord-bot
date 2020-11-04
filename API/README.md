@@ -52,6 +52,10 @@ This function retrieves the bot's status and returns it in a dictionary.
 
 This command returns the given Discord ID's username.
 
+### is_admin
+
+Determines if a user is admin in the bot's database.
+
 ### send_message
 
 This command allows you to send messages in the bot's name to selected users/channels or the default channel.
