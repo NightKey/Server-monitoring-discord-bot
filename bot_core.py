@@ -389,7 +389,7 @@ async def clear(message, number):
 Usage: &clear [optionally the number of messages or @user]
 Category: SERVER
     """
-    try: number = number.replace("<@!", '').replace('>', '')
+    try: number = number.replace("<@", '').replace('>', '')
     except: pass
     if number is not None:
         user = client.get_user(int(number))
@@ -635,8 +635,8 @@ Category: BOT
         admins.append(str(message.author.id))
         await message.channel.send("You are now an admin!")
         save_cfg()
-    elif str(message.author.id) in admins and '<@!' in key:
-        key = key.replace('<@!', '').replace(">", '')
+    elif str(message.author.id) in admins and '<@' in key:
+        key = key.replace('<@', '').replace(">", '')
         if key not in admins:
             admins.append(key)
             await message.channel.send(f"{str(client.get_user(int(key))).split('#')[0]} is now an admin!")
