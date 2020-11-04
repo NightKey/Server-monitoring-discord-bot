@@ -1,6 +1,7 @@
 from modules import writer, status, logger, watchdog
 from modules.services import server
 from modules.scanner import scann
+from modules.response import response
 from threading import Thread
 from time import sleep, process_time
 import datetime, psutil, os, json, webbrowser, asyncio, logging
@@ -191,7 +192,10 @@ def get_status():
     status = {}
     status['Network'] = "Available" if is_running else "Unavailable"
     status["SupportingFunctions"] = {name:("Active" if thread.is_alive() else "Inactive") for name, thread in threads.items()}
-    status["Ping"] = int(client.latency*1000)
+    try: 
+        status["Ping"] = int(client.latency*1000) 
+    except: 
+        status["Ping"] = 'Nan'
     return status
 
 async def status_check(message, stype="short"):
@@ -680,10 +684,15 @@ categories = {
     'USER': "Anything that interacts with the users."
 }
 
+def is_admin(uid):
+    return response("Success", uid in admins)
+
 def get_user(key):
     for usr in client.users:
         if (str)(usr.id) == key:
-            return usr.name
+            return response("Success", usr.name)
+    else:
+        return response("Internal error", "User not found")
 
 @client.event
 async def on_message(message):
@@ -777,24 +786,24 @@ def send_message(msg, user=None):
     """
     if user is None:
         loop.create_task(_watchdog.send_msg(msg))
-        return True
+        return response("Success")
     else:
         for usr in client.users:
             if (str)(usr.id) == user:
                 if usr.dm_channel is not None:
                     loop.create_task(usr.dm_channel.send(msg))
-                    return True
+                    return response("Success")
                 else:
                     loop.create_task(usr.create_dm())
                     while usr.dm_channel is None:
                         sleep(0.01)
                     loop.create_task(usr.dm_channel.send(msg))
-                    return True
+                    return response("Success")
         for chn in client.get_all_channels():
             if (str)(chn.id) == user:
                 chn.send(msg)
-                return True
-        return False
+                return response("Success")
+        return response("Internal error", "User or Channel wasn't found!")
 
 def start_thread(name):
     global threads
@@ -836,7 +845,7 @@ def Main(_loop):
         _watchdog = watchdog.watchdog(loop, client, process_list)
         if "--api" in os.sys.argv:
             print("Setting up the services")
-            _server = server(edit_linking, get_status, send_message, get_user)
+            _server = server(edit_linking, get_status, send_message, get_user, is_admin)
         print('Starting all processes', print_only=True)
         runner(loop)
     except Exception as ex:

@@ -24,14 +24,33 @@ The bot uses a tcp server as it's API, where plaintext messages will yield resul
  -  default port: `9600`
  -  default IP: `127.0.0.1`
 
-The messages should be sent in two parts. First for the command, then a list of paramaters. These parameters must be in the given order to work. A message should be sent in two parts:
+The messages should be sent as a json. The keys are `Command` and `Value`. The `Command` should contain the request, and `Value` should contain the request's data or `None` These parameters must be in the given order to work. A message should be sent in two parts:
  -  first a one byte long value for the length of the message
  -  the message itself. 
 The responses will be sent the same way.
 
-Upon validation, the bot can respond in two ways:
- -  'Accepted' - When the connection was accepted, and the client was added to the client list.
- -  'Denied' - The second message will contain the reason: 'Bad API Key' or 'Already connected'.
+### Example request
+
+```javascript
+{
+    "Command": "Create",
+    "Value": ["name", "help text", "callback value", [return_value]]
+}
+```
+
+Responses are in json format and they have the following structure:
+
+```javascript
+{
+    "Response": "Bad request" or "Success" or "Internal error" or "Denied" or "Accepted",
+    "Data": None or "Explanation",
+    "Code": 1 or 2 or 3 or 4 or 5
+}
+```
+
+Upon validation, the response can be two:
+ -  "Accepted" - When the connection was accepted, and the client was added to the client list.
+ -  "Denied" - The second message will contain the reason: "Bad API Key" or "Already connected".
 
 |Request                                          |Return Value  |Content                                        |
 |:------------------------------------------------|:-------------|:---------------------------------------------:|
@@ -41,6 +60,7 @@ Upon validation, the bot can respond in two ways:
 |[Username](#Username)<sup><sub>3</sub></sup>     |String        |Returns the username connected to the ID       |
 |[Remove](#Remove)<sup><sub>4</sub></sup>         |Boolean       |Rempves the selected command from the list     |
 |[Disconnect](#Disconnect)<sup><sub>5</sub></sup> |Nothing       |Safely disconnect, with an optional reason     |
+|[Is Admin](#Is_Admin)<sub>3</sub>                |Boolean       |Returns if user is an admin of the discord bot |
 
 The messages are case sensitive, and 'Bad request' message will be sent, when a message is not applicable.
 
@@ -131,3 +151,7 @@ Can be called with or without a specific name. If called with a command name, it
 ## Disconnect
 
 Can be used to remove every created command from the server, and close the connection between the server, and the client.
+
+## Is Admin
+
+Checks if a user is registered as an administrator for the bot

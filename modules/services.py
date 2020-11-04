@@ -1,4 +1,5 @@
 from . import writer, logger
+from .response import response
 import socket, select, json
 from hashlib import sha256
 from sys import getsizeof
@@ -16,7 +17,7 @@ writer = writer.writer("API")
 print = split   #Changed print to the split function
 
 class server:
-    def __init__(self, linking_editor, get_status, send_message, get_user):
+    def __init__(self, linking_editor, get_status, send_message, get_user, is_admin):
         self.clients = {}
         self.run = True
         self.linking_editor = linking_editor
@@ -24,11 +25,13 @@ class server:
         self.send_message = send_message
         self.functions = {}
         self.get_user = get_user
+        self.is_admin = is_admin
         self._load_settings()
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.bind((self.ip, self.port))
         self.socket_list = [self.socket]
+        self.bad_request = response("Bad request", None)
 
     def change_ip_port(self, ip, port):
         self.ip = ip
@@ -86,31 +89,31 @@ class server:
             'Create':self.create_command,
             'Remove':self.remove_command,
             'Username':self.return_usrname,
-            'Disconnect':self.disconnect
+            'Disconnect':self.disconnect,
+            'Is Admin':self.admin_check
         }
         self.socket.listen()
         print("API Server started")
         self.loop()
 
-    def create_command(self, socket):
+    def create_command(self, socket, data):
         """Creates a command in the discord bot
         """
-        data = self.retrive(socket)
         if data is None:
+            self.send(self.bad_request.create_altered(Data="No data given"), socket)
             return
         self.send(self.create_function(self.clients[socket], *data), socket)
 
-    def get_status_command(self, socket):
+    def get_status_command(self, socket, _):
         """Returns the status to the socket
         """
-        status = self.get_status()
-        self.send(status, socket)
+        self.send(self.get_status(), socket)
 
-    def send_command(self, socket):
+    def send_command(self, socket, msg):
         """Sends the message retrived from the socket to the bot.
         """
-        msg = self.retrive(socket)
         if msg is None:
+            self.send(self.bad_request.create_altered(Data="Empty message"), socket)
             return
         self.send(self.send_message(*msg), socket)
 
@@ -145,7 +148,10 @@ class server:
                     if value == socket:
                         socket = key
                         break
-            msg = json.dumps(msg)
+            if isinstance(msg, response):
+                msg = json.dumps(msg.__dict__)
+            else:
+                msg = json.dumps(msg)
             while True:
                 tmp = ''
                 if len(msg) > 9:
@@ -163,6 +169,12 @@ class server:
         """Returns the correct API key for a 'name' named program
         """
         return sha256(f"{self.key}{name}".encode('utf-8')).hexdigest()
+
+    def admin_check(self, socket, uid):
+        if uid is None:
+            self.send(self.bad_request.create_altered(Data="No UID was given"), socket)
+            return
+        self.send(self.is_admin(uid), socket)
 
     def create_function(self, creator, name, help_text, callback, user_value=0):
         """Creates a function with the given parameters, and stores it in the self.functions dictionary, with the 'name' as key
@@ -185,19 +197,16 @@ class server:
         except Exception as ex:
             print(f"\n{body}")
             print(ex)
-            return False
+            return response("Internal error", ex)
         setattr(self, name, locals()[name])
         self.linking_editor([name, getattr(self, name)])
         if creator not in self.functions: self.functions[creator] = []
         self.functions[creator].append(name)
-        return True
+        return response("Success")
 
-    def remove_command(self, socket):
+    def remove_command(self, socket, name):
         """Removes a function. Removes all functions, if empty message was sent instead of a function name!
         """
-        socket.settimeout(2)
-        name = self.retrive(socket)
-        socket.settimeout(30)
         if not name in self.functions[self.clients[socket]]: name = None
         self.send(self.remove_function(creator=self.clients[socket], name=name), socket)
 
@@ -206,7 +215,7 @@ class server:
         """
         try:
             if creator not in self.functions:
-                return False
+                return response("Internal error", "Function not found")
             if name is None:
                 for name in self.functions[creator]:
                     delattr(self, name)
@@ -215,15 +224,16 @@ class server:
                 self.linking_editor(name, True)
                 delattr(self, name)
                 self.functions[creator].remove(name)
-            return True
+            return response("Success")
         except Exception as ex:
             print(f"{type(ex)} -> {ex}")
+            return response("Internal error", ex)
 
-    def return_usrname(self, socket):
-        key = self.retrive(socket)
-        if key is None:
+    def return_usrname(self, socket, uid):
+        if uid is None:
+            self.send(self.bad_request.create_altered(Data="No UID was given"), socket)
             return
-        self.send(self.get_user(key), socket)
+        self.send(self.get_user(uid), socket)
 
     def loop(self):
         """Handles the clients.
@@ -239,10 +249,8 @@ class server:
                     if msg is None:
                         self.client_lost(notified_socket)
                         continue
-                    if msg is not None:
-                        self.command_retrived(msg, notified_socket)
                     else:
-                        print("Error in retriving message")
+                        self.command_retrived(msg, notified_socket)
             for notified_socket in exception_socket:
                 self.client_lost(notified_socket)
         self.socket.close()
@@ -250,14 +258,13 @@ class server:
     def command_retrived(self, msg, socket):
         """Retrives commands
         """
-        if msg not in self.commands:
-            self.send('Bad request', socket)
+        if msg["Command"] not in self.commands or "Value" not in msg.keys():
+            self.send(self.bad_request.create_altered(Data="Request was not correct"), socket)
             return
         #print(f'Command: {msg}')
-        self.commands[msg](socket)
+        self.commands[msg["Command"]](socket, msg["Value"])
     
-    def disconnect(self, socket):
-        reason = self.retrive(socket)
+    def disconnect(self, socket, reason):
         if reason is not None:
             print(f"{self.clients[socket]} disconnected with the following reason: {reason}")
         else:
@@ -283,19 +290,17 @@ class server:
         client_socket, client_address = self.socket.accept()
         client_socket.settimeout(30)
         print(f"Incoming connection from {client_address[0]}:{client_address[1]}", log_only=True)
-        name = self.retrive(client_socket)
-        key = self.retrive(client_socket)
+        retrived = self.retrive(client_socket)
+        name, key = retrived['Command'], retrived['Value']
         if key != sha256(f"{self.key}{name}".encode('utf-8')).hexdigest():
-            self.send('Denied', client_socket)
-            self.send('Bad API Key', client_socket)
+            self.send(self.bad_request.create_altered(Response="Denied", Data="Bad API Key"), client_socket)
             client_socket.close()
             return
         if name in self.clients:
-            self.send('Denied', client_socket)
-            self.send('Already connected', client_socket)
+            self.send(self.bad_request.create_altered(Response="Denied", Data="Already connected"), client_socket)
             client_socket.close()
             return
-        self.send('Accepted', client_socket)
+        self.send(self.bad_request.create_altered(Response="Success"), client_socket)
         print(f"Adding {name} to the connections", log_only=True)
         self.socket_list.append(client_socket)
         self.clients[client_socket] = name
