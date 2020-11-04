@@ -296,6 +296,7 @@ class server:
         except:
             self.send(self.bad_request.create_altered(Response="Denied", Data="Bad API protocoll was used!"), client_socket)
             client_socket.close()
+            return
         if key != sha256(f"{self.key}{name}".encode('utf-8')).hexdigest():
             self.send(self.bad_request.create_altered(Response="Denied", Data="Bad API Key"), client_socket)
             client_socket.close()
