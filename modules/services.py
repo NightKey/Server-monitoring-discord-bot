@@ -291,7 +291,11 @@ class server:
         client_socket.settimeout(30)
         print(f"Incoming connection from {client_address[0]}:{client_address[1]}", log_only=True)
         retrived = self.retrive(client_socket)
-        name, key = retrived['Command'], retrived['Value']
+        try:
+            name, key = retrived['Command'], retrived['Value']
+        except:
+            self.send(self.bad_request.create_altered(Response="Denied", Data="Bad API protocoll was used!"), client_socket)
+            client_socket.close()
         if key != sha256(f"{self.key}{name}".encode('utf-8')).hexdigest():
             self.send(self.bad_request.create_altered(Response="Denied", Data="Bad API Key"), client_socket)
             client_socket.close()
