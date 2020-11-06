@@ -1,4 +1,4 @@
-from modules import writer, status, logger, watchdog
+from modules import writer, status, logger, watchdog, status_gatherer
 from modules.services import server
 from modules.scanner import scann
 from modules.response import response
@@ -246,6 +246,12 @@ Category: SOFTWARE
                 embed.add_field(name="Power status", value=value[1])
                 embed.add_field(name="Status", value=value[2])
         await channel.send(embed=embed)
+    servers = status_gatherer.gather_status()
+    if servers is not None:
+        embed = discord.Embed(title="Remote servers", color=0x14f9a2)
+        for server_name, server_status in servers.items():
+            embed.add_field(server_name, server_status)
+        await  channel.send(embed=embed)
 
 async def add_process(message, name):
     """Adds a process to the watchlist. The watchdog automaticalli gets updated with the new list.
@@ -835,6 +841,7 @@ def Main(_loop):
         print('---------------------------------------------------------------------', log_only=True)
         print('Program started', log_only=True)
         print("Creating loop")
+        status_gatherer.init()
         loop = _loop
         loop.create_task(updater(None))
         load()
