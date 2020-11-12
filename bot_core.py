@@ -288,6 +288,9 @@ Category: SERVER
         return
     num = int(value.split('d')[0])
     sides = int(value.split('d')[1])
+    if num > 5 or sides > 30:
+        await message.channel.send("A maximum of 5 dice with a maximum of 30 sides are allowed!")
+        return
     res = []
     res_s = []
     for _ in range(num):
@@ -295,7 +298,7 @@ Category: SERVER
         res.append(n)
         res_s.append(str(n))
     await message.delete()
-    await message.channel.send(f"{message.author.name} rolled {sum(res)}")
+    await message.channel.send(f"{message.author.name} rolled [{num}d{sides}]: {sum(res)}")
 
 @client.event
 async def on_message_edit(before, after):
