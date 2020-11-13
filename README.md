@@ -18,6 +18,17 @@ This bot, needs the following permissions to function properly:
 * Manage Messages - Optional for the '&clear' command
 * Mention @everyone, @here, and All Roles
 
+## Arguments
+
+ - --nowd - Disables the watchdog
+ - --nodcc - Disables the disconnect checker
+ - --api - Enables the API server
+ - --remote - Sets the bot to remote modefor multiple computers (Disables watchdog and disconnect checker)
+    - --ip - Sets the remote discord bot's IP adress
+    - --auth - Sets the authentication code for the bot
+    - --name - Sets the name to use with the remote discord bot
+ - --scilent - Disables startup messages on the discord server
+
 ## API
 
 The bot uses a tcp server as it's API, where plaintext messages will yield results. The API can be turned on with the `-api` switch.

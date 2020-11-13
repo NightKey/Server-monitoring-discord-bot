@@ -44,6 +44,10 @@ _watchdog = None
 _server = None
 admin_key = None
 
+class signals:
+    exit = "Exit"
+    restart = "Restart"
+
 def split(text, error=False, log_only=False, print_only=False):
     """Logs to both stdout and a log file, using both the writer, and the logger module
     """
@@ -72,7 +76,7 @@ def signal(what):
 def enable_debug_logger():
     _logger = logging.getLogger('discord')
     _logger.setLevel(logging.DEBUG)
-    handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+    handler = logging.FileHandler(filename=os.path.join('logs', 'discord.log'), encoding='utf-8', mode='w')
     handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
     _logger.addHandler(handler)
 
@@ -163,7 +167,7 @@ def load():
                 f.write(f"[{datetime.now()}]: {type(ex)} -> {ex}")
             os.remove(os.path.join("data", "bot.cfg"))
             print("Error in cfg file... Restarting")
-            signal("Restart")
+            signal(signals.restart)
             exit(0)
     else:
         print("Data not found!")
@@ -458,7 +462,7 @@ Category: HARDWARE
                 _watchdog.stop()
                 is_running = False
                 await client.logout()
-                signal("Exit")
+                signal(signals.exit)
         except Exception as ex:
             await message.channel.send(f"Restart failed with the following exception:\n```{type(ex)} -> {str(ex)}```")
 
@@ -765,7 +769,7 @@ def disconnect_check(loop, channels):
                 _watchdog.create_tmp()
                 with open("Offline", "w") as f:
                     f.write(str(dc_time.timestamp()))
-                signal("Restart")
+                signal(signals.restart)
                 exit(0)
         if len(connections) > 0 and (datetime.datetime.now() - datetime.datetime.fromtimestamp(connections[0])) >= datetime.timedelta(hours=reset_time):
             del connections[0]
@@ -779,7 +783,7 @@ def disconnect_check(loop, channels):
             loop.create_task(client.logout())
             loop.create_task(client.close())
             while not client.is_closed(): pass
-            signal("Exit")
+            signal(signals.exit)
         sleep(2)
 
 def send_message(msg, user=None):
@@ -819,13 +823,47 @@ def start_thread(name):
 
 def runner(loop):
     """Runs the needed things in a way, the watchdog can access the bot client."""
-    start_thread("Disconnect checker")
-    if '--nowd' not in os.sys.argv:
+    if '--nodcc' not in os.sys.argv and "--remote" not in os.sys.argv:
+        start_thread("Disconnect checker")
+    if '--nowd' not in os.sys.argv and "--remote" not in os.sys.argv:
         start_thread("Watchdog")
     if "--api" in os.sys.argv:
         start_thread("API Server")
-    loop.create_task(client.start(token))
-    loop.run_forever()
+    if "--remote" not in os.sys.argv:
+        loop.create_task(client.start(token))
+        loop.run_forever()
+    else:
+        print("Started in remote mode...")
+        print("Gathering IP and Authentication code", print_only=True)
+        try:
+            ip = os.sys.argv[os.sys.argv.index('--ip') + 1]
+            auth = os.sys.argv[os.sys.argv.index('--auth') + 1]
+            name = os.sys.argv[os.sys.argv.index('--name') + 1]
+            #TODO: Remote bot operation (Possibly low powered)
+        except:
+            print("Called incorrectly!")
+            print("IP and Authentication code needed in remote mode!", print_only=True)
+            stop()
+            signal('')
+
+def stop():
+    global is_running
+    if was_online:
+        print("Sending stop signal to discord...")
+        loop.create_task(client.logout())
+        loop.create_task(client.close())
+        print("Waiting for discord to close...")
+        while not client.is_closed():
+            pass
+    if _watchdog is not None:
+        print("Stopping watchdogs")
+        _watchdog.create_tmp()
+    print("Stopping disconnect checker")
+    is_running = False
+    if _server is not None and _server.run:
+        _server.stop()
+    if loop is not None:
+        loop.stop()
     
 def Main(_loop):
     try:
@@ -851,25 +889,10 @@ def Main(_loop):
         runner(loop)
     except Exception as ex:
         print(str(ex), error=True)
-        if was_online:
-            print("Sending stop signal to discord...")
-            loop.create_task(client.logout())
-            loop.create_task(client.close())
-            print("Waiting for discord to close...")
-            while not client.is_closed():
-                pass
-        if _watchdog is not None:
-            print("Stopping watchdogs")
-            _watchdog.create_tmp()
-        print("Stopping disconnect checker")
-        is_running = False
-        if _server is not None and _server.run:
-            _server.stop()
-        if loop is not None:
-            loop.stop()
+        stop()
         print("Restarting...")
         lg.close()
-        signal("Restart")
+        signal(signals.restart)
 
 if __name__ == "__main__":
     print("Creating bot thread...")
