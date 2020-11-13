@@ -1,1 +1,1 @@
-from modules import bar, status, writer, logger, scanner, watchdog, services, response, status_gatherer
+from modules import bar, status, writer, logger, scanner, watchdog, services, response

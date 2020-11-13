@@ -235,24 +235,31 @@ class server:
             return
         self.send(self.get_user(uid), socket)
 
+    def stop(self):
+        self.run = False
+        self.socket.close()
+
     def loop(self):
         """Handles the clients.
         """
         while self.run:
-            read_socket, _, exception_socket = select.select(self.socket_list, [], self.socket_list)
-            for notified_socket in read_socket:
-                if notified_socket == self.socket:
-                    self.new_client()
-                else:
-                    print(f"Incoming message from {self.clients[notified_socket]}")
-                    msg = self.retrive(notified_socket)
-                    if msg is None:
-                        self.client_lost(notified_socket)
-                        continue
+            try:
+                read_socket, _, exception_socket = select.select(self.socket_list, [], self.socket_list)
+                for notified_socket in read_socket:
+                    if notified_socket == self.socket:
+                        self.new_client()
                     else:
-                        self.command_retrived(msg, notified_socket)
-            for notified_socket in exception_socket:
-                self.client_lost(notified_socket)
+                        print(f"Incoming message from {self.clients[notified_socket]}")
+                        msg = self.retrive(notified_socket)
+                        if msg is None:
+                            self.client_lost(notified_socket)
+                            continue
+                        else:
+                            self.command_retrived(msg, notified_socket)
+                for notified_socket in exception_socket:
+                    self.client_lost(notified_socket)
+            except socket.error: pass
+            except Exception as ex: print(f"{type(ex)} --> {ex}")
         self.socket.close()
 
     def command_retrived(self, msg, socket):
