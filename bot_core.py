@@ -755,6 +755,7 @@ def disconnect_check(loop, channels):
     """Restarts the bot, if the disconnected time is greater than one hour"""
     global connections
     channel = None
+    high_ping_count = 0
     for channel in client.get_all_channels():
         if str(channel) in channels:
             break
@@ -784,6 +785,12 @@ def disconnect_check(loop, channels):
             loop.create_task(client.close())
             while not client.is_closed(): pass
             signal(signals.exit)
+        if int(client.latency*1000) > 200:
+            high_ping_count += 1
+            if high_ping_count == 5:
+                loop.create_task(channel.send(f"Warning! Latency is {int(client.latency*1000)} ms!\nIt was abowe 200 ms for over 10 seconds."))
+        elif high_ping_count != 0:
+            high_ping_count - 1
         sleep(2)
 
 def send_message(msg, user=None):
@@ -833,18 +840,25 @@ def runner(loop):
         loop.create_task(client.start(token))
         loop.run_forever()
     else:
-        print("Started in remote mode...")
+        """ print("Started in remote mode...")
         print("Gathering IP and Authentication code", print_only=True)
         try:
             ip = os.sys.argv[os.sys.argv.index('--ip') + 1]
+            port = int(os.sys.argv[os.sys.argv.index('--port') + 1])
             auth = os.sys.argv[os.sys.argv.index('--auth') + 1]
             name = os.sys.argv[os.sys.argv.index('--name') + 1]
-            #TODO: Remote bot operation (Possibly low powered)
+            from API import smdb_api
+            _api = smdb_api.API(name, auth, ip, port)
+            _api.validate(10)
+            if not _api.valid:
+                print("Validation failed!")
+                signal(signals.exit)
+            _api.create_function("status", "Scanns the system for the running applications, and creates a message depending on the resoults.\nUsage: &status <long if you want to see the API status too>\nCategory: SOFTWARE")
         except:
             print("Called incorrectly!")
             print("IP and Authentication code needed in remote mode!", print_only=True)
             stop()
-            signal('')
+            signal(signals.exit) """
 
 def stop():
     global is_running
