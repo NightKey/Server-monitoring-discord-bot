@@ -785,7 +785,7 @@ def disconnect_check(loop, channels):
             loop.create_task(client.close())
             while not client.is_closed(): pass
             signal(signals.exit)
-        if client != None and client.latency == client.latency and int(client.latency*1000) > 200:  #client.latency == client.latency - NaN test
+        if was_online and int(client.latency*1000) > 200:  #client.latency == client.latency - NaN test
             high_ping_count += 1
             if high_ping_count == 5:
                 loop.create_task(channel.send(f"Warning! Latency is {int(client.latency*1000)} ms!\nIt was abowe 200 ms for over 10 seconds."))
