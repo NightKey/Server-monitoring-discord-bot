@@ -785,7 +785,7 @@ def disconnect_check(loop, channels):
             loop.create_task(client.close())
             while not client.is_closed(): pass
             signal(signals.exit)
-        if int(client.latency*1000) > 200:
+        if client != None and int(client.latency*1000) > 200:
             high_ping_count += 1
             if high_ping_count == 5:
                 loop.create_task(channel.send(f"Warning! Latency is {int(client.latency*1000)} ms!\nIt was abowe 200 ms for over 10 seconds."))
@@ -840,10 +840,11 @@ def runner(loop):
         loop.create_task(client.start(token))
         loop.run_forever()
     else:
-        """ print("Started in remote mode...")
-        print("Gathering IP and Authentication code", print_only=True)
+        print("Started in remote mode...")
+        print("Gathering IP and Authentication code", log_only=True)
+        ip = port = auth = name = None
         try:
-            ip = os.sys.argv[os.sys.argv.index('--ip') + 1]
+            """ ip = os.sys.argv[os.sys.argv.index('--ip') + 1]
             port = int(os.sys.argv[os.sys.argv.index('--port') + 1])
             auth = os.sys.argv[os.sys.argv.index('--auth') + 1]
             name = os.sys.argv[os.sys.argv.index('--name') + 1]
@@ -853,12 +854,13 @@ def runner(loop):
             if not _api.valid:
                 print("Validation failed!")
                 signal(signals.exit)
-            _api.create_function("status", "Scanns the system for the running applications, and creates a message depending on the resoults.\nUsage: &status <long if you want to see the API status too>\nCategory: SOFTWARE")
+            _api.create_function("status", "Scanns the system for the running applications, and creates a message depending on the resoults.\nUsage: &status <long if you want to see the API status too>\nCategory: SOFTWARE") """
         except:
             print("Called incorrectly!")
+            print(f"IP: {ip or 'None'} Port: {port or 'None'} Auth: {auth or 'None'} Name: {name or 'None'}", log_only=True)
             print("IP and Authentication code needed in remote mode!", print_only=True)
             stop()
-            signal(signals.exit) """
+            signal(signals.exit)
 
 def stop():
     global is_running
