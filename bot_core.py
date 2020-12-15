@@ -792,6 +792,7 @@ def disconnect_check(loop, channels):
             high_ping_count += 1
             if high_ping_count == 5:
                 loop.create_task(channel.send(f"Warning! Latency is {int(client.latency*1000)} ms!\nIt was abowe 200 ms for over 10 seconds."))
+                high_ping_count = 0
         elif high_ping_count != 0:
             high_ping_count - 1
         sleep(2)
