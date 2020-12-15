@@ -3,3 +3,4 @@ logs*
 *.cfg
 *.json
 *__py*
+*.last
