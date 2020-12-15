@@ -753,13 +753,16 @@ async def on_message(message):
 
 def disconnect_check(loop, channels):
     """Restarts the bot, if the disconnected time is greater than one hour"""
-    global connections
+    setup = False
     channel = None
-    high_ping_count = 0
-    for channel in client.get_all_channels():
-        if str(channel) in channels:
-            break
     while is_running:
+        if not setup:
+            global connections
+            channel = None
+            high_ping_count = 0
+            for channel in client.get_all_channels():
+                if str(channel) in channels:
+                    break
         if was_online and dc_time != None:
             if (datetime.datetime.now() - dc_time) > datetime.timedelta(hours=1):
                 print('Offline for too long. Restarting!')
