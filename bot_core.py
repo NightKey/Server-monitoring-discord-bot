@@ -436,6 +436,24 @@ Category: SERVER
     except Exception as ex:
         await message.channel.send(f'Exception occured during cleaning:\n```{type(ex)} --> {ex}```')
 
+async def count(message, channel):
+    """Counts the messages for every user in a channel. The channel can either be given as a tag, or left empty.
+Usage: &count <Optionally tagged channel (with  a '#' character before the name)>
+Category: SERVER
+    """
+    if channel is None:
+        channel = message.channel
+    else:
+        channel = client.get_channel(channel.replace("<#", '').replace(">", ""))
+    counter = {}
+    async for msg in channel.history():
+        counter[msg.author] = counter.setdefault(msg.author, 0) + 1
+    message_to_send = "```\n"
+    for user, count in counter.items():
+        message_to_send += f"{user}: {count}\n"
+    message_to_send += "```"
+    await message.channel.send(message_to_send)
+
 async def get_api_key(message, name):
     """Creates an API key for the given application name.
 Usage: &API <name of the application the key will be created to>
@@ -655,6 +673,7 @@ linking = {
     "api":get_api_key,
     "bar":set_bar,
     "clear":clear,
+    "count":count,
     "echo":echo,
     "end":stop_at,
     "errors":send_errors,
