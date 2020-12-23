@@ -444,14 +444,13 @@ Category: SERVER
     if channel is None:
         channel = message.channel
     else:
-        channel = client.get_channel(channel.replace("<#", '').replace(">", ""))
+        channel = client.get_channel(int(channel.replace("<#", '').replace(">", "")))
     if channel is None: 
         await message.channel.send("Channel is None! The bot probably doesn't have permission to read it.")
         return
     counter = {}
     async for msg in channel.history(limit=1000):
         counter[msg.author] = counter.setdefault(msg.author, 0) + 1
-        message_avaleable = True
     try: message_to_send = f"```\n{channel.name}\n"
     except: message_to_send = f"```\nPrivate Channel\n"
     for user, count in counter.items():
@@ -764,13 +763,13 @@ async def on_message(message):
                         if 'value' not in mx or mx["value"] < tmp:
                             mx["key"] = key
                             mx["value"] = tmp
-                    if mx['value'] == 100:
+                    if 'value' in mx and mx['value'] == 100:
                         try:
                             outside_options[mx["key"]](_server, str(message.channel.id), (str)(message.author.id), etc)
                             await message.add_reaction("dot:577128688433496073")
                             await message.remove_reaction("👎", me)
                         except Exception as ex: await message.channel.send(f"Error runnig the {cmd} command: {type(ex)} -> {ex}")
-                    elif mx['value'] > 70:
+                    elif 'value' in mx and mx['value'] > 70:
                         await message.channel.send(f"Did you mean `{mx['key']}`? Probability: {mx['value']}%")
                     else:
                         await message.channel.send("Not a valid command!\nUse '&help' for the avaleable commands")
