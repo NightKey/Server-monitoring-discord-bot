@@ -451,7 +451,7 @@ Category: SERVER
     counter = {}
     async for msg in channel.history():
         counter[msg.author] = counter.setdefault(msg.author, 0) + 1
-    try: message_to_send = f"```\n{channel.Name}\n"
+    try: message_to_send = f"```\n{channel.name}\n"
     except: message_to_send = f"```\nPrivate Channel\n"
     for user, count in counter.items():
         message_to_send += f"{user}: {count}\n"
