@@ -437,7 +437,7 @@ Category: SERVER
         await message.channel.send(f'Exception occured during cleaning:\n```{type(ex)} --> {ex}```')
 
 async def count(message, channel):
-    """Counts the messages for every user in a channel. The channel can either be given as a tag, or left empty.
+    """Counts the messages for every user in a channel's last 1000 messages. The channel can either be given as a tag, or left empty.
 Usage: &count <Optionally tagged channel (with  a '#' character before the name)>
 Category: SERVER
     """
@@ -452,7 +452,7 @@ Category: SERVER
     message_avaleable = True
     while message_avaleable:
         message_avaleable = False
-        async for msg in channel.history():
+        async for msg in channel.history(limit=1000):
             counter[msg.author] = counter.setdefault(msg.author, 0) + 1
             message_avaleable = True
     try: message_to_send = f"```\n{channel.name}\n"
