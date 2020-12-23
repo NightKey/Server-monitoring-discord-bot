@@ -449,8 +449,12 @@ Category: SERVER
         await message.channel.send("Channel is None! The bot probably doesn't have permission to read it.")
         return
     counter = {}
-    async for msg in channel.history():
-        counter[msg.author] = counter.setdefault(msg.author, 0) + 1
+    message_avaleable = True
+    while message_avaleable:
+        message_avaleable = False
+        async for msg in channel.history():
+            counter[msg.author] = counter.setdefault(msg.author, 0) + 1
+            message_avaleable = True
     try: message_to_send = f"```\n{channel.name}\n"
     except: message_to_send = f"```\nPrivate Channel\n"
     for user, count in counter.items():
