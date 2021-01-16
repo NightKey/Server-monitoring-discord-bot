@@ -282,8 +282,7 @@ Category: SERVER
     """
     import random
     if value is None:
-        await message.channel.send("Called incorrectly")
-        return
+        value = '1d20'
     num = int(value.split('d')[0])
     sides = int(value.split('d')[1])
     if num > 500 or sides > 1000:
