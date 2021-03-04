@@ -90,10 +90,15 @@ class API:
         del self.tmp
         del tmp
 
-    def validate(self, timeout=None):
+    def validate(self, timeout=None, try_in_background=False):
         """Validates with the bot, and starts the listener loop, if validation is finished.
         Time out can be set, so it won't halt the program for ever, if no bot is present. (The timeout will only work for the first validation.)
         """
+        if try_in_background:
+            self.th = threading.Thread(target=self._listener)
+            self.th.name = "Listener Thread"
+            self.th.start()
+        return True
         start = time()
         while True:
             try:
@@ -118,6 +123,7 @@ class API:
             if not self.connection_alive:
                 self.tmp = threading.Thread(target=self._re_init_commands)
                 self.tmp.start()
+        return True
                 
     def is_admin(self, uid):
         if self.valid:
@@ -206,7 +212,7 @@ class API:
 
             try:
                 if self.running: 
-                    self.validate()
+                    self.validate(try_in_background=False)
                     self.connection_alive = True
             except Exception as ex: print(f"{type(ex)} -> {ex}")
 
