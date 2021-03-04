@@ -4,3 +4,8 @@ logs*
 *.json
 *__py*
 *.last
+*dist*
+*build*
+*toml
+*tests*
+*egg-info*
