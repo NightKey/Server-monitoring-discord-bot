@@ -92,6 +92,12 @@ Category: BOT
         except: pass
         signal('Restart')
     else:
+        os.system("pip install --user --upgrade smdb_api > update.lg")
+        with open("update.lg", "r") as f:
+            tmp = f.read(-1).split("\n")
+        os.remove("update.lg")
+        if len(tmp) > 2 and message is not None:
+            await message.channel.send("API updated!")
         if message is not None:
             await message.channel.send('Nothing was updated!')
 
