@@ -98,6 +98,7 @@ Category: BOT
         os.remove("update.lg")
         if len(tmp) > 2 and message is not None:
             await message.channel.send("API updated!")
+            return
         if message is not None:
             await message.channel.send('Nothing was updated!')
 
