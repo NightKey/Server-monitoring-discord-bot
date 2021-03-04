@@ -98,7 +98,7 @@ class API:
             self.th = threading.Thread(target=self._listener)
             self.th.name = "Listener Thread"
             self.th.start()
-        return True
+            return True
         start = time()
         while True:
             try:
