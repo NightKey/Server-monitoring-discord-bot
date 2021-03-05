@@ -30,8 +30,9 @@ CHANNEL = 4
 
 class API:
     """API for the 'Server monitoring Discord bot' application."""
-    def __init__(self, name, key, ip="127.0.0.1", port=9600):
-        """Initialises an API that connects to the 'ip' ip and to the 'port' port with the 'name' name and the 'key' api key
+    def __init__(self, name, key, ip="127.0.0.1", port=9600, update_function=None):
+        """Initialises an API that connects to the 'ip' ip and to the 'port' port with the 'name' name and the 'key' api key.
+        The update_function should be a vfunction to call, when the bot calls for update (usually when the bot is updated). The function should not require input data.
         """
         self.ip = ip
         self.port = port
@@ -39,13 +40,14 @@ class API:
         self.key =  key
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.valid = False
-        self.call_list = {}
+        self.call_list = {"update", self.update}
         self.buffer = []
         self.sending = False
         self.running = True
         self.connection_alive = True
         self.socket_list = []
         self.created_function_list=[]
+        self.update_function = update_function
 
     def _send(self, msg):
         """Sends a socket message
@@ -137,6 +139,13 @@ class API:
             if tmp["Response"] == "Success":
                 return tmp["Data"]
         else: NotValidatedError()
+
+    def update(self):
+        """Trys to update the API with PIP, and calls the given update function if there is one avaleable.
+        """
+        os.system("pip install --user --upgrade smdb_api")
+        if self.update_function is not None:
+            self.update_function()
 
     def get_status(self):
         """Gets the bot's status

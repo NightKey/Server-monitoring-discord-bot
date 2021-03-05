@@ -80,6 +80,18 @@ class server:
     def get_api_status(self):
         return {"connections":list(self.clients.values()), "commands":list(self.functions.values())}
     
+    def request_all_update(self):
+        """Requests an update from the all connected clients. This update should request the application used to update itself and the API
+        """
+        for target in self.socket_list:
+            if target == self.socket: continue
+            self.send_update_request(target)
+
+    def send_update_request(self, target):
+        """Requests an update from the target. This update should request the application used to update itself and the API
+        """
+        self.send("update", target)
+
     def start(self):
         """Starts the API server
         """
@@ -118,7 +130,7 @@ class server:
         self.send(self.send_message(*msg), socket)
 
     def retrive(self, socket):
-        r"""Retrives a message from the socket. Every message is '\n' terminated
+        r"""Retrives a message from the socket. Every message is '\n' terminated (terminator not included)
         """
         ret = ""
         try:
@@ -140,7 +152,7 @@ class server:
             return None
     
     def send(self, msg, socket):
-        r"""Sends a message to the socket. Every message is '\n' terminated
+        r"""Sends a message to the socket. Every message is '\n' terminated (terminator does not required)
         """
         try:
             if isinstance(socket, str):
