@@ -91,7 +91,7 @@ Category: BOT
     os.remove("update.lg")
     if len(tmp) > 2 and message is not None:
         await message.channel.send("API updated!")
-    server.request_all_update()
+    _server.request_all_update()
     if updater.main():
         if message is not None:
             await message.channel.send("Restarting...")
