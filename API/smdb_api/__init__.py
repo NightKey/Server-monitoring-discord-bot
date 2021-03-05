@@ -40,7 +40,7 @@ class API:
         self.key =  key
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.valid = False
-        self.call_list = {"update", self.update}
+        self.call_list = {"update": self.update}
         self.buffer = []
         self.sending = False
         self.running = True
