@@ -21,6 +21,7 @@ def blockPrint():
     sys.stdout = open(os.devnull, 'w')
 
 def enablePrint():
+    sys.stdout.close()
     sys.stdout = sys.__stdout__
 
 NOTHING = 0
@@ -92,14 +93,15 @@ class API:
         del self.tmp
         del tmp
 
-    def validate(self, timeout=None, try_in_background=False):
-        """Validates with the bot, and starts the listener loop, if validation is finished.
+    def validate(self, timeout=None):
+        """Validates with the bot, and starts the listener loop, if validation is finished. Returns false, if validation timed out
         Time out can be set, so it won't halt the program for ever, if no bot is present. (The timeout will only work for the first validation.)
+        If the timeout is set to -1, the validation will be in a new thread, and always return true.
         """
-        if try_in_background:
-            self.th = threading.Thread(target=self._listener)
-            self.th.name = "Listener Thread"
-            self.th.start()
+        if timeout is not None and timeout == -1:
+            tmp = threading.Thread(target=self.validate)
+            tmp.name = "Validation"
+            tmp.start()
             return True
         start = time()
         while True:
@@ -107,7 +109,7 @@ class API:
                 self.socket.connect((self.ip, self.port))
                 break
             except ConnectionRefusedError: pass
-            if timeout is not None and time() - start > timeout:
+            if timeout is not None and timeout > 0 and time() - start > timeout:
                 return False
         self._send({"Command":self.name, "Value": self.key})
         ansvear = self._retrive()
@@ -184,7 +186,7 @@ class API:
             self.sending = False
             if tmp["Response"] == "Bad request": raise ActionFailed(tmp["Data"])
             elif tmp["Response"] == "Internal error": print(tmp["Data"])
-        else: raise NotValidatedError()
+        else: raise NotValidatedError
 
     def _listener(self):
         """Listens for incoming messages, and stops when the program stops running
@@ -253,25 +255,4 @@ class API:
                 self.call_list[name] = callback
             elif tmp["Response"] == "Internal error": print(tmp["Data"])
             else: raise ActionFailed(tmp["Data"])
-        else: raise NotValidatedError()
-
-if __name__ == "__main__":
-    api = API("Test", "80716cbfd9f90428cd308acc193b4b58519a4f10a7440b97aaffecf75e63ecec")
-    api.validate()
-    print('Validation finished')
-    print(api.get_status())
-    print('Status finished')
-    api.send_message("Test", destination="165892968283242497")
-    print('Message finished')
-    print(f"User is{' ' if api.is_admin('165892968283242497') else ' not '}admin")
-    def sst(usr, msg):
-        print(api.get_username(usr))
-        print(msg)
-        if msg == "": msg = "Empty message"
-        api.send_message(msg, usr)
-    api.create_function("SuperSecretTest",
-    "It's a super secret test option!\nUsage: &SuperSecretTest <You can say aaaanything>\nCategory: SOFTWARE",
-    sst, [USER_INPUT, SENDER])
-    print('Function created')
-    input("Press return to exit")
-    api.close("it's the end of the word!")
+        else: raise NotValidatedError

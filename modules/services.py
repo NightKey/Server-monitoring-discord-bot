@@ -6,11 +6,12 @@ from sys import getsizeof
 from time import sleep, process_time
 
 lg = logger.logger("api_server", folder="logs")
+verbose=True #If false, no data get's printed
 
 def split(text, error=False, log_only=False, print_only=False):
     """Logs to both stdout and a log file, using both the writer, and the logger module
     """
-    if not log_only: writer.write(text)
+    if not log_only and verbose: writer.write(text)
     if not print_only: lg.log(text, error=error)
 
 writer = writer.writer("API")
@@ -59,8 +60,10 @@ class server:
         return f'{self.ip}{self.port}'
 
     def _save_settings(self, key="current"):
-        from os import path
+        from os import path, mkdir
         settings_path = path.join("data", "server.cfg")
+        if not path.exists(settings_path):
+            mkdir("data")
         settings = {}
         if key == "current":
             settings["ip"] = self.ip

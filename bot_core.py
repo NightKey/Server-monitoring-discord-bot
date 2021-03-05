@@ -747,7 +747,6 @@ async def on_message(message):
                 except Exception as ex:
                     await message.channel.send(f"Error runnig the {cmd} command: {type(ex)} -> {ex}")
             else:
-                await message.add_reaction("👎")
                 mx = {}
                 for key in linking.keys():
                     tmp=fuzz.ratio(cmd.lower(), key.lower())
@@ -758,9 +757,9 @@ async def on_message(message):
                     try:
                         await linking[mx["key"]](message, etc)
                         await message.add_reaction("dot:577128688433496073")
-                        await message.remove_reaction("👎", me)
                     except Exception as ex: await message.channel.send(f"Error runnig the {cmd} command: {type(ex)} -> {ex}")
                 elif mx['value'] > 70:
+                    await message.add_reaction("👎")
                     await message.channel.send(f"Did you mean `{mx['key']}`? Probability: {mx['value']}%")
                 else:
                     mx = {}
@@ -773,11 +772,12 @@ async def on_message(message):
                         try:
                             outside_options[mx["key"]](_server, str(message.channel.id), (str)(message.author.id), etc)
                             await message.add_reaction("dot:577128688433496073")
-                            await message.remove_reaction("👎", me)
                         except Exception as ex: await message.channel.send(f"Error runnig the {cmd} command: {type(ex)} -> {ex}")
                     elif 'value' in mx and mx['value'] > 70:
+                        await message.add_reaction("👎")
                         await message.channel.send(f"Did you mean `{mx['key']}`? Probability: {mx['value']}%")
                     else:
+                        await message.add_reaction("👎")
                         await message.channel.send("Not a valid command!\nUse '&help' for the avaleable commands")
 
 def disconnect_check(loop, channels):
