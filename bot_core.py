@@ -91,7 +91,8 @@ Category: BOT
     os.remove("update.lg")
     if len(tmp) > 2 and message is not None:
         await message.channel.send("API updated!")
-    _server.request_all_update()
+    if _server is not None:
+        _server.request_all_update()
     if updater.main():
         if message is not None:
             await message.channel.send("Restarting...")
@@ -234,7 +235,7 @@ Category: SOFTWARE
         await channel.send(embed=embed)
         if stype is not None and stype.lower() == "long":
             embed = discord.Embed(title="API Status", color=0x14f9a2)
-            api_status = _server.get_api_status()
+            api_status = _server.get_api_status() if _status is not None else {"API":"Offline"}
             for key, values in api_status.items():
                 if values == []: continue
                 embed.add_field(name=key, value="\u200B", inline=False)
@@ -469,7 +470,7 @@ async def get_api_key(message, name):
 Usage: &API <name of the application the key will be created to>
 Category: SOFTWARE
     """
-    await message.channel.send(_server.get_api_key_for(name))
+    await message.channel.send(_server.get_api_key_for(name) if _server is not None else "API is not avaleable")
 
 async def restart(message, _):
     """Restarts the server it's running on. Admin permissions may be needed for this on the host.
