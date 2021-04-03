@@ -1,4 +1,4 @@
-import subprocess
+import subprocess, errno
 from platform import system
 from os import system as run
 from os import path, remove, rename
@@ -11,6 +11,12 @@ restart_counter = 0
 
 def is_debugger():
     return gettrace() is not None
+
+def install_dependencies():
+    pre = "sudo " if system() == 'Linux' else ""
+    post = " --user" if system() == 'Windows' else ""
+    resp = run(f"{pre}{interpreter} -m pip install{post} -r dependencies.txt")
+    return resp
 
 def main():
     """
@@ -46,6 +52,13 @@ def main():
             print(f"{type(ex)} -> {ex}")
         finally:
             sleep(0.2)
+    if server.returncode == errno.EPERM:
+        print("Permission error! If this occures more than once, please try to run the program in administrator/root mode")
+        print("Installing dependencies...")
+        if install_dependencies() == 0:
+            print("Dependencies installed!")
+        else:
+            print("Error in installing dependecies, please install them manually!")
 
 if __name__ == '__main__':
     #Starts the server, while required

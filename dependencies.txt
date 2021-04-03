@@ -1,3 +1,4 @@
+psutil
 discord
 fuzzywuzzy
 python-Levenshtein

@@ -1,6 +1,6 @@
-import psutil
 from modules import bar
 from datetime import timedelta
+import psutil
 
 a = 97
 z = 123

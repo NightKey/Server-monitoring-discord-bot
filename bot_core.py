@@ -949,3 +949,4 @@ if __name__ == "__main__":
     Bot.name = "Bot thread"
     print("Starting bot thread...")
     Bot.start()
+    Bot.join()
