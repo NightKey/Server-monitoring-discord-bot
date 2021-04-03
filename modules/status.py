@@ -1,5 +1,6 @@
 from modules import bar
 from datetime import timedelta
+from platform import system
 import psutil
 
 a = 97
@@ -10,11 +11,9 @@ def get_pc_status():
     Returns disk, memory, battery in this order.
     """
     disk = dict()
-    for letter in range(a, z):
-        try:
-            disk[chr(letter)] = psutil.disk_usage("{}:".format(chr(letter)))._asdict()
-        except:
-            pass
+    partitions = psutil.disk_partitions()
+    for partition in partitions:
+        disk[partition._asdict()["mountpoint"]] = psutil.disk_usage("{}".format(partition._asdict()["mountpoint"]))._asdict()
     memory = psutil.virtual_memory()._asdict()
     try:
         battery = psutil.sensors_battery()._asdict()
