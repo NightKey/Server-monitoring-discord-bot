@@ -4,8 +4,6 @@ This bot monitors the computer that it's running on.
 For it to work, you will need to create one [Discord bot account](https://discordapp.com/developers/applications/).
 Both the watchdog, and the bot is capable of running without one another.
 
-*This version is a Windows only version!*
-
 ## The bot
 
 This application is a chat-bot that is capable of telling the status of the computer, the watchlist's status (what application is and isn't running), and it can send a notification message of a process suddenly stopping (If the watchdog process is running).

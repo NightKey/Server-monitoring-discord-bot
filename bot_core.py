@@ -5,23 +5,8 @@ from modules.response import response
 from threading import Thread
 from time import sleep, process_time
 import datetime, psutil, os, json, webbrowser, asyncio, logging
-trys = 0
-while trys < 3:
-    try:
-        import discord
-        from fuzzywuzzy import fuzz
-        break
-    except:
-        print("Can't import something, trying to install dependencies")
-        with open("dependencies.txt", 'r') as f:
-            dep = f.read(-1).split('\n')
-        for d in dep:
-            os.system(f"pip install --user {d}")
-        trys = 1
-if trys >= 3:
-    print("Couldn't import something for the 3rd time...")
-    input('Exiting... Press return...')
-    exit(1)
+import discord
+from fuzzywuzzy import fuzz
 
 trys = 0
 token = ""
