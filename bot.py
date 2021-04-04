@@ -25,8 +25,8 @@ def main():
     global restart_counter
     param = []
     param.extend(argv[1:])
-    if is_debugger(): param.extend(['--nowd', '--api', '--scilent'])
-    print(f"Calling the bot with the following params: {*param}")
+    if is_debugger(): param.extend(['--nowd', '--scilent'])
+    print(f"Calling the bot with the following params: {param}")
     server = subprocess.Popen([interpreter, 'bot_core.py', *param])  #Creates a child process with the 'server.py' script
     while server.poll() is None:    #Works while the child process runs
         try:
