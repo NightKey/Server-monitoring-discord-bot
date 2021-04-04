@@ -70,7 +70,7 @@ async def updater(message, _=None):
 Category: BOT
     """
     from modules import updater
-    os.system("pip install --user --upgrade smdb_api > update.lg")
+    os.system("pip3 install --user --upgrade smdb_api > update.lg")
     with open("update.lg", "r") as f:
         tmp = f.read(-1).split("\n")
     os.remove("update.lg")
