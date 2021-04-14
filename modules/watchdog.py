@@ -90,21 +90,26 @@ class watchdog():
                 break
         self.channel = channel
         print("started")
+        battery_warning_number = 0
         n = 5
         while self.run:
             self.process_list = scann(self.process_list, psutil.process_iter())
             if n % 2 == 0:
-                _, _, battery = status.get_pc_status()
+                battery = status.get_battery_status()
                 if battery != None:
-                    if not battery["power_plugged"]:
+                    if not battery["power_plugged"] and battery_warning_number >= 3:
                         if not self.battery_warning:
                             if self._ready:
                                 print('Power Disconnected!', log_only=True)
                                 self.loop.create_task(channel.send(f"@everyone The Battery is not plugged in!"))
                                 self.battery_warning = True
+                    elif not battery["power_plugged"]:
+                        battery_warning_number += 1
                     elif self.battery_warning:
                         self.battery_warning = False
-            if n >= 5:
+                    elif battery_warning_number != 0:
+                        battery_warning_number = 0
+            if n >= 3:
                 n = 0
             else:
                 n += 1

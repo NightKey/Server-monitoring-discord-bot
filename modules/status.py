@@ -21,6 +21,13 @@ def get_pc_status():
         battery = None
     return disk, memory, battery
 
+def get_battery_status():
+    try:
+        battery = psutil.sensors_battery()._asdict()
+    except:
+        battery = None
+    return battery
+
 def get_graphical(bar_size, in_dict=False):
     """Using the bar module, creates a visual representation of the system's status.
     It shows the disks' and the momory's percentage, the used and the total space, and the battery's remaning lifetime, if it's pugged, and the battery's percentage.
