@@ -93,16 +93,20 @@ class API:
         del self.tmp
         del tmp
 
-    def validate(self, timeout=None):
+    def validate(self, timeout=-1):
         """Validates with the bot, and starts the listener loop, if validation is finished. Returns false, if validation timed out
         Time out can be set, so it won't halt the program for ever, if no bot is present. (The timeout will only work for the first validation.)
         If the timeout is set to -1, the validation will be in a new thread, and always return true.
         """
         if timeout is not None and timeout == -1:
-            tmp = threading.Thread(target=self.validate)
+            tmp = threading.Thread(target=self._validate)
             tmp.name = "Validation"
             tmp.start()
             return True
+        else:
+            return self._validate(timeout)
+
+    def _validate(self, timeout=None):
         start = time()
         while True:
             try:
@@ -220,10 +224,11 @@ class API:
                         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                         self.socket_list = []
                 except: pass
+                sleep(0.2)
 
             try:
                 if self.running: 
-                    self.validate(try_in_background=False)
+                    self._validate()
                     self.connection_alive = True
             except Exception as ex: print(f"{type(ex)} -> {ex}")
 
