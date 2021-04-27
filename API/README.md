@@ -28,10 +28,10 @@ To add a command to the bot, use the 'create_function' command, like shown here:
 
 ```
 [...]
-def my_callback(user_input):
+def my_callback(message):
     #Does something
 
-API.create_function("MyScript", "Shome text to help\nUsage: &MyCommand <User input>\nCategory: SERVER", my_callback, return_value=[smbd_api.USER_INPUT])
+API.create_function("MyScript", "Shome text to help\nUsage: &MyCommand <User input>\nCategory: SERVER", my_callback)
 ```
 To send a message to someone, use the 'send_message' command:
 

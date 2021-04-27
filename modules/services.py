@@ -17,6 +17,58 @@ def split(text, error=False, log_only=False, print_only=False):
 writer = writer.writer("API")
 print = split   #Changed print to the split function
 
+
+class Attachment:
+    """Message attachment"""
+    def from_json(json):
+        if json is None: return None
+        return Attachment(json["filename"], json["url"], json["size"])
+    
+    def from_discord_attachment(atch):
+        if atch is None: return None
+        return Attachment(atch.filename, atch.url, atch.size)
+
+    def __init__(self, filename, url, size):
+        if not isinstance(size, int): raise AttributeError(f"{type(size)} is not int type")
+        self.url = url
+        self.filename = filename
+        self.size = size
+
+    def size(slef):
+        return self.size
+
+    def download(self):
+        import requests
+        return requests.get(self.url)
+
+    def save(self, path):
+        if not os.path.exists(path): return ""
+        file = self.download()
+        with open(os.path.join(path, filename), "wb") as f:
+            f.write(file.content)
+        return os.path.join(path, filename)
+    
+    def to_json(self):
+        return {"filename":self.filename, "size":self.size, "url":self.url}
+
+class Message:
+    """Message object used by the api"""
+    def from_json(json):
+        return Message(json["sender"], json["content"], json["channel"], [Attachment.from_json(attachment) for attachment in json["attachments"]] if json["attachments"] is not None else [], json["called"])
+
+    def __init__(self, sender, content, channel, attachments, called):
+        self.sender = sender
+        self.content = content
+        self.channel = channel
+        self.attachments = attachments
+        self.called = called
+
+    def add_called(self, called):
+        self.called = called
+
+    def to_json(self):
+        return {"sender":self.sender, "content":self.content, "channel":self.channel, "called":self.called, "attachments":[attachment.to_json() for attachment in self.attachments] if len(self.attachments) > 0 else None}
+
 class server:
     def __init__(self, linking_editor, get_status, send_message, get_user, is_admin):
         self.clients = {}
@@ -93,7 +145,7 @@ class server:
     def send_update_request(self, target):
         """Requests an update from the target. This update should request the application used to update itself and the API
         """
-        self.send("update", target)
+        self.send(Message("0000000000", "", "0000000000", [], "update").to_json(), target)
 
     def start(self):
         """Starts the API server
@@ -191,22 +243,16 @@ class server:
             return
         self.send(self.is_admin(uid), socket)
 
-    def create_function(self, creator, name, help_text, callback, user_value=0):
+    def create_function(self, creator, name, help_text, callback):
         """Creates a function with the given parameters, and stores it in the self.functions dictionary, with the 'name' as key
-        user_value: 0 - None, 1 - user_input, 2 - sender name#descriminator, 4 - channel, 3 - 1+2, 5 - 1+4, 6 - 2+4, 7 - 1+2+4
         """
         print(f'Creating function with the name {name}', log_only=True)
         print(f'Creating function with the call back {callback}', log_only=True)
         print(f'Creating function with the creator as {creator}', log_only=True)
-        stuff = ''
-        stuff += f"self.send(channel, '{creator}')\n    " if user_value in [4, 5, 6, 7] else ''
-        stuff += f"self.send(sender, '{creator}')\n    " if user_value in [2, 3, 6, 7] else ''
-        stuff += f"self.send(_input, '{creator}')\n    " if user_value in [1,3, 5, 7] else ''
-        body = f"""def {name}(self, channel, sender, _input):
+        body = f"""def {name}(self, message):
     \"\"\"{help_text}\"\"\"
-    if _input is None: _input = ""
-    self.send('{callback}', '{creator}')
-    {stuff}self.send(None, '{creator}')"""
+    message.add_called('{name}')
+    self.send(message.to_json(), '{creator}')"""
         try:
             exec(body)
         except Exception as ex:

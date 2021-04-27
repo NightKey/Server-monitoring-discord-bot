@@ -69,7 +69,7 @@ Upon validation, the response can be two:
 |[Username](#Username)<sup><sub>3</sub></sup>     |String        |Returns the username connected to the ID       |
 |[Remove](#Remove)<sup><sub>4</sub></sup>         |Boolean       |Rempves the selected command from the list     |
 |[Disconnect](#Disconnect)<sup><sub>5</sub></sup> |Nothing       |Safely disconnect, with an optional reason     |
-|[Is Admin](#Is_Admin)<sub>3</sub>                |Boolean       |Returns if user is an admin of the discord bot |
+|[Is Admin](#Is_Admin)<sup><sub>3</sub></sup>     |Boolean       |Returns if user is an admin of the discord bot |
 
 The messages are case sensitive, and 'Bad request' message will be sent, when a message is not applicable.
 
@@ -111,15 +111,6 @@ When using the `Create` command, the parameters will describe the following:
  -  callback - The value to send to the program (alongside with the value from the user, if it's required)
  -  return_value - What to send back with the command. It excepts a list of values (if nothing, then a list containing 0) of what needs to be returned.
 
-#### Options to return_value
-
-|Key              |Value|What's sent back with the command               |
-|:----------------|:---:|:-----------------------------------------------|
-|NOTHING          |0    |Nothing                                         |
-|USER_INPUT       |1    |Text after the '&[command]' part of the call.   |
-|SENDER           |2    |Only the sender's user ID.                      |
-|CHANNEL          |4    |The cannel's ID get's returned.                 |
-
 The `help_text` value can be a long text, but if you want to use any specifications on the input it should look the following:
 
 ```
@@ -143,11 +134,28 @@ The 'Usage: ' line is optional, but if present, it should be formated like that,
 
 ### Returns
 
-When it's called, it returns with the following values, in the following order:
- - The name given in the create call
- - Channel ID, if required
- - User ID, if required
- - User Input, if required
+When it's called, it returns a message object. This object has the following properties:
+
+|Property name|Types                         |Description                          |
+|:-----------:|:-----------------------------|------------------------------------:|
+|sender       |String                        |The name of the sender               |
+|content      |String                        |The message the user provided        |
+|channel      |String                        |The channel name where it was used   |
+|attachment   |[attachment](#Attachment)/None|The attachment sent with the message |
+|called       |String                        |The metthod called by the user       |
+
+### Attachment
+
+A class used to represent attachments sent by the user.
+
+|Property or method name|Type or return type|Description                                            |
+|:---------------------:|:------------------|------------------------------------------------------:|
+|filename               |String             |The sent file's name with extention                    |
+|url                    |String             |The url from where the file can be downloaded          |
+|size/size()            |Int                |The size of the file                                   |
+|download()             |bite like          |Returns the file's bite like representation            |
+|save(valid_path)       |String             |Returns the full path to where the file was downloaded |
+
 
 ## Username
 

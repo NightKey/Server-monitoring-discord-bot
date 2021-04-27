@@ -1,5 +1,5 @@
 from sys import getsizeof
-import os, sys, select, socket, json, threading
+import os, sys, select, socket, json, threading, random
 from time import sleep, time
 
 class ValidationError(Exception):
@@ -16,6 +16,65 @@ class ActionFailed(Exception):
     """Get's raised, when an action failes"""
     def __init__(self, action):
         self.message = f"'{action}' failed!'"
+
+class Attachment:
+    """Message attachment"""
+    def from_json(json):
+        if json is None: return None
+        return Attachment(json["filename"], json["url"], json["size"])
+    
+    def from_discord_attachment(atch):
+        if atch is None: return None
+        return Attachment(atch.filename, atch.url, atch.size)
+
+    def __init__(self, filename, url, size):
+        if not isinstance(size, int): raise AttributeError(f"{type(size)} is not int type")
+        self.url = url
+        self.filename = filename
+        self.size = size
+
+    def size(slef):
+        return self.size
+
+    def download(self):
+        import requests
+        return requests.get(self.url)
+
+    def save(self, path):
+        if not os.path.exists(path): return ""
+        tmp = self.filename
+        while os.path.exists(os.path.join(path, tmp)):
+            tmp = "".join((".".join(self.filename.split(".")[:-1]), f"({n}).", self.filename.split(".")[-1]))
+            n += 1
+        self.filename = tmp
+        file = self.download()
+        with open(os.path.join(path, self.filename), "wb") as f:
+            f.write(file.content)
+        return os.path.join(path, self.filename)
+    
+    def to_json(self):
+        return {"filename":self.filename, "size":self.size, "url":self.url}
+
+class Message:
+    """Message object used by the api"""
+    def from_json(json):
+        return Message(json["sender"], json["content"], json["channel"], [Attachment.from_json(attachment) for attachment in json["attachments"]] if json["attachments"] is not None else [], json["called"])
+
+    def __init__(self, sender, content, channel, attachments, called):
+        self.sender = sender
+        self.content = content
+        self.channel = channel
+        self.attachments = attachments
+        self.called = called
+
+    def add_called(self, called):
+        self.called = called
+        
+    def has_attachments(self):
+        return len(self.attachments) > 0
+
+    def to_json(self):
+        return {"sender":self.sender, "content":self.content, "channel":self.channel, "called":self.called, "attachments":[attachment.to_json() for attachment in self.attachments] if len(self.attachment) > 0 else None}
 
 def blockPrint():
     sys.stdout = open(os.devnull, 'w')
@@ -108,6 +167,7 @@ class API:
 
     def _validate(self, timeout=None):
         start = time()
+        self.sending = True
         while True:
             try:
                 self.socket.connect((self.ip, self.port))
@@ -121,16 +181,17 @@ class API:
             raise ValueError("Bad value retrived from socket.")
         elif ansvear["Response"] == 'Denied':
             raise ValidationError(ansvear["Data"])
-        else:
+        else:            
             self.valid = True
             self.socket_list.append(self.socket)
             if self.connection_alive:
                 self.th = threading.Thread(target=self._listener)
                 self.th.name = "Listener Thread"
                 self.th.start()
-            if not self.connection_alive:
-                self.tmp = threading.Thread(target=self._re_init_commands)
-                self.tmp.start()
+            else:
+                self.connection_alive = True
+                self._re_init_commands()
+        self.sending = False
         return True
                 
     def is_admin(self, uid):
@@ -146,7 +207,7 @@ class API:
                 return tmp["Data"]
         else: NotValidatedError()
 
-    def update(self):
+    def update(self, _):
         """Trys to update the API with PIP, and calls the given update function if there is one avaleable.
         """
         os.system("pip install --user --upgrade smdb_api")
@@ -189,13 +250,15 @@ class API:
             self.buffer = []
             self.sending = False
             if tmp["Response"] == "Bad request": raise ActionFailed(tmp["Data"])
-            elif tmp["Response"] == "Internal error": print(tmp["Data"])
+            elif tmp["Response"] == "Internal error": 
+                print(tmp["Data"])
+                return False
+            return True
         else: raise NotValidatedError
 
     def _listener(self):
         """Listens for incoming messages, and stops when the program stops running
         """
-        retrived_call=[]
         while self.running:
             while self.valid and self.connection_alive:
                 try:
@@ -204,26 +267,23 @@ class API:
                         msg = self._retrive()
                         if self.sending:
                             self.buffer.append(msg)
-                        elif msg in self.call_list:
-                            retrived_call.append(msg)
-                        elif msg is None and retrived_call != []:
-                            call = threading.Thread(target=self.call_list[retrived_call[0]], args=[*retrived_call[1:], ])
-                            call.name = self.call_list[retrived_call[0]]
-                            retrived_call = []
-                            call.start()
-                        elif retrived_call != []:
-                            retrived_call.append(msg)
                         elif msg is None:
                             self.connection_alive = False
                             self.socket.close()
                             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                             self.socket_list = []
+                        else:
+                            message = Message.from_json(msg)
+                            if message.called is not None and message.called in self.call_list:
+                                call = threading.Thread(target=self.call_list[message.called], args=[message, ])
+                                call.name = message.called
+                                call.start()
                     if exception_socket != []:
                         self.connection_alive = False
                         self.socket.close()
                         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                         self.socket_list = []
-                except: pass
+                except Exception as ex: print(f"{type(ex)} -> {ex}")
                 sleep(0.2)
 
             try:
@@ -241,23 +301,27 @@ class API:
         self._send({"Command":"Disconnect", "Value": reason})
         self.socket.close()
 
-    def create_function(self, name, help_text, callback, return_value=[NOTHING]):
-        """Creates a function in the connected bot.
+    def create_function(self, name, help_text, callback):
+        """Creates a function in the connected bot. This function creates a thread so it won't block while it waits for validation from the bot.
         Return order: ChannelID, UserID, UserInput. The returned value depends on the return value, but the order is the same.
         """
-        if self.valid:
-            if isinstance(return_value, (tuple, list)):
-                self.created_function_list.append([name, help_text, callback, sum(return_value)])
-                return_value = sum(return_value)
-            self.sending = True
-            self._send({"Command":"Create", "Value": [name, help_text, name, return_value]})
-            while self.buffer == []:
-                sleep(0.1)
-            tmp = self.buffer[0]
-            self.buffer = []
-            self.sending = False
-            if tmp["Response"] == "Success":
-                self.call_list[name] = callback
-            elif tmp["Response"] == "Internal error": print(tmp["Data"])
-            else: raise ActionFailed(tmp["Data"])
-        else: raise NotValidatedError
+        cf = threading.Thread(target=self._create_function, args=[name, help_text, callback,])
+        cf.name = f"Create thread for {name}"
+        cf.start()
+
+    def _create_function(self, name, help_text, callback):
+        """Creates a function in the connected bot when validated.
+        """
+        while not self.valid or self.sending:
+            sleep(random.choice([1,1.2,1.5,1,3]))
+        self.sending = True
+        self._send({"Command":"Create", "Value": [name, help_text, name]})
+        while self.buffer == []:
+            sleep(0.1)
+        tmp = self.buffer[0]
+        self.buffer = []
+        self.sending = False
+        if tmp["Response"] == "Success":
+            self.call_list[name] = callback
+        elif tmp["Response"] == "Internal error": print(tmp["Data"])
+        else: raise ActionFailed(tmp["Data"])

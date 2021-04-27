@@ -31,11 +31,13 @@ class API_CreationTest(unittest.TestCase):
         self.assertEqual(api.get_username("123"), "123")
 
     def test_6_api_uses_callback(self):
-        api.create_function("Test", "Test Description", self.dummy_callback, [smdb_api.SENDER])
-        server.Test(server, "Channel", "sender", 'input')
+        api.create_function("Test", "Test Description", dummy_callback)
+        msg = smdb_api.Message("sender", "content", "channel", None, None)
+        server.Test(server, msg)
 
-    def dummy_callback(self, input):
-        self.assertEqual(input, "sender")
+def dummy_callback(_input):
+    print("callback called")
+    API_CreationTest.assertEqual(_input.sender, "sender")
 
 def linking_editor(data, remove=False):
     pass

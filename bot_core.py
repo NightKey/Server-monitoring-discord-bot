@@ -1,5 +1,6 @@
 from modules import writer, status, logger, watchdog
 from modules.services import server
+from modules.services import Message, Attachment
 from modules.scanner import scann
 from modules.response import response
 from threading import Thread
@@ -729,7 +730,7 @@ async def on_message(message):
                 await message.add_reaction("dot:577128688433496073")
                 try:
                     if cmd in linking.keys(): await linking[cmd](message, etc)
-                    elif cmd in outside_options.keys(): outside_options[cmd](_server, str(message.channel.id), (str)(message.author.id), etc)
+                    elif cmd in outside_options.keys(): outside_options[cmd](_server, Message(str(message.author.id), etc, str(message.channel.id), [Attachment.from_discord_attachment(attachment) for attachment in message.attachments], None))
                 except Exception as ex:
                     await message.channel.send(f"Error runnig the {cmd} command: {type(ex)} -> {ex}")
             else:
@@ -819,8 +820,7 @@ def send_message(msg, user=None):
         loop.create_task(_watchdog.send_msg(msg))
         return response("Success")
     else:
-        for usr in client.users:
-            if (str)(usr.id) == user:
+        if usr := client.get_user(int(user)):
                 if usr.dm_channel is not None:
                     loop.create_task(usr.dm_channel.send(msg))
                     return response("Success")
