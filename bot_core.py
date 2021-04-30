@@ -744,7 +744,7 @@ async def on_message(message):
                     try:
                         await linking[mx["key"]](message, etc)
                         await message.add_reaction("dot:577128688433496073")
-                    except Exception as ex: await message.channel.send(f"Error runnig the {cmd} command: {type(ex)} -> {ex}")
+                    except Exception as ex: await message.channel.send(f"Error runnig the {cmd} command: {type(ex)} -> {ex}\nInterpreted command: {mx['key']}")
                 elif mx['value'] > 70:
                     await message.add_reaction("👎")
                     await message.channel.send(f"Did you mean `{mx['key']}`? Probability: {mx['value']}%")
@@ -757,9 +757,9 @@ async def on_message(message):
                             mx["value"] = tmp
                     if 'value' in mx and mx['value'] == 100:
                         try:
-                            outside_options[mx["key"]](_server, str(message.channel.id), (str)(message.author.id), etc)
+                            outside_options[mx["key"]](_server, Message(str(message.author.id), etc, str(message.channel.id), [Attachment.from_discord_attachment(attachment) for attachment in message.attachments], None))
                             await message.add_reaction("dot:577128688433496073")
-                        except Exception as ex: await message.channel.send(f"Error runnig the {cmd} command: {type(ex)} -> {ex}")
+                        except Exception as ex: await message.channel.send(f"Error runnig the {cmd} command: {type(ex)} -> {ex}\nInterpreted command: {mx['key']}")
                     elif 'value' in mx and mx['value'] > 70:
                         await message.add_reaction("👎")
                         await message.channel.send(f"Did you mean `{mx['key']}`? Probability: {mx['value']}%")
