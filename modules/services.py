@@ -2,8 +2,7 @@ from . import writer, logger
 from .response import response
 import socket, select, json
 from hashlib import sha256
-from sys import getsizeof
-from time import sleep, process_time
+import os
 
 lg = logger.logger("api_server", folder="logs")
 verbose=True #If false, no data get's printed
@@ -34,7 +33,7 @@ class Attachment:
         self.filename = filename
         self.size = size
 
-    def size(slef):
+    def size(self):
         return self.size
 
     def download(self):
@@ -44,9 +43,9 @@ class Attachment:
     def save(self, path):
         if not os.path.exists(path): return ""
         file = self.download()
-        with open(os.path.join(path, filename), "wb") as f:
+        with open(os.path.join(path, self.filename), "wb") as f:
             f.write(file.content)
-        return os.path.join(path, filename)
+        return os.path.join(path, self.filename)
     
     def to_json(self):
         return {"filename":self.filename, "size":self.size, "url":self.url}

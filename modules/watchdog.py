@@ -97,7 +97,7 @@ class watchdog():
             if n % 2 == 0:
                 battery = status.get_battery_status()
                 if battery != None:
-                    if not battery["power_plugged"] and battery_warning_number >= 3:
+                    if not battery["power_plugged"] and battery_warning_number >= 300:
                         if not self.battery_warning:
                             if self._ready:
                                 print('Power Disconnected!', log_only=True)
@@ -124,3 +124,4 @@ class watchdog():
                 if self._ready:
                     self.loop.create_task(channel.send(f"@everyone\n{self.error}"))
                     self.error = ""
+            sleep(0.2)

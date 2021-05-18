@@ -221,7 +221,7 @@ Category: SOFTWARE
         await channel.send(embed=embed)
         if stype is not None and stype.lower() == "long":
             embed = discord.Embed(title="API Status", color=0x14f9a2)
-            api_status = _server.get_api_status() if _status is not None else {"API":"Offline"}
+            api_status = _server.get_api_status() if _server is not None else {"API":"Offline"}
             for key, values in api_status.items():
                 if values == []: continue
                 embed.add_field(name=key, value="\u200B", inline=False)
@@ -821,15 +821,15 @@ def send_message(msg, user=None):
         return response("Success")
     else:
         if usr := client.get_user(int(user)):
-                if usr.dm_channel is not None:
-                    loop.create_task(usr.dm_channel.send(msg))
-                    return response("Success")
-                else:
-                    loop.create_task(usr.create_dm())
-                    while usr.dm_channel is None:
-                        sleep(0.01)
-                    loop.create_task(usr.dm_channel.send(msg))
-                    return response("Success")
+            if usr.dm_channel is not None:
+                loop.create_task(usr.dm_channel.send(msg))
+                return response("Success")
+            else:
+                loop.create_task(usr.create_dm())
+                while usr.dm_channel is None:
+                    sleep(0.01)
+                loop.create_task(usr.dm_channel.send(msg))
+                return response("Success")
         for chn in client.get_all_channels():
             if (str)(chn.id) == user:
                 chn.send(msg)

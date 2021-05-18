@@ -1,6 +1,5 @@
 from modules import bar
 from datetime import timedelta
-from platform import system
 import psutil
 
 a = 97
