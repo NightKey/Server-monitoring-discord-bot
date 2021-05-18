@@ -33,7 +33,7 @@ class Attachment:
         self.filename = filename
         self.size = size
 
-    def size(slef):
+    def size(self):
         return self.size
 
     def download(self):
@@ -43,6 +43,7 @@ class Attachment:
     def save(self, path):
         if not os.path.exists(path): return ""
         tmp = self.filename
+        n = 1
         while os.path.exists(os.path.join(path, tmp)):
             tmp = "".join((".".join(self.filename.split(".")[:-1]), f"({n}).", self.filename.split(".")[-1]))
             n += 1
@@ -105,6 +106,7 @@ class API:
         self.sending = False
         self.running = True
         self.connection_alive = True
+        self.initial = True
         self.socket_list = []
         self.created_function_list=[]
         self.update_function = update_function
@@ -143,13 +145,10 @@ class API:
             return None
     
     def _re_init_commands(self):
-        while not self.connection_alive:
-            pass
         from copy import deepcopy
         tmp = deepcopy(self.created_function_list)
         for item in tmp:
             self.create_function(*item)
-        del self.tmp
         del tmp
 
     def validate(self, timeout=-1):
@@ -184,13 +183,14 @@ class API:
         else:            
             self.valid = True
             self.socket_list.append(self.socket)
-            if self.connection_alive:
+            if self.created_function_list != []:
+                self.connection_alive = True
+                self._re_init_commands()
+            if self.initial:
+                self.initial = False
                 self.th = threading.Thread(target=self._listener)
                 self.th.name = "Listener Thread"
                 self.th.start()
-            else:
-                self.connection_alive = True
-                self._re_init_commands()
         self.sending = False
         return True
                 
@@ -265,14 +265,16 @@ class API:
                     read_socket, _, exception_socket = select.select(self.socket_list, [], self.socket_list)
                     if read_socket != []:
                         msg = self._retrive()
-                        if self.sending:
-                            self.buffer.append(msg)
-                        elif msg is None:
+                        if msg is None:
                             self.connection_alive = False
                             self.socket.close()
                             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                             self.socket_list = []
-                        else:
+                            if self.sending:
+                                self.buffer.append({"Response":"Internal error", "Data": "Connection closed"})
+                        elif self.sending:
+                            self.buffer.append(msg)
+                        elif not self.sending:
                             message = Message.from_json(msg)
                             if message.called is not None and message.called in self.call_list:
                                 call = threading.Thread(target=self.call_list[message.called], args=[message, ])
@@ -283,14 +285,14 @@ class API:
                         self.socket.close()
                         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                         self.socket_list = []
-                except Exception as ex: print(f"{type(ex)} -> {ex}")
+                except Exception as ex: print(f"[Listener thread Inner exception]: {type(ex)} -> {ex}")
                 sleep(0.2)
 
             try:
                 if self.running: 
                     self._validate()
                     self.connection_alive = True
-            except Exception as ex: print(f"{type(ex)} -> {ex}")
+            except Exception as ex: print(f"[Listener thread Outer exception]: {type(ex)} -> {ex}")
 
     def close(self, reason=None):
         """Closes the socket, and stops the listener loop.
@@ -312,8 +314,11 @@ class API:
     def _create_function(self, name, help_text, callback):
         """Creates a function in the connected bot when validated.
         """
-        while not self.valid or self.sending:
-            sleep(random.choice([1,1.2,1.5,1,3]))
+        while self.sending:
+            sleep(random.randrange(1, 3))
+        if [name, help_text, callback] not in self.created_function_list:
+            self.created_function_list.append([name, help_text, callback])
+        if not self.valid: return
         self.sending = True
         self._send({"Command":"Create", "Value": [name, help_text, name]})
         while self.buffer == []:
