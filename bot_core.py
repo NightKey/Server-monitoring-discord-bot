@@ -72,24 +72,25 @@ async def updater(message, _=None):
     """Updates the bot, and restarts it after a successfull update.
 Category: BOT
     """
-    from modules import updater
-    os.system("pip3 install --user --upgrade smdb_api > update.lg")
-    with open("update.lg", "r") as f:
-        tmp = f.read(-1).split("\n")
-    os.remove("update.lg")
-    if len(tmp) > 2 and message is not None:
-        await message.channel.send("API updated!")
-    if _server is not None:
-        _server.request_all_update()
-    if updater.main():
-        if message is not None:
-            await message.channel.send("Restarting...")
-        try: await client.logout()
-        except: pass
-        signal('Restart')
-    else:
-        if message is not None:
-            await message.channel.send('Nothing was updated!')
+    if str(message.channel) in channels or str(message.author.id) in admins:
+        from modules import updater
+        os.system("pip3 install --user --upgrade smdb_api > update.lg")
+        with open("update.lg", "r") as f:
+            tmp = f.read(-1).split("\n")
+        os.remove("update.lg")
+        if len(tmp) > 2 and message is not None:
+            await message.channel.send("API updated!")
+        if _server is not None:
+            _server.request_all_update()
+        if updater.main():
+            if message is not None:
+                await message.channel.send("Restarting...")
+            try: await client.logout()
+            except: pass
+            signal('Restart')
+        else:
+            if message is not None:
+                await message.channel.send('Nothing was updated!')
 
 async def processes(message):
     text = 'Currently running processes:\n'
@@ -208,6 +209,9 @@ Category: SOFTWARE
         channel = message.channel
     except:
         channel = message
+    if str(message.channel) not in channels and str(message.author.id) not in admins:
+        await echo(message)
+        return
     process_list = scann(process_list, psutil.process_iter())
     embed = discord.Embed(title="Interal status", color=0x14f9a2)
     embed.add_field(name=f"Reconnectoins in the past {reset_time} hours", value=len(connections), inline=False)
@@ -252,24 +256,26 @@ async def add_process(message, name):
 Usage: &add <existing process name>
 Category: BOT
     """
-    global process_list
-    process_list[name] = [False, False]
-    with open(os.path.join("data", "process_list.json"), "w") as f:
-        json.dump(process_list, f)
-    await message.channel.send('Process added')
+    if str(message.channel) in channels or str(message.author.id) in admins:
+        global process_list
+        process_list[name] = [False, False]
+        with open(os.path.join("data", "process_list.json"), "w") as f:
+            json.dump(process_list, f)
+        await message.channel.send('Process added')
 
 async def remove(message, name):
     """Removes the given program from the watchlist
 Usage: &remove <watched process name>
 Category: BOT
     """
-    global process_list
-    try:
-        del process_list[name]
-    except:
-        await message.channel.send(f"Couldn't delete the '{name}' item.")
-    with open(os.path.join("data", "process_list.json"), "w") as f:
-        json.dump(process_list, f)
+    if str(message.channel) in channels or str(message.author.id) in admins:
+        global process_list
+        try:
+            del process_list[name]
+        except:
+            await message.channel.send(f"Couldn't delete the '{name}' item.")
+        with open(os.path.join("data", "process_list.json"), "w") as f:
+            json.dump(process_list, f)
     
 async def roll(message, value):
     """Rolls the dice specifyed.
@@ -389,6 +395,8 @@ async def clear(message, number):
 Usage: &clear [optionally the number of messages or @user]
 Category: SERVER
     """
+    user_permissions = message.author.permissions_in(message.channel)
+    if (not user_permissions.administrator and not user_permissions.manage_messages): return
     try: number = number.replace("<@", '').replace('>', '')
     except: pass
     if number is not None:
@@ -458,7 +466,8 @@ async def get_api_key(message, name):
 Usage: &API <name of the application the key will be created to>
 Category: SOFTWARE
     """
-    await message.channel.send(_server.get_api_key_for(name) if _server is not None else "API is not avaleable")
+    if str(message.channel) in channels or str(message.author.id) in admins:
+        await message.channel.send(_server.get_api_key_for(name) if _server is not None else "API is not avaleable")
 
 async def restart(message, _):
     """Restarts the server it's running on. Admin permissions may be needed for this on the host.
@@ -487,55 +496,59 @@ async def send_errors(message, _=None):
     """Sends all stored errors to the channel the command was sent to.
 Category: BOT
     """
-    global errors
-    msg = ""
-    for date, item in errors:
-        msg += f"{date}: {item}"
-    if msg != "":
-        await message.channel.send(msg)
-    else:
-        await message.channel.send("No errors saved")
-    errors = {}
+    if str(message.channel) in channels or str(message.author.id) in admins:
+        global errors
+        msg = ""
+        for date, item in errors:
+            msg += f"{date}: {item}"
+        if msg != "":
+            await message.channel.send(msg)
+        else:
+            await message.channel.send("No errors saved")
+        errors = {}
 
 async def terminate_process(message, target):
     """Terminates the specified process. (Admin permission may be needed for this)
 Usage: &terminate <existing process' name>
 Category: SOFTWARE
     """
-    if target not in process_list:
-        for p in process_list:
-            if target in p:
-                target = p
+    if str(message.channel) in channels or str(message.author.id) in admins:
+        if target not in process_list:
+            for p in process_list:
+                if target in p:
+                    target = p
+                    break
+            else:
+                await message.channel.send("Target not found, process can't be safely killed!")
+                return
+        for process in psutil.process_iter():
+            try:
+                name = os.path.basename(process.cmdline()[-1])
+                if name.lower() == target:
+                    process.kill()
                 break
-        else:
-            await message.channel.send("Target not found, process can't be safely killed!")
-            return
-    for process in psutil.process_iter():
-        try:
-            name = os.path.basename(process.cmdline()[-1])
-            if name.lower() == target:
-                process.kill()
-            break
-        except Exception as ex:
-            errors[datetime.datetime.now()] = f"Exception occured during terminating process '{target}' {type(ex)} --> {ex}"
-    else: await message.channel.send(f"Error while stopping {target}!\nManual help needed!")
+            except Exception as ex:
+                errors[datetime.datetime.now()] = f"Exception occured during terminating process '{target}' {type(ex)} --> {ex}"
+        else: await message.channel.send(f"Error while stopping {target}!\nManual help needed!")
 
 async def open_browser(message, link):
     """Opens a page in the server's browser.
 Usage: &open <url to open>
 Category: SOFTWARE   
     """
-    if play(link): await message.channel.send('Started playing the link')
-    else:   await message.channel.send("Couldn't open the link")
+    if str(message.channel) in channels or str(message.author.id) in admins:
+        if play(link): await message.channel.send('Started playing the link')
+        else:   await message.channel.send("Couldn't open the link")
 
 async def set_bar(message, value):
     """Sets the bars' widht to the given value in total character number (the default is 25)
 Usage: &bar <integer value to change to>
 Category: BOT
     """
-    global bar_size
-    bar_size = int(value)
-    await message.channel.send(f"Barsize set to {bar_size}")
+    if str(message.channel) in channels or str(message.author.id) in admins:
+        global bar_size
+        bar_size = int(value)
+        await message.channel.send(f"Barsize set to {bar_size}")
 
 async def locker(message, value):
     """Locks and unlocks the linked message.
@@ -569,6 +582,7 @@ async def help(message, what):
 Usage: &help <optionaly a specific without the '&' character>
 Category: BOT
     """
+    is_admin = (str(message.channel) in channels or str(message.author.id) in admins)
     if what == None:
         embed = discord.Embed(title="Help", description=f"Currently {len(linking.keys())+len(outside_options.keys())} commands and {len(categories.keys())} categories are avaleable", color=0x0083fb)
         embed.set_author(name="Night Key", url="https://github.com/NightKey", icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
@@ -578,8 +592,9 @@ Category: BOT
         embed = discord.Embed(title="Help", description=f"Showing all commands!", color=0x0083fb)
         embed.set_author(name="Night Key", url="https://github.com/NightKey", icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
         for key, value in linking.items():
+            if value[1] and not is_admin: continue
             add = False
-            txt = value.__doc__
+            txt = value[0].__doc__
             tmp = txt.split("\n")
             for a in tmp:
                 if "Usage: " in a:
@@ -588,26 +603,28 @@ Category: BOT
                 except: pass
             txt = "\n".join(tmp)
             embed.add_field(name=key, value=txt, inline=False)
-        embed.add_field(name='Added options', value='\u200B', inline=False)
-        line = len(embed.fields)
-        for key, value in outside_options.items():
-            add = False
-            txt = value.__doc__
-            tmp = txt.split("\n")
-            for a in tmp:
-                if "Usage: " in a:
-                    key = a.replace("Usage: &", '')
-                try: tmp.remove(f"Usage: &{key}")
-                except: pass
-            txt = "\n".join(tmp)
-            embed.add_field(name=key, value=txt, inline=False)
-        if len(embed.fields) == line: embed.remove_field(line-1)
+        if is_admin:
+            embed.add_field(name='Added options', value='\u200B', inline=False)
+            line = len(embed.fields)
+            for key, value in outside_options.items():
+                add = False
+                txt = value.__doc__
+                tmp = txt.split("\n")
+                for a in tmp:
+                    if "Usage: " in a:
+                        key = a.replace("Usage: &", '')
+                    try: tmp.remove(f"Usage: &{key}")
+                    except: pass
+                txt = "\n".join(tmp)
+                embed.add_field(name=key, value=txt, inline=False)
+            if len(embed.fields) == line: embed.remove_field(line-1)
     elif what.upper() in categories:
         embed = discord.Embed(title=f"Help for the {what} category", description=f"Currently {len(linking.keys())+len(outside_options.keys())} commands and {len(categories.keys())} categories are avaleable", color=0x0083fb)
         embed.set_author(name="Night Key", url="https://github.com/NightKey", icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
         for key, value in linking.items():
+            if value[1] and not is_admin: continue
             add = False
-            txt = value.__doc__
+            txt = value[0].__doc__
             tmp = txt.split("\n")
             for a in tmp:
                 if "Usage: " in a:
@@ -620,30 +637,33 @@ Category: BOT
                 except: pass
                 txt = "\n".join(tmp)
                 embed.add_field(name=key, value=txt, inline=False)
-        embed.add_field(name='Added options', value='\u200B', inline=False)
-        line = len(embed.fields)
-        for key, value in outside_options.items():
-            add = False
-            txt = value.__doc__
-            tmp = txt.split("\n")
-            for a in tmp:
-                if "Usage: " in a:
-                    key = a.replace("Usage: &", '')
-                elif 'Category: ' in a:
-                    if a.replace('Category: ', '').upper() == what:
-                        add = True
-            if add:
-                try: tmp.remove(f"Usage: &{key}")
-                except: pass
-                txt = "\n".join(tmp)
-                embed.add_field(name=key, value=txt, inline=False)
-        if len(embed.fields) == line: embed.remove_field(line-1)
+        if is_admin:
+            embed.add_field(name='Added options', value='\u200B', inline=False)
+            line = len(embed.fields)
+            for key, value in outside_options.items():
+                add = False
+                txt = value.__doc__
+                tmp = txt.split("\n")
+                for a in tmp:
+                    if "Usage: " in a:
+                        key = a.replace("Usage: &", '')
+                    elif 'Category: ' in a:
+                        if a.replace('Category: ', '').upper() == what:
+                            add = True
+                if add:
+                    try: tmp.remove(f"Usage: &{key}")
+                    except: pass
+                    txt = "\n".join(tmp)
+                    embed.add_field(name=key, value=txt, inline=False)
+            if len(embed.fields) == line: embed.remove_field(line-1)
     elif f"{what}" in linking.keys():
-        embed = discord.Embed(title=f"Help for the {what} command", description=linking[what].__doc__, color=0xb000ff)
-        embed.set_author(name="Night Key", url="https://github.com/NightKey", icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
+        if linking[what][1] and is_admin:
+            embed = discord.Embed(title=f"Help for the {what} command", description=linking[what][0].__doc__, color=0xb000ff)
+            embed.set_author(name="Night Key", url="https://github.com/NightKey", icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
     elif f"{what}" in outside_options.keys():
-        embed = discord.Embed(title=f"Help for the {what} command", description=linking[what].__doc__, color=0xb000ff)
-        embed.set_author(name="Night Key", url="https://github.com/NightKey", icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
+        if is_admin:
+            embed = discord.Embed(title=f"Help for the {what} command", description=outside_options[what].__doc__, color=0xb000ff)
+            embed.set_author(name="Night Key", url="https://github.com/NightKey", icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
     try:
         await message.channel.send(embed=embed)
     except: await message.channel.send(f"{what} was not found!")
@@ -667,26 +687,26 @@ Category: BOT
         save_cfg()
 
 linking = {
-    "add":add_process,
-    "admin":add_admin,
-    "api":get_api_key,
-    "bar":set_bar,
-    "clear":clear,
-    "count":count,
-    "echo":echo,
-    "end":stop_at,
-    "errors":send_errors,
-    "exit":stop_bot,
-    "help":help,
-    "status":status_check,
-    "link":send_link,
-    "lock":locker,
-    "open":open_browser,
-    "remove": remove,
-    "restart":restart,
-    "roll":roll,
-    "terminate":terminate_process,
-    "update":updater
+    "add":[add_process, True],
+    "admin":[add_admin, False],
+    "api":[get_api_key, True],
+    "bar":[set_bar, True],
+    "clear":[clear, False],
+    "count":[count, False],
+    "echo":[echo, False],
+    "end":[stop_at, False],
+    "errors":[send_errors, True],
+    "exit":[stop_bot, True],
+    "help":[help, False],
+    "status":[status_check, True],
+    "link":[send_link, False],
+    "lock":[locker, False],
+    "open":[open_browser, True],
+    "remove": [remove, True],
+    "restart":[restart, True],
+    "roll":[roll, False],
+    "terminate":[terminate_process, True],
+    "update":[updater, True]
 }
 
 outside_options = {}
@@ -731,7 +751,7 @@ async def on_message(message):
             if cmd in linking.keys() or cmd in outside_options.keys():
                 await message.add_reaction("dot:577128688433496073")
                 try:
-                    if cmd in linking.keys(): await linking[cmd](message, etc)
+                    if cmd in linking.keys(): await linking[cmd][0](message, etc)
                     elif cmd in outside_options.keys(): outside_options[cmd](_server, Message(str(message.author.id), etc, str(message.channel.id), [Attachment.from_discord_attachment(attachment) for attachment in message.attachments], None))
                 except Exception as ex:
                     await message.channel.send(f"Error runnig the {cmd} command: {type(ex)} -> {ex}")
@@ -744,7 +764,7 @@ async def on_message(message):
                         mx["value"] = tmp
                 if mx['value'] == 100:
                     try:
-                        await linking[mx["key"]](message, etc)
+                        await linking[mx["key"]][0](message, etc)
                         await message.add_reaction("dot:577128688433496073")
                     except Exception as ex: await message.channel.send(f"Error runnig the {cmd} command: {type(ex)} -> {ex}\nInterpreted command: {mx['key']}")
                 elif mx['value'] > 70:
