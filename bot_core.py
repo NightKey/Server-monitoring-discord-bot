@@ -42,7 +42,9 @@ def split(text, error=False, log_only=False, print_only=False):
 
 writer = writer.writer("Bot")
 print = split   #Changed print to the split function
-client = discord.Client(heartbeat_timeout=120)       #Creates a client instance using the discord  module
+intents = discord.Intents.default()
+intents.members = True
+client = discord.Client(heartbeat_timeout=120, intents=intents)       #Creates a client instance using the discord  module
 
 def play(link):
     """Opens an URL in the default browser
