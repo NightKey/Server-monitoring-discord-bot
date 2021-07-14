@@ -72,7 +72,7 @@ async def updater(message, _=None):
     """Updates the bot, and restarts it after a successfull update.
 Category: BOT
     """
-    if str(message.channel) in channels or str(message.author.id) in admins:
+    if message is None or str(message.channel) in channels or str(message.author.id) in admins:
         from modules import updater
         os.system("pip3 install --user --upgrade smdb_api > update.lg")
         with open("update.lg", "r") as f:
