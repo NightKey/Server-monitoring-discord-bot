@@ -279,7 +279,7 @@ Category: BOT
     
 async def roll(message, value):
     """Rolls the dice specifyed.
-Usage: &roll <(# of dices)d(# of sides)>
+Usage: &roll <(# of dices)d(# of sides) or default 1d20>
 Category: SERVER
     """
     import random
@@ -287,15 +287,19 @@ Category: SERVER
         value = '1d20'
     num = int(value.split('d')[0])
     sides = int(value.split('d')[1])
-    if num > 500 or sides > 1000:
-        await message.channel.send("A maximum of 500 dice with a maximum of 1000 sides are allowed!")
+    if num > 1000 or sides > 10000:
+        await message.channel.send("A maximum of 1000 dice with a maximum of 10000 sides are allowed!")
         return
     res = []
     for _ in range(num):
         n = random.randint(1, sides)
         res.append(n)
-    await message.delete()
-    await message.channel.send(f"{message.author.name} rolled [{num}d{sides}]: {sum(res)}")
+    tag = ""
+    try:
+        await message.delete()
+        tag = "@"
+    except discord.Forbidden: pass
+    await message.channel.send(f"{tag}{message.author.name}`[{num}d{sides}]` rolled [{'+'.join([str(n) for n in res])}]: {sum(res)}") #Add a preferrence setting option for more costumisable bot
 
 @client.event
 async def on_message_edit(before, after):
