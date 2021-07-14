@@ -209,7 +209,7 @@ Category: SOFTWARE
         channel = message.channel
     except:
         channel = message
-    if str(message.channel) not in channels and str(message.author.id) not in admins:
+    if str(channel) not in channels and isinstance(message, discord.Message) and str(message.author.id) not in admins:
         await echo(message)
         return
     process_list = scann(process_list, psutil.process_iter())
