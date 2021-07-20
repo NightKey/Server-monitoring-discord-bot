@@ -394,7 +394,7 @@ Category: BOT
         signal('Exit')
         exit(0)
 
-async def clear(message, number):
+async def clear(message: discord.Message, number):
     """Clears all messages from this channel.
 Usage: &clear [optionally the number of messages or @user]
 Category: SERVER
@@ -412,36 +412,42 @@ Category: SERVER
     try:
         count = 0
         clean = True
-        while clean:
-            is_message=False
-            async for message in message.channel.history():
-                skip = False
-                if user is not None and message.author != user:
-                    skip = True
-                for reaction in message.reactions:
-                    if str(reaction) == str("🔒"):
+        async with message.channel.typing():
+            while clean:
+                is_message=False
+                hystory = await message.channel.history(limit=number).flatten()
+                if len(hystory) <= 0:
+                    break
+                for message in hystory:
+                    skip = False
+                    if user is not None and message.author != user:
                         skip = True
-                    elif str(reaction) == str("🛑"):
-                        clean = False
-                if skip:
-                    if not clean:
+                    for reaction in message.reactions:
+                        if str(reaction) == str("🔒"):
+                            skip = True
+                        elif str(reaction) == str("🛑"):
+                            clean = False
+                    if skip:
+                        if not clean:
+                            break
+                        else:
+                            continue
+                    await message.delete()
+                    is_message=True
+                    count += 1
+                    if (number != None and count == int(number)) or not skip:
                         break
-                    else:
-                        continue
-                await message.delete()
-                is_message=True
-                count += 1
-                if (number != None and count == int(number)) or not skip:
+                else:
+                    if not is_message:
+                        break
+                if number != None and count == int(number):
                     break
-            else:
-                if not is_message:
-                    break
-            if number != None and count == int(number):
-                break
     except discord.Forbidden:
         await message.channel.send("I'm afraid, I can't do that.")
     except Exception as ex:
-        await message.channel.send(f'Exception occured during cleaning:\n```{type(ex)} --> {ex}```')
+        errors[datetime.datetime.now()] = f'Exception occured during cleaning:\n```{type(ex)} --> {ex}```'
+        await message.channel.send("Sorry, something went wrong!")
+
 
 async def count(message, channel):
     """Counts the messages for every user in a channel's last 1000 messages. The channel can either be given as a tag, or left empty.
@@ -503,7 +509,7 @@ Category: BOT
     if str(message.channel) in channels or str(message.author.id) in admins:
         global errors
         msg = ""
-        for date, item in errors:
+        for date, item in errors.items():
             msg += f"{date}: {item}"
         if msg != "":
             await message.channel.send(msg)
