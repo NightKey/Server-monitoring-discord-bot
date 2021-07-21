@@ -1,3 +1,4 @@
+from asyncio.windows_events import NULL
 from modules import writer, status, logger, watchdog
 from modules.services import server
 from modules.services import Message, Attachment
@@ -161,7 +162,7 @@ def load():
         except Exception as ex: #incase there is an error, the program deletes the file, and restarts
             from datetime import datetime
             with open("Loading_error", 'a') as f:
-                f.write(f"[{datetime.now()}]: {type(ex)} -> {ex}")
+                f.write(f"[{datetime.now()}]: {ex}")
             os.remove(os.path.join("data", "bot.cfg"))
             print("Error in cfg file... Restarting")
             signal(signals.restart)
@@ -317,7 +318,7 @@ async def on_disconnect():
     try:
         await _watchdog.check_connection(offline)
     except Exception as ex:
-        errors[datetime.datetime.now()] = f"Exception occured during disconnect event {type(ex)} --> {ex}"
+        errors[datetime.datetime.now()] = f"Exception occured during disconnect event {ex}"
 
 @client.event
 async def on_ready():
@@ -379,7 +380,7 @@ Category: SERVER
         embed.color=0xFF00F3
         await message.channel.send(embed=embed)
     except Exception as ex:
-        errors[datetime.datetime.now()] = f"Exception occured during link sending {type(ex)} --> {ex}"
+        errors[datetime.datetime.now()] = f"Exception occured during link sending {ex}"
 
 async def stop_bot(message, _):
     """Stops the bot. To use this command, you need to be an admin, or need to call it from a selected channel!
@@ -394,58 +395,77 @@ Category: BOT
         signal('Exit')
         exit(0)
 
-async def clear(message: discord.Message, number):
+class clear_helper:
+    def __init__(self, number, user) -> None:
+        self.finished = False
+        self.number = number
+        self.user = user
+        self.count = 0
+        self.lock = discord.Reaction(message=None, data={"count": 1, "me":None}, emoji=str("🔒"))
+        self.stop = discord.Reaction(message=None, data={"count": 1, "me":None}, emoji=str("🛑"))
+        self.bulk = []
+    
+    def check(self, message: discord.Message):
+        skip = False
+        if self.lock in message.reactions:
+            skip = True
+        if self.stop in message.reactions:
+            self.finished = True
+        if self.user is not None and message.author != self.user:
+            skip = True
+        if self.number != None and self.count == self.number:
+            self.finished = True
+        if not skip and not self.finished:
+            self.count += 1 
+        return not skip and not self.finished
+    
+    def add_to_bulk(self, message):
+        if len(self.bulk) >= 99:
+            self.trigger_bulk(message.channel)
+        self.bulk.append(message)
+    
+    def trigger_bulk(self, channel: discord.TextChannel):
+        if len(self.bulk) == 0: return
+        loop.create_task(channel.delete_messages(self.bulk))
+        self.bulk = []
+    
+    def is_finished(self):
+        return self.finished or (self.number is not None and self.count == self.number)
+
+
+async def clear(message: discord.Message, data: None):
     """Clears all messages from this channel.
 Usage: &clear [optionally the number of messages or @user]
 Category: SERVER
     """
     user_permissions = message.author.permissions_in(message.channel)
     if (not user_permissions.administrator and not user_permissions.manage_messages): return
-    try: number = number.replace("<@", '').replace('>', '')
-    except: pass
-    if number is not None:
-        user = client.get_user(int(number))
-    else:
-        user = None
-    if user is not None:
-        number = None
+    user: discord.Member = None
+    number: int = None
+    if data is not None and "<@" in data: 
+        user = client.get_user(int(data.replace("<@!", '').replace(">", '')))
+    elif data is not None:
+        number = int(data)
+    helper = clear_helper(number, user)
     try:
-        count = 0
-        clean = True
-        async with message.channel.typing():
-            while clean:
-                is_message=False
-                hystory = await message.channel.history(limit=number).flatten()
-                if len(hystory) <= 0:
-                    break
-                for message in hystory:
-                    skip = False
-                    if user is not None and message.author != user:
-                        skip = True
-                    for reaction in message.reactions:
-                        if str(reaction) == str("🔒"):
-                            skip = True
-                        elif str(reaction) == str("🛑"):
-                            clean = False
-                    if skip:
-                        if not clean:
-                            break
+       async  with message.channel.typing():
+            while True:
+                history = await message.channel.history(limit=None).flatten()
+                for message in history:
+                    if helper.check(message):
+                        if datetime.datetime.now() - message.created_at < datetime.timedelta(14):
+                            helper.add_to_bulk(message)
                         else:
-                            continue
-                    await message.delete()
-                    is_message=True
-                    count += 1
-                    if (number != None and count == int(number)) or not skip:
+                            helper.trigger_bulk(message.channel)
+                            loop.create_task(message.delete())
+                    if helper.is_finished():
                         break
-                else:
-                    if not is_message:
-                        break
-                if number != None and count == int(number):
+                if helper.is_finished() or len(history) == 0:
                     break
     except discord.Forbidden:
         await message.channel.send("I'm afraid, I can't do that.")
     except Exception as ex:
-        errors[datetime.datetime.now()] = f'Exception occured during cleaning:\n```{type(ex)} --> {ex}```'
+        errors[datetime.datetime.now()] = f'Exception occured during cleaning:\n```{ex}```'
         await message.channel.send("Sorry, something went wrong!")
 
 
@@ -500,7 +520,7 @@ Category: HARDWARE
                 await client.logout()
                 signal(signals.exit)
         except Exception as ex:
-            await message.channel.send(f"Restart failed with the following exception:\n```{type(ex)} -> {str(ex)}```")
+            await message.channel.send(f"Restart failed with the following exception:\n``` {str(ex)}```")
 
 async def send_errors(message, _=None):
     """Sends all stored errors to the channel the command was sent to.
@@ -538,7 +558,7 @@ Category: SOFTWARE
                     process.kill()
                 break
             except Exception as ex:
-                errors[datetime.datetime.now()] = f"Exception occured during terminating process '{target}' {type(ex)} --> {ex}"
+                errors[datetime.datetime.now()] = f"Exception occured during terminating process '{target}' {ex}"
         else: await message.channel.send(f"Error while stopping {target}!\nManual help needed!")
 
 async def open_browser(message, link):
@@ -575,7 +595,7 @@ Category: SERVER
 
 async def stop_at(message, value):
     """Creates a stop signal to the clear command on the message linked.
-It will stop AFTER that message. To keep a message, refer to the '&lock' command.
+It will stop at that message.
 Usage: &end <message_id>
 Category: SERVER
     """
@@ -764,7 +784,7 @@ async def on_message(message):
                     if cmd in linking.keys(): await linking[cmd][0](message, etc)
                     elif cmd in outside_options.keys(): outside_options[cmd](_server, Message(str(message.author.id), etc, str(message.channel.id), [Attachment.from_discord_attachment(attachment) for attachment in message.attachments], None))
                 except Exception as ex:
-                    await message.channel.send(f"Error runnig the {cmd} command: {type(ex)} -> {ex}")
+                    await message.channel.send(f"Error runnig the '{cmd}' command: {ex}")
             else:
                 mx = {}
                 for key in linking.keys():
@@ -776,7 +796,7 @@ async def on_message(message):
                     try:
                         await linking[mx["key"]][0](message, etc)
                         await message.add_reaction("dot:577128688433496073")
-                    except Exception as ex: await message.channel.send(f"Error runnig the {cmd} command: {type(ex)} -> {ex}\nInterpreted command: {mx['key']}")
+                    except Exception as ex: await message.channel.send(f"Error runnig the '{cmd}' command: {ex}\nInterpreted command: {mx['key']}")
                 elif mx['value'] > 70:
                     await message.add_reaction("👎")
                     await message.channel.send(f"Did you mean `{mx['key']}`? Probability: {mx['value']}%")
@@ -791,7 +811,7 @@ async def on_message(message):
                         try:
                             outside_options[mx["key"]](_server, Message(str(message.author.id), etc, str(message.channel.id), [Attachment.from_discord_attachment(attachment) for attachment in message.attachments], None))
                             await message.add_reaction("dot:577128688433496073")
-                        except Exception as ex: await message.channel.send(f"Error runnig the {cmd} command: {type(ex)} -> {ex}\nInterpreted command: {mx['key']}")
+                        except Exception as ex: await message.channel.send(f"Error runnig the '{cmd}' command: {ex}\nInterpreted command: {mx['key']}")
                     elif 'value' in mx and mx['value'] > 70:
                         await message.add_reaction("👎")
                         await message.channel.send(f"Did you mean `{mx['key']}`? Probability: {mx['value']}%")

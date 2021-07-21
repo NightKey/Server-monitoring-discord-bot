@@ -50,7 +50,7 @@ def main():
                 while server.poll() is None:
                     pass
         except Exception as ex:
-            print(f"{type(ex)} -> {ex}")
+            print(f"{ex}")
         finally:
             sleep(0.2)
     if server.returncode == errno.EPERM:
