@@ -1,4 +1,3 @@
-from asyncio.windows_events import NULL
 from modules import writer, status, logger, watchdog
 from modules.services import server
 from modules.services import Message, Attachment
