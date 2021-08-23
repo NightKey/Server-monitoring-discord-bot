@@ -109,6 +109,7 @@ class API:
         self.initial = True
         self.socket_list = []
         self.created_function_list=[]
+        self.create_function_threads = []
         self.update_function = update_function
 
     def _send(self, msg):
@@ -172,7 +173,7 @@ class API:
                 self.socket.connect((self.ip, self.port))
                 break
             except ConnectionRefusedError: pass
-            if timeout is not None and timeout > 0 and time() - start > timeout:
+            if (timeout is not None and timeout > 0 and time() - start > timeout) or not self.running:
                 return False
         self._send({"Command":self.name, "Value": self.key})
         ansvear = self._retrive()
@@ -300,6 +301,9 @@ class API:
         self.running = False
         self.valid = False
         self.connection_alive = False
+        self.sending = False
+        while threading.active_count() > 0:
+            sleep(1)
         self._send({"Command":"Disconnect", "Value": reason})
         self.socket.close()
 
@@ -307,9 +311,9 @@ class API:
         """Creates a function in the connected bot. This function creates a thread so it won't block while it waits for validation from the bot.
         Return order: ChannelID, UserID, UserInput. The returned value depends on the return value, but the order is the same.
         """
-        cf = threading.Thread(target=self._create_function, args=[name, help_text, callback,])
-        cf.name = f"Create thread for {name}"
-        cf.start()
+        self.create_function_threads.append(threading.Thread(target=self._create_function, args=[name, help_text, callback,]))
+        self.create_function_threads[-1].name = f"Create thread for {name}"
+        self.create_function_threads[-1].start()
 
     def _create_function(self, name, help_text, callback):
         """Creates a function in the connected bot when validated.
