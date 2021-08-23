@@ -124,4 +124,4 @@ class watchdog():
                 if self._ready:
                     self.loop.create_task(channel.send(f"@everyone\n{self.error}"))
                     self.error = ""
-            sleep(0.2)
+            sleep(1)
