@@ -302,8 +302,6 @@ class API:
         self.valid = False
         self.connection_alive = False
         self.sending = False
-        while threading.active_count() > 0:
-            sleep(1)
         self._send({"Command":"Disconnect", "Value": reason})
         self.socket.close()
 
