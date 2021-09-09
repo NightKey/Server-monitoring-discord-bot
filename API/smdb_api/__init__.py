@@ -298,11 +298,11 @@ class API:
     def close(self, reason=None):
         """Closes the socket, and stops the listener loop.
         """
+        if self.valid and self.connection_alive: self._send({"Command":"Disconnect", "Value": reason})
         self.running = False
         self.valid = False
         self.connection_alive = False
         self.sending = False
-        self._send({"Command":"Disconnect", "Value": reason})
         self.socket.close()
 
     def create_function(self, name, help_text, callback):
