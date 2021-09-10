@@ -648,7 +648,7 @@ Category: BOT
                 embed.add_field(name=key, value=txt, inline=False)
             if len(embed.fields) == line: embed.remove_field(line-1)
     elif what.upper() in categories:
-        embed = discord.Embed(title=f"Help for the {what} category", description=f"Currently {len(linking.keys())+len(outside_options.keys())} commands and {len(categories.keys())} categories are avaleable", color=0x0083fb)
+        embed = discord.Embed(title=f"Help for the {what.upper()} category", description=f"Currently {len(linking.keys())+len(outside_options.keys())} commands and {len(categories.keys())} categories are avaleable", color=0x0083fb)
         embed.set_author(name="Night Key", url="https://github.com/NightKey", icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
         for key, value in linking.items():
             if value[1] and not is_admin: continue
@@ -659,7 +659,7 @@ Category: BOT
                 if "Usage: " in a:
                     key = a.replace("Usage: &", '')
                 elif 'Category: ' in a:
-                    if a.replace('Category: ', '').upper() == what:
+                    if a.replace('Category: ', '').upper() == what.upper():
                         add = True
             if add:
                 try: tmp.remove(f"Usage: &{key}")
@@ -677,7 +677,7 @@ Category: BOT
                     if "Usage: " in a:
                         key = a.replace("Usage: &", '')
                     elif 'Category: ' in a:
-                        if a.replace('Category: ', '').upper() == what:
+                        if a.replace('Category: ', '').upper() == what.upper():
                             add = True
                 if add:
                     try: tmp.remove(f"Usage: &{key}")
