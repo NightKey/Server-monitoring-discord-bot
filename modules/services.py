@@ -276,19 +276,20 @@ class server:
         """
         try:
             if creator not in self.functions:
-                return response("Internal error", "Function not found")
+                return response("Internal error", "Function not found", _bool=False)
             if name is None:
                 for name in self.functions[creator]:
+                    self.linking_editor(name, True)
                     delattr(self, name)
                 del self.functions[creator]
             else:
                 self.linking_editor(name, True)
                 delattr(self, name)
                 self.functions[creator].remove(name)
-            return response("Success")
+            return response("Success", _bool=True)
         except Exception as ex:
             print(f"{type(ex)} -> {ex}")
-            return response("Internal error", ex)
+            return response("Internal error", ex, _bool=False)
 
     def return_usrname(self, socket, uid):
         if uid is None:
