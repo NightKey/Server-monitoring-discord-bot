@@ -1,6 +1,6 @@
 from . import writer, logger
 from .response import response
-import socket, select, json
+import socket, select, json, discord
 from hashlib import sha256
 import os
 
@@ -55,7 +55,7 @@ class Message:
     def from_json(json):
         return Message(json["sender"], json["content"], json["channel"], [Attachment.from_json(attachment) for attachment in json["attachments"]] if json["attachments"] is not None else [], json["called"])
 
-    def __init__(self, sender, content, channel, attachments, called):
+    def __init__(self, sender, content, channel: discord.TextChannel, attachments: list[Attachment], called):
         self.sender = sender
         self.content = content
         self.channel = channel
@@ -175,13 +175,14 @@ class server:
         """
         self.send(self.get_status(), socket)
 
-    def send_command(self, socket, msg):
+    def send_command(self, socket, msg: str):
         """Sends the message retrived from the socket to the bot.
         """
         if msg is None:
             self.send(self.bad_request.create_altered(Data="Empty message"), socket)
             return
-        self.send(self.send_message(*msg), socket)
+        message = Message.from_json(msg)
+        self.send(self.send_message(message), socket)
 
     def retrive(self, socket):
         r"""Retrives a message from the socket. Every message is '\n' terminated (terminator not included)

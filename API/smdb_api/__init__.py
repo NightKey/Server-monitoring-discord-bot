@@ -75,7 +75,7 @@ class Message:
         return len(self.attachments) > 0
 
     def to_json(self):
-        return {"sender":self.sender, "content":self.content, "channel":self.channel, "called":self.called, "attachments":[attachment.to_json() for attachment in self.attachments] if len(self.attachment) > 0 else None}
+        return {"sender":self.sender, "content":self.content, "channel":self.channel, "called":self.called, "attachments":[attachment.to_json() for attachment in self.attachments] if len(self.attachments) > 0 else None}
 
 def blockPrint():
     sys.stdout = open(os.devnull, 'w')
@@ -239,12 +239,13 @@ class API:
         self.buffer = []
         return tmp["Data"] if tmp["Response"] == "Success" else "unknown"
 
-    def send_message(self, message, destination=None):
+    def send_message(self, message, destination=None, file_path=None):
         """Sends a message trough the discord bot.
         """
+        msg = Message("API", message, destination, [Attachment(file_path.split("/")[-1], file_path, os.path.getsize(file_path))] if file_path is not None else [], "API")
         if self.valid:
             self.sending = True
-            self._send({"Command":"Send", 'Value': [message, destination]})
+            self._send({"Command":"Send", 'Value': msg.to_json()})
             while self.buffer == []:
                 sleep(0.1)
             tmp = self.buffer[0]
