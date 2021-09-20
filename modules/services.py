@@ -55,7 +55,7 @@ class Message:
     def from_json(json):
         return Message(json["sender"], json["content"], json["channel"], [Attachment.from_json(attachment) for attachment in json["attachments"]] if json["attachments"] is not None else [], json["called"])
 
-    def __init__(self, sender, content, channel: discord.TextChannel, attachments: list[Attachment], called):
+    def __init__(self, sender, content, channel: discord.TextChannel, attachments: list, called):
         self.sender = sender
         self.content = content
         self.channel = channel
