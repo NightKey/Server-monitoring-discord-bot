@@ -1,46 +1,48 @@
-from sys import getsizeof
-import os, sys, select, socket, json, threading, random
+from _typeshed import Self
+import os, sys, select, socket, json, threading, random, discord
 from time import sleep, time
+
+from requests.models import Response
 
 class ValidationError(Exception):
     """Get's raised, when validation failes"""
-    def __init__(self, reason):
+    def __init__(self, reason: str) -> None:
         self.message=f"Validation failed! Reason: {reason}"
 
 class NotValidatedError(Exception):
     """Get's raised, when trying to communicate with the API server, without validation."""
-    def __init__(self):
+    def __init__(self) -> None:
         self.message="Can't communicate without validation!"
 
 class ActionFailed(Exception):
     """Get's raised, when an action failes"""
-    def __init__(self, action):
+    def __init__(self, action: str) -> None:
         self.message = f"'{action}' failed!'"
 
 class Attachment:
     """Message attachment"""
-    def from_json(json):
+    def from_json(json: dict):
         if json is None: return None
         return Attachment(json["filename"], json["url"], json["size"])
     
-    def from_discord_attachment(atch):
+    def from_discord_attachment(atch: discord.Attachment):
         if atch is None: return None
         return Attachment(atch.filename, atch.url, atch.size)
 
-    def __init__(self, filename, url, size):
+    def __init__(self, filename: str, url: str, size: int) -> None:
         if not isinstance(size, int): raise AttributeError(f"{type(size)} is not int type")
         self.url = url
         self.filename = filename
         self.size = size
 
-    def size(self):
+    def size(self) -> int:
         return self.size
 
-    def download(self):
+    def download(self) -> Response:
         import requests
         return requests.get(self.url)
 
-    def save(self, path):
+    def save(self, path: str) -> str:
         if not os.path.exists(path): return ""
         tmp = self.filename
         n = 1
@@ -53,7 +55,7 @@ class Attachment:
             f.write(file.content)
         return os.path.join(path, self.filename)
     
-    def to_json(self):
+    def to_json(self) -> dict:
         return {"filename":self.filename, "size":self.size, "url":self.url}
 
 class Message:
@@ -61,26 +63,26 @@ class Message:
     def from_json(json):
         return Message(json["sender"], json["content"], json["channel"], [Attachment.from_json(attachment) for attachment in json["attachments"]] if json["attachments"] is not None else [], json["called"])
 
-    def __init__(self, sender, content, channel, attachments, called):
+    def __init__(self, sender: str, content: str, channel: str, attachments: str, called: str) -> None:
         self.sender = sender
         self.content = content
         self.channel = channel
         self.attachments = attachments
         self.called = called
 
-    def add_called(self, called):
+    def add_called(self, called: str) -> None:
         self.called = called
         
-    def has_attachments(self):
+    def has_attachments(self) -> bool:
         return len(self.attachments) > 0
 
-    def to_json(self):
+    def to_json(self) -> dict:
         return {"sender":self.sender, "content":self.content, "channel":self.channel, "called":self.called, "attachments":[attachment.to_json() for attachment in self.attachments] if len(self.attachments) > 0 else None}
 
-def blockPrint():
+def blockPrint() -> None:
     sys.stdout = open(os.devnull, 'w')
 
-def enablePrint():
+def enablePrint() -> None:
     sys.stdout.close()
     sys.stdout = sys.__stdout__
 
@@ -91,7 +93,7 @@ CHANNEL = 4
 
 class API:
     """API for the 'Server monitoring Discord bot' application."""
-    def __init__(self, name, key, ip="127.0.0.1", port=9600, update_function=None):
+    def __init__(self, name: str, key: str, ip: str = "127.0.0.1", port: int = 9600, update_function: function = None) -> None:
         """Initialises an API that connects to the 'ip' ip and to the 'port' port with the 'name' name and the 'key' api key.
         The update_function should be a vfunction to call, when the bot calls for update (usually when the bot is updated). The function should not require input data.
         """
@@ -112,7 +114,7 @@ class API:
         self.create_function_threads = []
         self.update_function = update_function
 
-    def _send(self, msg):
+    def _send(self, msg: str) -> None:
         """Sends a socket message
         """
         msg = json.dumps(msg)
@@ -127,7 +129,7 @@ class API:
             if msg == '\n': break
             msg = tmp
 
-    def _retrive(self):
+    def _retrive(self) -> dict:
         """Retrives a socket message
         """
         ret = ""
@@ -145,14 +147,14 @@ class API:
             print(ex)
             return None
     
-    def _re_init_commands(self):
+    def _re_init_commands(self) -> None:
         from copy import deepcopy
         tmp = deepcopy(self.created_function_list)
         for item in tmp:
             self.create_function(*item)
         del tmp
 
-    def validate(self, timeout=-1):
+    def validate(self, timeout: int = -1) -> bool:
         """Validates with the bot, and starts the listener loop, if validation is finished. Returns false, if validation timed out
         Time out can be set, so it won't halt the program for ever, if no bot is present. (The timeout will only work for the first validation.)
         If the timeout is set to -1, the validation will be in a new thread, and always return true.
@@ -165,7 +167,7 @@ class API:
         else:
             return self._validate(timeout)
 
-    def _validate(self, timeout=None):
+    def _validate(self, timeout: int = None) -> bool:
         start = time()
         self.sending = True
         while True:
@@ -195,7 +197,7 @@ class API:
         self.sending = False
         return True
                 
-    def is_admin(self, uid):
+    def is_admin(self, uid: str) -> bool:
         if self.valid:
             self.sending = True
             self._send({"Command":"Is Admin", "Value":uid})
@@ -208,14 +210,14 @@ class API:
                 return tmp["Data"]
         else: NotValidatedError()
 
-    def update(self, _):
+    def update(self, _) -> None:
         """Trys to update the API with PIP, and calls the given update function if there is one avaleable.
         """
         os.system("pip install --user --upgrade smdb_api")
         if self.update_function is not None:
             self.update_function()
 
-    def get_status(self):
+    def get_status(self) -> dict:
         """Gets the bot's status
         """
         if self.valid:
@@ -229,7 +231,7 @@ class API:
             return tmp
         else: raise NotValidatedError()
     
-    def get_username(self, key):
+    def get_username(self, key: str) -> str:
         self.sending = True
         self._send({"Command":'Username', "Value":key})
         while self.buffer == []:
@@ -239,7 +241,7 @@ class API:
         self.buffer = []
         return tmp["Data"] if tmp["Response"] == "Success" else "unknown"
 
-    def send_message(self, message, destination=None, file_path=None):
+    def send_message(self, message: str, destination: str = None, file_path: str = None) -> bool:
         """Sends a message trough the discord bot.
         """
         msg = Message("API", message, destination, [Attachment(file_path.split("/")[-1], file_path, os.path.getsize(file_path))] if file_path is not None else [], "API")
@@ -258,7 +260,7 @@ class API:
             return True
         else: raise NotValidatedError
 
-    def _listener(self):
+    def _listener(self) -> None:
         """Listens for incoming messages, and stops when the program stops running
         """
         while self.running:
@@ -296,7 +298,7 @@ class API:
                     self.connection_alive = True
             except Exception as ex: print(f"[Listener thread Outer exception]: {type(ex)} -> {ex}")
 
-    def close(self, reason=None):
+    def close(self, reason: str = None) -> None:
         """Closes the socket, and stops the listener loop.
         """
         if self.valid and self.connection_alive: self._send({"Command":"Disconnect", "Value": reason})
@@ -306,7 +308,7 @@ class API:
         self.sending = False
         self.socket.close()
 
-    def create_function(self, name, help_text, callback):
+    def create_function(self, name: str, help_text: str, callback: function) -> None:
         """Creates a function in the connected bot. This function creates a thread so it won't block while it waits for validation from the bot.
         Return order: ChannelID, UserID, UserInput. The returned value depends on the return value, but the order is the same.
         """
@@ -314,7 +316,7 @@ class API:
         self.create_function_threads[-1].name = f"Create thread for {name}"
         self.create_function_threads[-1].start()
 
-    def _create_function(self, name, help_text, callback):
+    def _create_function(self, name: str, help_text: str, callback: function) -> None:
         """Creates a function in the connected bot when validated.
         """
         while self.sending:

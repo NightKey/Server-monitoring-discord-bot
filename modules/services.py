@@ -1,3 +1,4 @@
+from requests.models import Response
 from . import writer, logger
 from .response import response
 import socket, select, json, discord
@@ -7,7 +8,7 @@ import os
 lg = logger.logger("api_server", folder="logs")
 verbose=True #If false, no data get's printed
 
-def split(text, error=False, log_only=False, print_only=False):
+def split(text, error: bool = False, log_only: bool = False, print_only: bool = False) -> None:
     """Logs to both stdout and a log file, using both the writer, and the logger module
     """
     if not log_only and verbose: writer.write(text)
@@ -16,38 +17,43 @@ def split(text, error=False, log_only=False, print_only=False):
 writer = writer.writer("API")
 print = split   #Changed print to the split function
 
-
 class Attachment:
     """Message attachment"""
-    def from_json(json):
+    def from_json(json: dict):
         if json is None: return None
         return Attachment(json["filename"], json["url"], json["size"])
     
-    def from_discord_attachment(atch):
+    def from_discord_attachment(atch: discord.Attachment):
         if atch is None: return None
         return Attachment(atch.filename, atch.url, atch.size)
 
-    def __init__(self, filename, url, size):
+    def __init__(self, filename: str, url: str, size: int) -> None:
         if not isinstance(size, int): raise AttributeError(f"{type(size)} is not int type")
         self.url = url
         self.filename = filename
         self.size = size
 
-    def size(self):
+    def size(self) -> int:
         return self.size
 
-    def download(self):
+    def download(self) -> Response:
         import requests
         return requests.get(self.url)
 
-    def save(self, path):
+    def save(self, path: str) -> str:
         if not os.path.exists(path): return ""
+        tmp = self.filename
+        n = 1
+        while os.path.exists(os.path.join(path, tmp)):
+            tmp = "".join((".".join(self.filename.split(".")[:-1]), f"({n}).", self.filename.split(".")[-1]))
+            n += 1
+        self.filename = tmp
         file = self.download()
         with open(os.path.join(path, self.filename), "wb") as f:
             f.write(file.content)
         return os.path.join(path, self.filename)
     
-    def to_json(self):
+    def to_json(self) -> dict:
         return {"filename":self.filename, "size":self.size, "url":self.url}
 
 class Message:
@@ -55,21 +61,24 @@ class Message:
     def from_json(json):
         return Message(json["sender"], json["content"], json["channel"], [Attachment.from_json(attachment) for attachment in json["attachments"]] if json["attachments"] is not None else [], json["called"])
 
-    def __init__(self, sender, content, channel: discord.TextChannel, attachments: list, called):
+    def __init__(self, sender: str, content: str, channel: str, attachments: str, called: str) -> None:
         self.sender = sender
         self.content = content
         self.channel = channel
         self.attachments = attachments
         self.called = called
 
-    def add_called(self, called):
+    def add_called(self, called: str) -> None:
         self.called = called
+        
+    def has_attachments(self) -> bool:
+        return len(self.attachments) > 0
 
-    def to_json(self):
+    def to_json(self) -> dict:
         return {"sender":self.sender, "content":self.content, "channel":self.channel, "called":self.called, "attachments":[attachment.to_json() for attachment in self.attachments] if len(self.attachments) > 0 else None}
 
 class server:
-    def __init__(self, linking_editor, get_status, send_message, get_user, is_admin):
+    def __init__(self, linking_editor: function, get_status: function, send_message: function, get_user: function, is_admin: function) -> None:
         self.clients = {}
         self.run = True
         self.linking_editor = linking_editor
@@ -85,13 +94,13 @@ class server:
         self.socket_list = [self.socket]
         self.bad_request = response("Bad request", None)
 
-    def change_ip_port(self, ip, port):
+    def change_ip_port(self, ip: str, port: int) -> None:
         self.ip = ip
         self.port = port
         self.key = self._generate_key()
         self._save_settings()
 
-    def _load_settings(self):
+    def _load_settings(self) -> None:
         from os import path
         settings_path = path.join("data", "server.cfg")
         if path.exists(settings_path):
@@ -107,10 +116,10 @@ class server:
         else:
             self._save_settings("default")
 
-    def _generate_key(self):
+    def _generate_key(self) -> str:
         return f'{self.ip}{self.port}'
 
-    def _save_settings(self, key="current"):
+    def _save_settings(self, key: str = "current") -> None:
         from os import path, mkdir
         settings_path = path.join("data", "server.cfg")
         if not path.exists(settings_path):
@@ -131,22 +140,22 @@ class server:
         with open(settings_path, "w") as settings_file:
             json.dump(settings, settings_file)
 
-    def get_api_status(self):
+    def get_api_status(self) -> dict:
         return {"connections":list(self.clients.values()), "commands":list(self.functions.values())}
     
-    def request_all_update(self):
+    def request_all_update(self) -> None:
         """Requests an update from the all connected clients. This update should request the application used to update itself and the API
         """
         for target in self.socket_list:
             if target == self.socket: continue
             self.send_update_request(target)
 
-    def send_update_request(self, target):
+    def send_update_request(self, target) -> None:
         """Requests an update from the target. This update should request the application used to update itself and the API
         """
         self.send(Message("0000000000", "", "0000000000", [], "update").to_json(), target)
 
-    def start(self):
+    def start(self) -> None:
         """Starts the API server
         """
         self.commands = {
@@ -162,7 +171,7 @@ class server:
         print("API Server started")
         self.loop()
 
-    def create_command(self, socket, data):
+    def create_command(self, socket: socket, data: dict) -> None:
         """Creates a command in the discord bot
         """
         if data is None:
@@ -170,12 +179,12 @@ class server:
             return
         self.send(self.create_function(self.clients[socket], *data), socket)
 
-    def get_status_command(self, socket, _):
+    def get_status_command(self, socket: socket, _) -> None:
         """Returns the status to the socket
         """
         self.send(self.get_status(), socket)
 
-    def send_command(self, socket, msg: str):
+    def send_command(self, socket: socket, msg: str) -> None:
         """Sends the message retrived from the socket to the bot.
         """
         if msg is None:
@@ -184,7 +193,7 @@ class server:
         message = Message.from_json(msg)
         self.send(self.send_message(message), socket)
 
-    def retrive(self, socket):
+    def retrive(self, socket: socket) -> dict:
         r"""Retrives a message from the socket. Every message is '\n' terminated (terminator not included)
         """
         ret = ""
@@ -206,7 +215,7 @@ class server:
             print(ex, print_only=True)
             return None
     
-    def send(self, msg, socket):
+    def send(self, msg: str, socket: socket) -> None:
         r"""Sends a message to the socket. Every message is '\n' terminated (terminator does not required)
         """
         try:
@@ -232,18 +241,18 @@ class server:
         except ConnectionError:
             self.client_lost(socket)
 
-    def get_api_key_for(self, name):
+    def get_api_key_for(self, name: str) -> str:
         """Returns the correct API key for a 'name' named program
         """
         return sha256(f"{self.key}{name}".encode('utf-8')).hexdigest()
 
-    def admin_check(self, socket, uid):
+    def admin_check(self, socket: socket, uid: str) -> None:
         if uid is None:
             self.send(self.bad_request.create_altered(Data="No UID was given"), socket)
             return
         self.send(self.is_admin(uid), socket)
 
-    def create_function(self, creator, name, help_text, callback):
+    def create_function(self, creator: str, name: str, help_text: str, callback: str) -> response:
         """Creates a function with the given parameters, and stores it in the self.functions dictionary, with the 'name' as key
         """
         print(f'Creating function with the name {name}', log_only=True)
@@ -265,13 +274,13 @@ class server:
         self.functions[creator].append(name)
         return response("Success")
 
-    def remove_command(self, socket, name):
+    def remove_command(self, socket: socket, name) -> None:
         """Removes a function. Removes all functions, if empty message was sent instead of a function name!
         """
         if not name in self.functions[self.clients[socket]]: name = None
         self.send(self.remove_function(creator=self.clients[socket], name=name), socket)
 
-    def remove_function(self, creator, name=None):
+    def remove_function(self, creator: str, name: str = None) -> response:
         """Removes a function from the created functions
         """
         try:
@@ -291,17 +300,17 @@ class server:
             print(f"{type(ex)} -> {ex}")
             return response("Internal error", ex, _bool=False)
 
-    def return_usrname(self, socket, uid):
+    def return_usrname(self, socket: socket, uid: str) -> None:
         if uid is None:
             self.send(self.bad_request.create_altered(Data="No UID was given"), socket)
             return
         self.send(self.get_user(uid), socket)
 
-    def stop(self):
+    def stop(self) -> None:
         self.run = False
         self.socket.close()
 
-    def loop(self):
+    def loop(self) -> None:
         """Handles the clients.
         """
         while self.run:
@@ -324,7 +333,7 @@ class server:
             except Exception as ex: print(f"{type(ex)} --> {ex}")
         self.socket.close()
 
-    def command_retrived(self, msg, socket):
+    def command_retrived(self, msg: Message, socket: socket) -> None:
         """Retrives commands
         """
         if msg["Command"] not in self.commands or "Value" not in msg.keys():
@@ -333,14 +342,14 @@ class server:
         #print(f'Command: {msg}')
         self.commands[msg["Command"]](socket, msg["Value"])
     
-    def disconnect(self, socket, reason):
+    def disconnect(self, socket: socket, reason: str) -> None:
         if reason is not None:
             print(f"{self.clients[socket]} disconnected with the following reason: {reason}")
         else:
             print(f"{self.clients[socket]} disconnected with no reason given.")
         self.client_lost(socket, called=True)
 
-    def client_lost(self, socket, called = False):
+    def client_lost(self, socket: socket, called: str = False) -> None:
         """Handles loosing connections
         """
         if socket not in self.clients: return
@@ -353,7 +362,7 @@ class server:
         if called: socket.close()
         return
 
-    def new_client(self):
+    def new_client(self) -> None:
         """handles new clinets
         """
         client_socket, client_address = self.socket.accept()
