@@ -1,6 +1,6 @@
-from _typeshed import Self
 import os, sys, select, socket, json, threading, random, discord
 from time import sleep, time
+from typing import Callable
 
 from requests.models import Response
 
@@ -93,7 +93,7 @@ CHANNEL = 4
 
 class API:
     """API for the 'Server monitoring Discord bot' application."""
-    def __init__(self, name: str, key: str, ip: str = "127.0.0.1", port: int = 9600, update_function: function = None) -> None:
+    def __init__(self, name: str, key: str, ip: str = "127.0.0.1", port: int = 9600, update_function: Callable[[], None] = None) -> None:
         """Initialises an API that connects to the 'ip' ip and to the 'port' port with the 'name' name and the 'key' api key.
         The update_function should be a vfunction to call, when the bot calls for update (usually when the bot is updated). The function should not require input data.
         """
@@ -147,9 +147,14 @@ class API:
             print(ex)
             return None
     
+    def _get_copy_function_list(self):
+        ret = []
+        for item in self.created_function_list:
+            ret.append(item)
+        return ret
+
     def _re_init_commands(self) -> None:
-        from copy import deepcopy
-        tmp = deepcopy(self.created_function_list)
+        tmp = self._get_copy_function_list()
         for item in tmp:
             self.create_function(*item)
         del tmp
@@ -174,7 +179,7 @@ class API:
             try:
                 self.socket.connect((self.ip, self.port))
                 break
-            except ConnectionRefusedError: pass
+            except: pass
             if (timeout is not None and timeout > 0 and time() - start > timeout) or not self.running:
                 return False
         self._send({"Command":self.name, "Value": self.key})
@@ -308,7 +313,7 @@ class API:
         self.sending = False
         self.socket.close()
 
-    def create_function(self, name: str, help_text: str, callback: function) -> None:
+    def create_function(self, name: str, help_text: str, callback: Callable[[Message], None]) -> None:
         """Creates a function in the connected bot. This function creates a thread so it won't block while it waits for validation from the bot.
         Return order: ChannelID, UserID, UserInput. The returned value depends on the return value, but the order is the same.
         """
@@ -316,7 +321,7 @@ class API:
         self.create_function_threads[-1].name = f"Create thread for {name}"
         self.create_function_threads[-1].start()
 
-    def _create_function(self, name: str, help_text: str, callback: function) -> None:
+    def _create_function(self, name: str, help_text: str, callback: Callable[[Message], None]) -> None:
         """Creates a function in the connected bot when validated.
         """
         while self.sending:

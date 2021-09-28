@@ -52,7 +52,7 @@ def main():
         except Exception as ex:
             print(f"{ex}")
         finally:
-            sleep(0.2)
+            sleep(1)
     if server.returncode == errno.EPERM:
         print("Permission error! If this occures more than once, please try to run the program in administrator/root mode")
         print("Installing dependencies...")

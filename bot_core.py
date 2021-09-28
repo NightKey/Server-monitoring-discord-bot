@@ -26,7 +26,7 @@ is_running = True
 errors = {}
 threads = {}
 admins = []
-loop = None
+loop: asyncio.AbstractEventLoop = None
 _watchdog = None
 _server = None
 admin_key = None
@@ -874,25 +874,29 @@ def send_message(msg: services.Message):
     else:
         if usr := client.get_user(int(msg.channel)):
             if usr.dm_channel is not None:
-                _send_message(msg, usr.dm_channel)
+                loop.create_task(_send_message(msg, usr.dm_channel))
                 return response("Success")
             else:
                 loop.create_task(usr.create_dm())
                 while usr.dm_channel is None:
                     sleep(0.1)
-                _send_message(msg, usr.dm_channel)
+                loop.create_task(_send_message(msg, usr.dm_channel))
                 return response("Success")
         for chn in client.get_all_channels():
             if (str)(chn.id) == msg.channel:
-                _send_message(msg, chn)
+                loop.create_task(_send_message(msg, chn))
                 return response("Success")
         return response("Internal error", "User or Channel wasn't found!")
 
-def _send_message(msg: services.Message, channel: discord.TextChannel):
+async def _send_message(msg: services.Message, channel: discord.TextChannel):
     if len(msg.attachments) > 0:
-        loop.create_task(channel.send(msg.content, file=discord.File(msg.attachments[0].url, msg.attachments[0].filename)))
+        try:
+            await channel.send(msg.content, file=discord.File(msg.attachments[0].url, msg.attachments[0].filename))
+        except discord.errors.HTTPException as ex:
+            if ex.status == 413: await channel.send("File too big!")
+            else: raise ex
         return
-    loop.create_task(channel.send(msg.content))
+    await channel.send(msg.content)
 
 def start_thread(name):
     global threads

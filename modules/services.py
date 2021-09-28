@@ -1,4 +1,5 @@
 from requests.models import Response
+from typing import Any, Callable
 from . import writer, logger
 from .response import response
 import socket, select, json, discord
@@ -78,7 +79,7 @@ class Message:
         return {"sender":self.sender, "content":self.content, "channel":self.channel, "called":self.called, "attachments":[attachment.to_json() for attachment in self.attachments] if len(self.attachments) > 0 else None}
 
 class server:
-    def __init__(self, linking_editor: function, get_status: function, send_message: function, get_user: function, is_admin: function) -> None:
+    def __init__(self, linking_editor: Callable[[Any, bool], None], get_status: Callable[[], dict], send_message: Callable[[Message], bool], get_user: Callable[[str], response], is_admin: Callable[[str], bool]) -> None:
         self.clients = {}
         self.run = True
         self.linking_editor = linking_editor
