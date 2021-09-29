@@ -218,7 +218,8 @@ class API:
     def update(self, _) -> None:
         """Trys to update the API with PIP, and calls the given update function if there is one avaleable.
         """
-        os.system("pip install --user --upgrade smdb_api")
+        os.system("pip install --user --upgrade smdb_api > pip.txt")
+        os.remove("pip.txt")
         if self.update_function is not None:
             self.update_function()
 
