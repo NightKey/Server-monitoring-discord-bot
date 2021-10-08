@@ -1,6 +1,7 @@
 from asyncio import tasks
 from modules import writer, status, logger, watchdog
 from modules import services
+from platform import node
 from modules.services import server
 from modules.services import Message, Attachment
 from modules.scanner import scann
@@ -215,43 +216,46 @@ Category: SOFTWARE
         await echo(message)
         return
     process_list = scann(process_list, psutil.process_iter())
-    embed = discord.Embed(title="Interal status", color=0x14f9a2)
-    embed.add_field(name=f"Reconnectoins in the past {reset_time} hours", value=len(connections), inline=False)
+    pc_name = node()
+    bot_status = discord.Embed(title=f"{pc_name}'s status", color=0x14f9a2)
+    bot_status.add_field(name=f"Reconnectoins in the past {reset_time} hours", value=len(connections), inline=False)
     for name, thread in threads.items():
-        embed.add_field(name=name, value=("Active" if thread.is_alive() else "Inactive"))
-    embed.set_author(name="Night Key", url="https://github.com/NightKey", icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
-    await channel.send(embed=embed)
-    embed = discord.Embed(title="Watched processes' status", color=0x14f9a2)
+        bot_status.add_field(name=name, value=("Active" if thread.is_alive() else "Inactive"))
+    bot_status.set_author(name="Night Key", url="https://github.com/NightKey", icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
+    watchdog_status = discord.Embed(title="Watched processes' status", color=0x14f9a2)
     for key, value in process_list.items():
-        embed.add_field(name=key, value=("running" if value[0] else "stopped"), inline=True)
+        watchdog_status.add_field(name=key, value=("running" if value[0] else "stopped"), inline=True)
         process_list[key] = [False, False]
-    else:
-        await channel.send(embed=embed)
-        if stype is not None and stype.lower() == "long":
-            embed = discord.Embed(title="API Status", color=0x14f9a2)
-            api_status = _server.get_api_status() if _server is not None else {"API":"Offline"}
-            for key, values in api_status.items():
-                if values == []: continue
-                embed.add_field(name=key, value="\u200B", inline=False)
-                for item in list(values):
-                    embed.add_field(value="\u200B", name=item, inline=True)
-            if embed.fields != []:
-                await channel.send(embed=embed)
-        embed = discord.Embed(title="Host status", color=0x14f9a2)
-        embed.set_footer(text="Created by Night Key @ https://github.com/NightKey", icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
-        stts = status.get_graphical(bar_size, True)
-        for key, value in stts.items():
-            val = ("Status" if len(value) > 1 else value[0])
-            embed.add_field(name=key, value=val, inline=False)
-            if len(value) > 1 and key != "Battery":
-                embed.add_field(name="Max", value=value[0])
-                embed.add_field(name="Used", value=value[1])
-                embed.add_field(name="Status", value=value[2])
-            elif len(value) > 1:
-                embed.add_field(name="Battery life", value=value[0])
-                embed.add_field(name="Power status", value=value[1])
-                embed.add_field(name="Status", value=value[2])
-        await channel.send(embed=embed)
+    
+    if stype is not None and stype.lower() == "long":
+        api_server_status = discord.Embed(title="API Status", color=0x14f9a2)
+        api_status = _server.get_api_status() if _server is not None else {"API":"Offline"}
+        for key, values in api_status.items():
+            if values == []: continue
+            api_server_status.add_field(name=key, value="\u200B", inline=False)
+            for item in list(values):
+                api_server_status.add_field(value="\u200B", name=item, inline=True)
+
+    host_status = discord.Embed(title="Host status", color=0x14f9a2)
+    host_status.set_footer(text="Created by Night Key @ https://github.com/NightKey", icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
+    stts = status.get_graphical(bar_size, True)
+    for key, value in stts.items():
+        val = ("Status" if len(value) > 1 else value[0])
+        host_status.add_field(name=key, value=val, inline=False)
+        if len(value) > 1 and key != "Battery":
+            host_status.add_field(name="Max", value=value[0])
+            host_status.add_field(name="Used", value=value[1])
+            host_status.add_field(name="Status", value=value[2])
+        elif len(value) > 1:
+            host_status.add_field(name="Battery life", value=value[0])
+            host_status.add_field(name="Power status", value=value[1])
+            host_status.add_field(name="Status", value=value[2])
+    
+    await channel.send(embed=bot_status)
+    await channel.send(embed=watchdog_status)
+    if stype == "long" and api_server_status.fields != []:
+        await channel.send(embed=api_server_status)
+    await channel.send(embed=host_status)
 
 async def add_process(message, name):
     """Adds a process to the watchlist. The watchdog automaticalli gets updated with the new list.

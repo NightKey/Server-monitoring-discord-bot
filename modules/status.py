@@ -64,7 +64,7 @@ def get_graphical(bar_size, in_dict=False):
             pass
     tmp = round(int(memory["used"]) / (1024 **3), 2)
     used = f"{tmp} GB"
-    tmp = round((int(memory["free"]) + int(memory['used'])) / (1024 **3), 2)
+    tmp = round(int(memory["total"]) / (1024 **3), 2)
     _max = f"{tmp} GB"
     if in_dict:
         d["Memory"]=[_max, used, memory['bar']]
