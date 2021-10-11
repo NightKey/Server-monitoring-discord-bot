@@ -217,7 +217,7 @@ Category: SOFTWARE
         return
     process_list = scann(process_list, psutil.process_iter())
     pc_name = node()
-    bot_status = discord.Embed(title=f"{pc_name}'s status", color=0x14f9a2)
+    bot_status = discord.Embed(title="Bot status", color=0x14f9a2)
     bot_status.add_field(name=f"Reconnectoins in the past {reset_time} hours", value=len(connections), inline=False)
     for name, thread in threads.items():
         bot_status.add_field(name=name, value=("Active" if thread.is_alive() else "Inactive"))
@@ -236,7 +236,7 @@ Category: SOFTWARE
             for item in list(values):
                 api_server_status.add_field(value="\u200B", name=item, inline=True)
 
-    host_status = discord.Embed(title="Host status", color=0x14f9a2)
+    host_status = discord.Embed(title=f"{pc_name}'s status", color=0x14f9a2)
     host_status.set_footer(text="Created by Night Key @ https://github.com/NightKey", icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
     stts = status.get_graphical(bar_size, True)
     for key, value in stts.items():
