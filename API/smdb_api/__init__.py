@@ -1,4 +1,6 @@
-import os, sys, select, socket, json, threading, random, discord
+import select, socket, json, threading, random, discord, re
+from os import path, devnull, system, remove
+from sys import stdout, __stdout__
 from time import sleep, time
 from typing import Callable
 
@@ -43,27 +45,28 @@ class Attachment:
         return requests.get(self.url)
 
     def save(self, path: str) -> str:
-        if not os.path.exists(path): return ""
+        if not path.exists(path): return ""
         tmp = self.filename
         n = 1
-        while os.path.exists(os.path.join(path, tmp)):
+        while path.exists(path.join(path, tmp)):
             tmp = "".join((".".join(self.filename.split(".")[:-1]), f"({n}).", self.filename.split(".")[-1]))
             n += 1
         self.filename = tmp
         file = self.download()
-        with open(os.path.join(path, self.filename), "wb") as f:
+        with open(path.join(path, self.filename), "wb") as f:
             f.write(file.content)
-        return os.path.join(path, self.filename)
+        return path.join(path, self.filename)
     
     def to_json(self) -> dict:
         return {"filename":self.filename, "size":self.size, "url":self.url}
 
 class Message:
     """Message object used by the api"""
+    USER_REGX = r"(<@![0-9]+>){1}"
     def from_json(json):
         return Message(json["sender"], json["content"], json["channel"], [Attachment.from_json(attachment) for attachment in json["attachments"]] if json["attachments"] is not None else [], json["called"])
 
-    def __init__(self, sender: str, content: str, channel: str, attachments: str, called: str) -> None:
+    def __init__(self, sender: str, content: str, channel: str, attachments: list, called: str) -> None:
         self.sender = sender
         self.content = content
         self.channel = channel
@@ -72,19 +75,33 @@ class Message:
 
     def add_called(self, called: str) -> None:
         self.called = called
-        
+
+    def contains_user(self) -> bool:
+        return len(re.findall(Message.USER_REGX, self.content)) > 0
+
+    def get_contained_user_id(self) -> str:
+        if not self.contains_user():
+            return ""
+        if " " in self.content:
+            content = self.content.split(' ')
+            for item in content:
+                if "<@" in item:
+                    return item.replace("<@!", "").replace(">", "")
+    
     def has_attachments(self) -> bool:
-        return len(self.attachments) > 0
+        return len(self.attachments) == 1
 
     def to_json(self) -> dict:
         return {"sender":self.sender, "content":self.content, "channel":self.channel, "called":self.called, "attachments":[attachment.to_json() for attachment in self.attachments] if len(self.attachments) > 0 else None}
 
 def blockPrint() -> None:
-    sys.stdout = open(os.devnull, 'w')
+    global stdout
+    stdout = open(devnull, 'w')
 
 def enablePrint() -> None:
-    sys.stdout.close()
-    sys.stdout = sys.__stdout__
+    global stdout
+    stdout.close()
+    stdout = __stdout__
 
 NOTHING = 0
 USER_INPUT = 1
@@ -218,8 +235,8 @@ class API:
     def update(self, _) -> None:
         """Trys to update the API with PIP, and calls the given update function if there is one avaleable.
         """
-        os.system("pip install --user --upgrade smdb_api > pip.txt")
-        os.remove("pip.txt")
+        system("pip install --user --upgrade smdb_api > pip.txt")
+        remove("pip.txt")
         if self.update_function is not None:
             self.update_function()
 
@@ -250,7 +267,7 @@ class API:
     def send_message(self, message: str, destination: str = None, file_path: str = None) -> bool:
         """Sends a message trough the discord bot.
         """
-        msg = Message("API", message, destination, [Attachment(file_path.split("/")[-1], file_path, os.path.getsize(file_path))] if file_path is not None else [], "API")
+        msg = Message("API", message, destination, [Attachment(file_path.split("/")[-1], file_path, path.getsize(file_path))] if file_path is not None else [], "API")
         if self.valid:
             self.sending = True
             self._send({"Command":"Send", 'Value': msg.to_json()})

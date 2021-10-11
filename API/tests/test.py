@@ -54,11 +54,34 @@ def get_user(uid):
 def is_admin(uid):
     return response.response("Success", uid=="123")
 
+class Message_function_test(unittest.TestCase):
+
+    def test_1_message_contains_user(self):
+        msg = smdb_api.Message("sender", "the message content <@!000000000000000000>", "channel", [], "called")
+        self.assertTrue(msg.contains_user())
+        msg = smdb_api.Message("sender", "the message content", "channel", [], "called")
+        self.assertFalse(msg.contains_user())
+    
+    def test_2_message_returns_correct_tag(self):
+        msg = smdb_api.Message("sender", "the message content <@!000000000000000000>", "channel", [], "called")
+        self.assertEquals("000000000000000000", msg.get_contained_user_id())
+        msg = smdb_api.Message("sender", "the message content", "channel", [], "called")
+        self.assertEquals("", msg.get_contained_user_id())
+        msg = smdb_api.Message("sender", "the <@!000000000000000000> message content", "channel", [], "called")
+        self.assertEquals("000000000000000000", msg.get_contained_user_id())
+
+    def test_3_message_has_attachment(self):
+        msg = smdb_api.Message("sender", "the message content", "channel", [], "called")
+        self.assertFalse(msg.has_attachments())
+        msg = smdb_api.Message("sender", "the message content", "channel", [smdb_api.Attachment("name", "url", 12)], "called")
+        self.assertTrue(msg.has_attachments())
+
 if __name__ == "__main__":
     print("Creating dummy server...")
     services.verbose = False
     server = services.server(linking_editor, get_status, send_message, get_user, is_admin)
-    th = threading.Thread(target=server.start)
+    server._start_for_test()
+    th = threading.Thread(target=server.loop)
     th.name = "Dummy server"
     th.start()
     print("Dummy server started")
@@ -71,4 +94,4 @@ if __name__ == "__main__":
     print("Stopping dummy server")
     server.stop()
     print("Finished!")
-    exit(0)
+    th.join()

@@ -171,6 +171,18 @@ class server:
         self.socket.listen()
         print("API Server started")
         self.loop()
+    
+    def _start_for_test(self) -> None:
+        self.commands = {
+            'Status':self.get_status_command,
+            'Send':self.send_command,
+            'Create':self.create_command,
+            'Remove':self.remove_command,
+            'Username':self.return_usrname,
+            'Disconnect':self.disconnect,
+            'Is Admin':self.admin_check
+        }
+        self.socket.listen()
 
     def create_command(self, socket: socket, data: dict) -> None:
         """Creates a command in the discord bot
