@@ -257,11 +257,17 @@ Category: SOFTWARE
                 host_status.add_field(name="Power status", value=value[1])
                 host_status.add_field(name="Status", value=value[2])
     
-    await channel.send(embed=bot_status)
-    await channel.send(embed=watchdog_status)
-    if stype == "long" and api_server_status.fields != []:
+    if stype.lower() in ["short", "long", "bot"]:
+        await channel.send(embed=bot_status)
+    
+    if stype.lower() in ["short", "long", "watchdog"]:
+        await channel.send(embed=watchdog_status)
+
+    if stype.lower() in ["long", "api"] and api_server_status.fields != []:
         await channel.send(embed=api_server_status)
-    await channel.send(embed=host_status)
+    
+    if stype.lower() in ["short", "long", "host", pc_name.lower()]:
+        await channel.send(embed=host_status)
 
 async def add_process(message, name):
     """Adds a process to the watchlist. The watchdog automaticalli gets updated with the new list.
