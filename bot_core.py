@@ -204,7 +204,7 @@ def get_status():
 
 async def status_check(message, stype="short"):
     """Scanns the system for the running applications, and creates a message depending on the resoults.
-Usage: &status <long if you want to see the API status too>
+Usage: &status <long if you want to see the API status too or module name for specific module status [bot, watchdog, api, host/pc_name]>
 Category: SOFTWARE
     """
     global process_list
