@@ -53,9 +53,9 @@ def get_graphical(bar_size, in_dict=False):
             letter = chr(letter)
             dbar = disk[letter]["bar"]
             tmp = round(int(disk[letter]["total"]) / (1024 **3), 2)
-            total = f"{tmp} GB"
+            total = f"{tmp} GiB"
             tmp = round(int(disk[letter]["used"]) / (1024 **3), 2)
-            used = f"{tmp} GB"
+            used = f"{tmp} GiB"
             if in_dict:
                 d[f"{letter.upper()} drive"]=[total, used, dbar]
             else:
@@ -63,9 +63,9 @@ def get_graphical(bar_size, in_dict=False):
         except:
             pass
     tmp = round(int(memory["used"]) / (1024 **3), 2)
-    used = f"{tmp} GB"
+    used = f"{tmp} GiB"
     tmp = round(int(memory["total"]) / (1024 **3), 2)
-    _max = f"{tmp} GB"
+    _max = f"{tmp} GiB"
     if in_dict:
         d["Memory"]=[_max, used, memory['bar']]
     else:
