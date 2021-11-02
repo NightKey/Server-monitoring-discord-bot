@@ -799,7 +799,7 @@ async def on_message(message):
                 await message.add_reaction("dot:577128688433496073")
                 try:
                     if cmd in linking.keys(): await linking[cmd][0](message, etc)
-                    elif cmd in outside_options.keys(): outside_options[cmd](_server, Message(str(message.author.id), etc, str(message.channel.id), [Attachment.from_discord_attachment(attachment) for attachment in message.attachments], None))
+                    elif cmd in outside_options.keys(): outside_options[cmd](_server, Message.create_message(str(message.author.id), etc, str(message.channel.id), [Attachment.from_discord_attachment(attachment) for attachment in message.attachments], None))
                 except Exception as ex:
                     await message.channel.send(f"Error runnig the '{cmd}' command: {ex}")
             else:
@@ -826,7 +826,7 @@ async def on_message(message):
                             mx["value"] = tmp
                     if 'value' in mx and mx['value'] == 100:
                         try:
-                            outside_options[mx["key"]](_server, Message(str(message.author.id), etc, str(message.channel.id), [Attachment.from_discord_attachment(attachment) for attachment in message.attachments], None))
+                            outside_options[mx["key"]](_server, Message.create_message(str(message.author.id), etc, str(message.channel.id), [Attachment.from_discord_attachment(attachment) for attachment in message.attachments], None))
                             await message.add_reaction("dot:577128688433496073")
                         except Exception as ex: await message.channel.send(f"Error runnig the '{cmd}' command: {ex}\nInterpreted command: {mx['key']}")
                     elif 'value' in mx and mx['value'] > 70:

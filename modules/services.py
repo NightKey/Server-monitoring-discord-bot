@@ -1,5 +1,5 @@
 from requests.models import Response
-from typing import Any, Callable
+from typing import Any, Callable, List
 from . import writer, logger
 from .response import response
 import socket, select, json, discord
@@ -20,11 +20,11 @@ print = split   #Changed print to the split function
 
 class Attachment:
     """Message attachment"""
-    def from_json(json: dict):
+    def from_json(json: dict) -> "Attachment":
         if json is None: return None
         return Attachment(json["filename"], json["url"], json["size"])
     
-    def from_discord_attachment(atch: discord.Attachment):
+    def from_discord_attachment(atch: discord.Attachment) -> "Attachment":
         if atch is None: return None
         return Attachment(atch.filename, atch.url, atch.size)
 
@@ -59,10 +59,13 @@ class Attachment:
 
 class Message:
     """Message object used by the api"""
-    def from_json(json):
+    def from_json(json) -> "Message":
         return Message(json["sender"], json["content"], json["channel"], [Attachment.from_json(attachment) for attachment in json["attachments"]] if json["attachments"] is not None else [], json["called"])
 
-    def __init__(self, sender: str, content: str, channel: str, attachments: str, called: str) -> None:
+    def create_message(sender: str, content: str, channel: str, attachments: List[Attachment], called: str) -> "Message":
+        return Message(sender, content if content is not None else "", channel, attachments, called)
+
+    def __init__(self, sender: str, content: str, channel: str, attachments: List[Attachment], called: str) -> None:
         self.sender = sender
         self.content = content
         self.channel = channel
