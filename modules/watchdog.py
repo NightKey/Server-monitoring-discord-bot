@@ -19,10 +19,12 @@ class watchdog():
         self.process_list = deepcopy(process_list)
         self.error = ""
         self.battery_warning = False
+        self.temp_warning = False
         self.client = client
         self.loop = loop
         self._ready = False
         self.run = True
+        self.high_temp = 80.0
 
     def was_restarted(self):
         """Updates the restarted state
@@ -91,6 +93,7 @@ class watchdog():
         self.channel = channel
         print("started")
         battery_warning_number = 0
+        temp_warning_number = 0
         n = 5
         while self.run:
             self.process_list = scann(self.process_list, psutil.process_iter())
@@ -109,6 +112,22 @@ class watchdog():
                         self.battery_warning = False
                     elif battery_warning_number != 0:
                         battery_warning_number = 0
+                temp = status.get_temp()
+                if temp != None:
+                    if not self.temp_warning:
+                        if temp > self.high_temp:
+                            print(f'{temp}°C CPU temp detected!', log_only=True)
+                            self.loop.create_task(channel.send(f"@everyone CPU is running hot @ {temp}°C!"))
+                            self.temp_warning = True
+                    else:
+                        if temp > self.high_temp:
+                            temp_warning_number += 1
+                        else:
+                            temp_warning_number = 0
+                            self.temp_warning = False
+                        if temp_warning_number % 150 == 0:
+                            print('CPU temp constantly high!', log_only=True)
+                            self.loop.create_task(channel.send(f"@everyone CPU is running hot @ {temp}°C for more than 5 minutes! The server will be hut down in 5 minutes!"))
             if n >= 3:
                 n = 0
             else:

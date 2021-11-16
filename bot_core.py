@@ -29,7 +29,7 @@ errors = {}
 threads = {}
 admins = []
 loop: asyncio.AbstractEventLoop = None
-_watchdog = None
+_watchdog: watchdog = None
 _server = None
 admin_key = None
 
@@ -90,7 +90,7 @@ Category: BOT
                 await message.channel.send("Restarting...")
             try: await client.logout()
             except: pass
-            signal('Restart')
+            signal(signals.restart)
         else:
             if message is not None:
                 await message.channel.send('Nothing was updated!')
@@ -256,6 +256,8 @@ Category: SOFTWARE
                 host_status.add_field(name="Battery life", value=value[0])
                 host_status.add_field(name="Power status", value=value[1])
                 host_status.add_field(name="Status", value=value[2])
+        temp = status.get_temp()
+        host_status.add_field(name="Temperature", value=(f"{temp}°C" if temp is not None else "Not detected!"))
     
     if stype.lower() in ["short", "long", "bot"]:
         await channel.send(embed=bot_status)
@@ -406,11 +408,7 @@ Category: BOT
     global is_running
     if str(message.channel) in channels or str(message.author.id) in admins:
         await message.channel.send("Exiting")
-        await client.logout()
-        _watchdog.stop()
-        is_running = False
-        signal('Exit')
-        exit(0)
+        stop()
 
 class clear_helper:
     def __init__(self, number, user) -> None:
@@ -531,11 +529,8 @@ Category: HARDWARE
             if os.system(command) != 0:
                 await message.channel.send("Permission denied!")
             else:
-                global is_running
-                _watchdog.stop()
-                is_running = False
-                await client.logout()
-                signal(signals.exit)
+                await message.channel.send("Exiting")
+                stop()
         except Exception as ex:
             await message.channel.send(f"Restart failed with the following exception:\n``` {str(ex)}```")
 
@@ -972,12 +967,14 @@ def stop():
     if _watchdog is not None:
         print("Stopping watchdogs")
         _watchdog.create_tmp()
+        _watchdog.stop()
     print("Stopping disconnect checker")
     is_running = False
     if _server is not None and _server.run:
         _server.stop()
     if loop is not None:
         loop.stop()
+    signal(signals.exit)
     
 def Main(_loop):
     try:

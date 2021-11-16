@@ -2,8 +2,13 @@ from modules import bar
 from datetime import timedelta
 import psutil
 
-a = 97
-z = 123
+def get_temp() -> float:
+    temps = psutil.sensors_temperatures()
+    if not temps:
+        return None
+    cpu_temps = temps["coretemp"]
+    return cpu_temps[0].current
+
 
 def get_pc_status():
     """With the help of the psutil module, scanns the PC for information about all the drives, the memory and the battery, if it has one.
@@ -31,14 +36,8 @@ def get_graphical(bar_size, in_dict=False):
     """Using the bar module, creates a visual representation of the system's status.
     It shows the disks' and the momory's percentage, the used and the total space, and the battery's remaning lifetime, if it's pugged, and the battery's percentage.
     """
-    disk, memory, battery = get_pc_status()
+    disks, memory, battery = get_pc_status()
     bars = bar.loading_bar("", 100, size=bar_size, show="▓", off_show="░")
-    for letter in range(a, z):
-        try:
-            bars.update(round(disk[chr(letter)]["percent"], 1), False)
-            disk[chr(letter)]["bar"] = bars.bar()
-        except:
-            pass
     bars.update(round(memory["percent"], 1), False)
     memory["bar"] = bars.bar()
     if battery != None:
@@ -48,20 +47,17 @@ def get_graphical(bar_size, in_dict=False):
         d = {}
     else:
         string = ""
-    for letter in range(a, z):
-        try:
-            letter = chr(letter)
-            dbar = disk[letter]["bar"]
-            tmp = round(int(disk[letter]["total"]) / (1024 **3), 2)
-            total = f"{tmp} GiB"
-            tmp = round(int(disk[letter]["used"]) / (1024 **3), 2)
-            used = f"{tmp} GiB"
-            if in_dict:
-                d[f"{letter.upper()} drive"]=[total, used, dbar]
-            else:
-                string += f"{letter}: Max: {total}, used: {used}\n{dbar}\n"
-        except:
-            pass
+    for mp, disk in disks.items():
+        bars.update(round(disk["percent"], 1), False)
+        dbar = bars.bar()
+        tmp = round(int(disk["total"]) / (1024 **3), 2)
+        total = f"{tmp} GiB"
+        tmp = round(int(disk["used"]) / (1024 **3), 2)
+        used = f"{tmp} GiB"
+        if in_dict:
+            d[f"{mp.upper()} drive"]=[total, used, dbar]
+        else:
+            string += f"{mp}: Max: {total}, used: {used}\n{dbar}\n"
     tmp = round(int(memory["used"]) / (1024 **3), 2)
     used = f"{tmp} GiB"
     tmp = round(int(memory["total"]) / (1024 **3), 2)
