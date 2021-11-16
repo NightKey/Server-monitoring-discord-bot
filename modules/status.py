@@ -9,6 +9,7 @@ def get_temp() -> float:
     cpu_temps = temps["coretemp"]
     return cpu_temps[0].current
 
+valid_fstypes = ["ntfs", "ext4", "ext3"]
 
 def get_pc_status():
     """With the help of the psutil module, scanns the PC for information about all the drives, the memory and the battery, if it has one.
@@ -17,7 +18,8 @@ def get_pc_status():
     disk = dict()
     partitions = psutil.disk_partitions()
     for partition in partitions:
-        disk[partition._asdict()["mountpoint"]] = psutil.disk_usage("{}".format(partition._asdict()["mountpoint"]))._asdict()
+        if partition.fstype.lower() in valid_fstypes:
+            disk[partition._asdict()["mountpoint"]] = psutil.disk_usage("{}".format(partition._asdict()["mountpoint"]))._asdict()
     memory = psutil.virtual_memory()._asdict()
     try:
         battery = psutil.sensors_battery()._asdict()
