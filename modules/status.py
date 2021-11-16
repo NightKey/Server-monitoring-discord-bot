@@ -3,6 +3,8 @@ from datetime import timedelta
 import psutil
 
 def get_temp() -> float:
+    if not hasattr(psutil, "sensors_temperatures"):
+        return None
     temps = psutil.sensors_temperatures()
     if not temps:
         return None
