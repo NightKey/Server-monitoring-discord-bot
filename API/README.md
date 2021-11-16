@@ -31,7 +31,7 @@ To add a command to the bot, use the 'create_function' command, like shown here:
 def my_callback(message):
     #Does something
 
-API.create_function("MyScript", "Shome text to help\nUsage: &MyScript <User input>\nCategory: SERVER", my_callback)
+API.create_function("MyScript", "Some text to help\nUsage: &MyScript <User input>\nCategory: SERVER", my_callback)
 ```
 To send a message to someone, use the 'send_message' command:
 

@@ -178,7 +178,7 @@ class API:
 
     def validate(self, timeout: int = -1) -> bool:
         """Validates with the bot, and starts the listener loop, if validation is finished. Returns false, if validation timed out
-        Time out can be set, so it won't halt the program for ever, if no bot is present. (The timeout will only work for the first validation.)
+        Timeout can be set, so it won't halt the program for ever, if no bot is present. (The timeout will only work for the first validation.)
         If the timeout is set to -1, the validation will be in a new thread, and always return true.
         """
         if timeout is not None and timeout == -1:
