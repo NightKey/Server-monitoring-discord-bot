@@ -25,6 +25,7 @@ class watchdog():
         self._ready = False
         self.run = True
         self.high_temp = 80.0
+        self.disks = {}
 
     def was_restarted(self):
         """Updates the restarted state
@@ -128,7 +129,20 @@ class watchdog():
                         if temp_warning_number % 150 == 0:
                             print('CPU temp constantly high!', log_only=True)
                             self.loop.create_task(channel.send(f"@everyone CPU is running hot @ {temp}°C for more than 5 minutes! The server will be hut down in 5 minutes!"))
-            if n >= 3:
+                if n % 5 == 0:
+                    disks = status.get_disk_status()
+                    for key, disk in disks.items():
+                        percentage = round(disk["percent"], 1)
+                        if key in self.disks:
+                            if percentage > 99 and percentage > self.disks[key]:
+                                self.loop.create_task(channel.send(f"@everyone The disk '{key}' is full ({percentage}%)!"))
+                            elif percentage > 95 and percentage > self.disks[key]:
+                                self.loop.create_task(channel.send(f"@everyone The disk '{key}' is nearly filled ({percentage}%)!"))
+                            elif percentage > 90 and percentage > self.disks[key]:
+                                self.loop.create_task(channel.send(f"@everyone The disk '{key}' is {percentage}% filled!"))
+                        self.disks[key] = percentage
+                    
+            if n >= 20:
                 n = 0
             else:
                 n += 1

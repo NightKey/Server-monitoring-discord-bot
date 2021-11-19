@@ -13,21 +13,22 @@ def get_temp() -> float:
 
 valid_fstypes = ["ntfs", "ext4", "ext3"]
 
+def get_disk_status():
+    disks = dict()
+    partitions = psutil.disk_partitions()
+    for partition in partitions:
+        if partition.fstype.lower() in valid_fstypes:
+            disks[partition._asdict()["mountpoint"]] = psutil.disk_usage("{}".format(partition._asdict()["mountpoint"]))._asdict()
+    return disks
+
 def get_pc_status():
     """With the help of the psutil module, scanns the PC for information about all the drives, the memory and the battery, if it has one.
     Returns disk, memory, battery in this order.
     """
-    disk = dict()
-    partitions = psutil.disk_partitions()
-    for partition in partitions:
-        if partition.fstype.lower() in valid_fstypes:
-            disk[partition._asdict()["mountpoint"]] = psutil.disk_usage("{}".format(partition._asdict()["mountpoint"]))._asdict()
+    disks = get_disk_status()
     memory = psutil.virtual_memory()._asdict()
-    try:
-        battery = psutil.sensors_battery()._asdict()
-    except:
-        battery = None
-    return disk, memory, battery
+    battery = get_battery_status()
+    return disks, memory, battery
 
 def get_battery_status():
     try:
