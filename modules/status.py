@@ -66,7 +66,7 @@ def get_graphical(bar_size, in_dict=False) -> Union[str, Dict[str, str]]:
         used = f"{tmp} GiB"
         tmp = round(int(memory[key]["total"]) / (1024 **3), 2)
         _max = f"{tmp} GiB"
-        bars.update(round(memory["RAM"]["percent"], 1), False)
+        bars.update(round(memory[key]["percent"], 1), False)
         _bar = bars.bar()
         if in_dict:
             d[key]=[_max, used, _bar]
