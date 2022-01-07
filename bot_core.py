@@ -250,7 +250,7 @@ Category: SOFTWARE
             host_status.add_field(name=key, value=val, inline=False)
             if len(value) > 1 and key != "Battery":
                 host_status.add_field(name="Max", value=value[0])
-                host_status.add_field(name="Used", value=value[1])
+                host_status.add_field(name="Used" if key in ["RAM", "SWAP"] else "Free", value=value[1])
                 host_status.add_field(name="Status", value=value[2])
             elif len(value) > 1:
                 host_status.add_field(name="Battery life", value=value[0])

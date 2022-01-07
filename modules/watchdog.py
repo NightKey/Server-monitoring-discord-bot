@@ -134,11 +134,11 @@ class watchdog():
                     for key, disk in disks.items():
                         percentage = round(disk["percent"], 1)
                         if key in self.disks:
-                            if percentage > 99 and percentage > self.disks[key]:
+                            if percentage > 99 and percentage > (self.disks[key] + 3):
                                 self.loop.create_task(channel.send(f"@everyone The disk '{key}' is full ({percentage}%)!"))
-                            elif percentage > 95 and percentage > self.disks[key]:
+                            elif percentage > 95 and percentage > (self.disks[key] + 3):
                                 self.loop.create_task(channel.send(f"@everyone The disk '{key}' is nearly filled ({percentage}%)!"))
-                            elif percentage > 90 and percentage > self.disks[key]:
+                            elif percentage > 90 and percentage > (self.disks[key] + 3):
                                 self.loop.create_task(channel.send(f"@everyone The disk '{key}' is {percentage}% filled!"))
                         self.disks[key] = percentage
                     

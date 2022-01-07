@@ -55,12 +55,12 @@ def get_graphical(bar_size, in_dict=False) -> Union[str, Dict[str, str]]:
         dbar = bars.bar()
         tmp = round(int(disk["total"]) / (1024 **3), 2)
         total = f"{tmp} GiB"
-        tmp = round(int(disk["used"]) / (1024 **3), 2)
-        used = f"{tmp} GiB"
+        tmp = round(int(disk["free"]) / (1024 **3), 2)
+        free = f"{tmp} GiB"
         if in_dict:
-            d[f"{mp.upper()}"]=[total, used, dbar]
+            d[f"{mp.upper()}"]=[total, free, dbar]
         else:
-            string += f"{mp}: Max: {total}, used: {used}\n{dbar}\n"
+            string += f"{mp}: Max: {total}, Free: {free}\n{dbar}\n"
     for key in ["RAM", "SWAP"]:
         tmp = round(int(memory[key]["used"]) / (1024 **3), 2)
         used = f"{tmp} GiB"
