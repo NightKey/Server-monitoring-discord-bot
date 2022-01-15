@@ -343,11 +343,11 @@ class API:
         """Creates a function in the connected bot when validated.
         """
         while self.sending:
-            sleep(random.randrange(1, 3))
+            sleep(random.randrange(0.2, 3.0))
+        self.sending = True
         if [name, help_text, callback] not in self.created_function_list:
             self.created_function_list.append([name, help_text, callback])
         if not self.valid: return
-        self.sending = True
         self._send({"Command":"Create", "Value": [name, help_text, name]})
         while self.buffer == []:
             sleep(0.1)
