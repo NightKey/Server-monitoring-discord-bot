@@ -343,7 +343,7 @@ class API:
         """Creates a function in the connected bot when validated.
         """
         while self.sending:
-            sleep(random.randrange(0.2, 3.0))
+            sleep(random.randrange(0, 5))
         self.sending = True
         if [name, help_text, callback] not in self.created_function_list:
             self.created_function_list.append([name, help_text, callback])
