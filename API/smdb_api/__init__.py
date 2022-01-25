@@ -161,7 +161,7 @@ class API:
             return json.loads(ret)
         except Exception as ex:
             enablePrint()
-            print(ex)
+            print(f"[_retrive exception]: {ex}")
             return None
     
     def _get_copy_function_list(self):
@@ -278,7 +278,7 @@ class API:
             self.sending = False
             if tmp["Response"] == "Bad request": raise ActionFailed(tmp["Data"])
             elif tmp["Response"] == "Internal error": 
-                print(tmp["Data"])
+                print(f"[Message sending exception] Internal error: {tmp['Data']}")
                 return False
             return True
         else: raise NotValidatedError
@@ -312,14 +312,14 @@ class API:
                         self.socket.close()
                         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                         self.socket_list = []
-                except Exception as ex: print(f"[Listener thread Inner exception]: {type(ex)} -> {ex}")
+                except Exception as ex: print(f"[Listener thread Inner exception]: {ex}")
                 sleep(0.2)
 
             try:
                 if self.running: 
                     self._validate()
                     self.connection_alive = True
-            except Exception as ex: print(f"[Listener thread Outer exception]: {type(ex)} -> {ex}")
+            except Exception as ex: print(f"[Listener thread Outer exception]: {ex}")
 
     def close(self, reason: str = None) -> None:
         """Closes the socket, and stops the listener loop.
@@ -356,5 +356,5 @@ class API:
         self.sending = False
         if tmp["Response"] == "Success":
             self.call_list[name] = callback
-        elif tmp["Response"] == "Internal error": print(tmp["Data"])
+        elif tmp["Response"] == "Internal error": print(f"[_create_function exception] Internal error: {tmp['Data']}")
         else: raise ActionFailed(tmp["Data"])
