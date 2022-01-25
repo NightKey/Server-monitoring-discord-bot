@@ -1,22 +1,12 @@
 from requests.models import Response
 from typing import Any, Callable, List
-from . import writer, logger
+from .logger import logger_class, LEVEL
 from .response import response
 import socket, select, json, discord
 from hashlib import sha256
 import os
 
-lg = logger.logger("api_server", folder="logs")
-verbose=True #If false, no data get's printed
-
-def split(text, error: bool = False, log_only: bool = False, print_only: bool = False) -> None:
-    """Logs to both stdout and a log file, using both the writer, and the logger module
-    """
-    if not log_only and verbose: writer.write(text)
-    if not print_only: lg.log(text, error=error)
-
-writer = writer.writer("API")
-print = split   #Changed print to the split function
+logger = logger_class("logs/api_server.log", level=LEVEL.DEBUG, log_to_console=True, use_name=True)
 
 class Attachment:
     """Message attachment"""
@@ -97,6 +87,7 @@ class server:
         self.socket.bind((self.ip, self.port))
         self.socket_list = [self.socket]
         self.bad_request = response("Bad request", None)
+        logger.header("Service initialized")
 
     def change_ip_port(self, ip: str, port: int) -> None:
         self.ip = ip
@@ -172,7 +163,7 @@ class server:
             'Is Admin':self.admin_check
         }
         self.socket.listen()
-        print("API Server started")
+        logger.info("API Server started")
         self.loop()
     
     def _start_for_test(self) -> None:
@@ -228,7 +219,7 @@ class server:
                 ret += data
             return json.loads(ret)
         except Exception as ex:
-            print(ex, print_only=True)
+            logger.error(ex)
             return None
     
     def send(self, msg: str, socket: socket) -> None:
@@ -271,9 +262,9 @@ class server:
     def create_function(self, creator: str, name: str, help_text: str, callback: str) -> response:
         """Creates a function with the given parameters, and stores it in the self.functions dictionary, with the 'name' as key
         """
-        print(f'Creating function with the name {name}', log_only=True)
-        print(f'Creating function with the call back {callback}', log_only=True)
-        print(f'Creating function with the creator as {creator}', log_only=True)
+        logger.debug(f'Creating function with the name {name}')
+        logger.debug(f'Creating function with the call back {callback}')
+        logger.debug(f'Creating function with the creator as {creator}')
         body = f"""def {name}(self, message):
     \"\"\"{help_text}\"\"\"
     message.add_called('{name}')
@@ -281,8 +272,8 @@ class server:
         try:
             exec(body)
         except Exception as ex:
-            print(f"\n{body}")
-            print(ex)
+            logger.error(f"{body}")
+            logger.error(ex)
             return response("Internal error", ex)
         setattr(self, name, locals()[name])
         self.linking_editor([name, getattr(self, name)])
@@ -313,7 +304,7 @@ class server:
                 self.functions[creator].remove(name)
             return response("Success", _bool=True)
         except Exception as ex:
-            print(f"{type(ex)} -> {ex}")
+            logger.error(f"{ex}")
             return response("Internal error", ex, _bool=False)
 
     def return_usrname(self, socket: socket, uid: str) -> None:
@@ -336,7 +327,7 @@ class server:
                     if notified_socket == self.socket:
                         self.new_client()
                     else:
-                        print(f"Incoming message from {self.clients[notified_socket]}")
+                        logger.debug(f"Incoming message from {self.clients[notified_socket]}")
                         msg = self.retrive(notified_socket)
                         if msg is None:
                             self.client_lost(notified_socket)
@@ -346,7 +337,7 @@ class server:
                 for notified_socket in exception_socket:
                     self.client_lost(notified_socket)
             except socket.error: pass
-            except Exception as ex: print(f"{type(ex)} --> {ex}")
+            except Exception as ex: logger.error(f"{ex}")
         self.socket.close()
 
     def command_retrived(self, msg: Message, socket: socket) -> None:
@@ -355,26 +346,26 @@ class server:
         if msg["Command"] not in self.commands or "Value" not in msg.keys():
             self.send(self.bad_request.create_altered(Data="Request was not correct"), socket)
             return
-        #print(f'Command: {msg}')
+        #logger.debug(f'Command: {msg}')
         self.commands[msg["Command"]](socket, msg["Value"])
     
     def disconnect(self, socket: socket, reason: str) -> None:
         if reason is not None:
-            print(f"{self.clients[socket]} disconnected with the following reason: {reason}")
+            logger.info(f"{self.clients[socket]} disconnected with the following reason: {reason}")
         else:
-            print(f"{self.clients[socket]} disconnected with no reason given.")
+            logger.info(f"{self.clients[socket]} disconnected with no reason given.")
         self.client_lost(socket, called=True)
 
     def client_lost(self, socket: socket, called: str = False) -> None:
         """Handles loosing connections
         """
         if socket not in self.clients: return
-        if not called: print(f"{self.clients[socket]} closed connection.")
+        if not called: logger.warning(f"{self.clients[socket]} closed connection.")
         if self.remove_function(creator=self.clients[socket]):
-            print("Functions removed!", log_only=True)
+            logger.debug("Functions removed!")
         del self.clients[socket]
         self.socket_list.remove(socket)
-        print("Client removed!", log_only=True)
+        logger.info("Client removed!")
         if called: socket.close()
         return
 
@@ -383,7 +374,7 @@ class server:
         """
         client_socket, client_address = self.socket.accept()
         client_socket.settimeout(30)
-        print(f"Incoming connection from {client_address[0]}:{client_address[1]}", log_only=True)
+        logger.info(f"Incoming connection from {client_address[0]}:{client_address[1]}")
         retrived = self.retrive(client_socket)
         try:
             name, key = retrived['Command'], retrived['Value']
@@ -400,6 +391,6 @@ class server:
             client_socket.close()
             return
         self.send(self.bad_request.create_altered(Response="Success"), client_socket)
-        print(f"Adding {name} to the connections", log_only=True)
+        logger.debug(f"Adding {name} to the connections")
         self.socket_list.append(client_socket)
         self.clients[client_socket] = name

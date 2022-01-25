@@ -4,10 +4,12 @@ from os import system as run
 from os import path, remove, rename
 from sys import argv, gettrace
 from time import sleep
+from modules.logger import logger_class, LEVEL
 
 interpreter = 'python' if system() == 'Windows' else 'python3'
 dnull = "NUL" if system() == 'Windows' else "/dev/null"
 restart_counter = 0
+logger = logger_class("logs/bot_runner.log", level=LEVEL.DEBUG, log_to_console=True, use_name=True)
 
 def is_debugger():
     return gettrace() is not None
@@ -26,7 +28,7 @@ def main():
     param = []
     param.extend(argv[1:])
     if is_debugger(): param.extend(['--nowd', '--api', '--scilent'])
-    print(f"Calling the bot with the following params: {param}")
+    logger.debug(f"Calling the bot with the following params: {param}")
     server = subprocess.Popen([interpreter, 'bot_core.py', *param])  #Creates a child process with the 'server.py' script
     while server.poll() is None:    #Works while the child process runs
         try:
@@ -36,7 +38,7 @@ def main():
                 while server.poll() is None:
                     pass
                 restart_counter += 1
-                print(f"Restarting...")
+                logger.info(f"Restarting...")
                 if restart_counter > 2:
                     if path.exists("discord.log"):
                         if path.exists("discord.log.last"): remove("discord.log.last")
@@ -50,22 +52,23 @@ def main():
                 while server.poll() is None:
                     pass
         except Exception as ex:
-            print(f"{ex}")
+            logger.error(f"{ex}")
         finally:
             sleep(1)
     if server.returncode == errno.EPERM:
-        print("Permission error! If this occures more than once, please try to run the program in administrator/root mode")
-        print("Installing dependencies...")
+        logger.warning("Permission error! If this occures more than once, please try to run the program in administrator/root mode")
+        logger.info("Installing dependencies...")
         if install_dependencies() == 0:
-            print("Dependencies installed!")
+            logger.info("Dependencies installed!")
         else:
-            print("Error in installing dependecies, please install them manually!")
+            logger.error("Error in installing dependecies, please install them manually!")
 
 if __name__ == '__main__':
     #Starts the server, while required
+    logger.header("Bot runner started")
     while True:
         main()
-        print('Bot killed!')
+        logger.warning('Bot killed!')
         ansv = str(input('Do you want to restart the bot? ([Y]/N) ') or 'Y')
         if ansv.upper() == 'N':
             break

@@ -1,9 +1,7 @@
-from asyncio import tasks
-from modules import writer, status, logger, watchdog
-from modules import services
+from modules import status, watchdog
+from modules.logger import logger_class, LEVEL
 from platform import node
-from modules.services import server
-from modules.services import Message, Attachment
+from modules.services import server, Message, Attachment
 from modules.scanner import scann
 from modules.response import response
 from threading import Thread
@@ -19,7 +17,7 @@ process_list = {}
 ptime = 0
 was_online=False
 id = None
-lg = logger.logger("bot", folder="logs")
+logger = logger_class("logs/bot.log", level=LEVEL.DEBUG, log_to_console=True, use_name=True)
 dc_time = None
 bar_size=18
 connections = []
@@ -37,14 +35,6 @@ class signals:
     exit = "Exit"
     restart = "Restart"
 
-def split(text, error=False, log_only=False, print_only=False):
-    """Logs to both stdout and a log file, using both the writer, and the logger module
-    """
-    if not log_only: writer.write(text)
-    if not print_only: lg.log(text, error=error)
-
-writer = writer.writer("Bot")
-print = split   #Changed print to the split function
 intents = discord.Intents.default()
 intents.members = True
 client = discord.Client(heartbeat_timeout=120, intents=intents)       #Creates a client instance using the discord  module
@@ -53,7 +43,7 @@ def play(link):
     """Opens an URL in the default browser
 Category: SERVER
     """
-    print(f"The url was {link}", print_only=True)
+    logger.info(f"The url was {link}")
     return webbrowser.open(link)
 
 def signal(what):
@@ -121,7 +111,7 @@ def get_passcode():
     for _ in range(60):
         passcode += chr(randint(33, 126))
     key = sha256(passcode.encode(encoding="utf-8")).hexdigest()
-    print(f"Your key is {key}")
+    logger.debug(f"Your key is {key}")
     return key
 
 def save_cfg():
@@ -142,7 +132,7 @@ def load():
     global connections
     global admins
     global admin_key
-    print("Loading data...")
+    logger.debug("Loading data...")
     if os.path.exists(os.path.join("data", "bot.cfg")):
         try:
             with open(os.path.join("data", "bot.cfg"), "r") as f:
@@ -159,18 +149,18 @@ def load():
             except:
                 admin_key = get_passcode()
                 save_cfg()
-            print("Data loading finished!")
+            logger.info("Data loading finished!")
             del tmp
         except Exception as ex: #incase there is an error, the program deletes the file, and restarts
             from datetime import datetime
             with open("Loading_error", 'a') as f:
                 f.write(f"[{datetime.now()}]: {ex}")
             os.remove(os.path.join("data", "bot.cfg"))
-            print("Error in cfg file... Restarting")
+            logger.error("Error in cfg file... Restarting")
             signal(signals.restart)
             exit(0)
     else:
-        print("Data not found!")
+        logger.warning("Data not found!")
         token = input("Type in the token: ")
         me = int(input("Type in this bot's user id: "))
         admins = str(input("Type in the admin user's ID, separated by a coma (,): ")).split(',')
@@ -186,7 +176,7 @@ def check_process_list():
     global ptime
     if ptime < mtime:
         global process_list
-        print("Process list update detected!", print_only=True)
+        logger.debug("Process list update detected!")
         with open(os.path.join("data", "process_list.json"), "r") as f:
             process_list = json.load(f)
         ptime = mtime
@@ -327,7 +317,7 @@ async def on_message_edit(before, after):
 
 def offline(online):
     if not online:
-        print("Connection lost!")
+        logger.info("Connection lost!")
         global dc_time
         dc_time = datetime.datetime.now()
         _watchdog.not_ready()
@@ -346,7 +336,7 @@ It does a system scann for the running programs.
     """
     global connections
     connections.append(datetime.datetime.now().timestamp())
-    print('Startup check started')
+    logger.debug('Startup check started')
     start = process_time()
     global was_online
     for channel in client.get_all_channels():   #Sets the channel to the first valid channel, and runs a scann.
@@ -375,12 +365,12 @@ It does a system scann for the running programs.
                     await channel.send(f"Was offline for {now - dc_time}")
             break
     finish = process_time()
-    print('Startup check finished')
-    print(f"Startup check took {finish-start} s", log_only=True)
+    logger.info('Startup check finished')
+    logger.debug(f"Startup check took {finish-start} s")
     _watchdog.ready()
     global trys
     trys = 0
-    print("Bot started up correctly!")      #The bot totally started up, and ready.
+    logger.info("Bot started up correctly!")      #The bot totally started up, and ready.
 
 async def echo(message, _):
     """Responds with 'echo' and shows the current latency
@@ -845,7 +835,7 @@ def disconnect_check(loop, channels):
                     break
         if was_online and dc_time != None:
             if (datetime.datetime.now() - dc_time) > datetime.timedelta(hours=1):
-                print('Offline for too long. Restarting!')
+                logger.warning('Offline for too long. Restarting!')
                 save_cfg()
                 loop.create_task(client.logout())
                 loop.create_task(client.close())
@@ -877,7 +867,7 @@ def disconnect_check(loop, channels):
             high_ping_count - 1
         sleep(2)
 
-def send_message(msg: services.Message):
+def send_message(msg: Message):
     """Callback function to the services.py.
     """
     if msg.channel is None:
@@ -900,7 +890,7 @@ def send_message(msg: services.Message):
                 return response("Success")
         return response("Internal error", "User or Channel wasn't found!")
 
-async def _send_message(msg: services.Message, channel: discord.TextChannel):
+async def _send_message(msg: Message, channel: discord.TextChannel):
     if len(msg.attachments) > 0:
         try:
             await channel.send(msg.content, file=discord.File(msg.attachments[0].url, msg.attachments[0].filename))
@@ -933,8 +923,8 @@ def runner(loop):
         loop.create_task(client.start(token))
         loop.run_forever()
     else:
-        print("Started in remote mode...")
-        print("Gathering IP and Authentication code", log_only=True)
+        logger.debug("Started in remote mode...")
+        logger.debug("Gathering IP and Authentication code")
         ip = port = auth = name = None
         try:
             """ ip = os.sys.argv[os.sys.argv.index('--ip') + 1]
@@ -945,30 +935,30 @@ def runner(loop):
             _api = smdb_api.API(name, auth, ip, port)
             _api.validate(10)
             if not _api.valid:
-                print("Validation failed!")
+                logger.debug("Validation failed!")
                 signal(signals.exit)
             _api.create_function("status", "Scanns the system for the running applications, and creates a message depending on the resoults.\nUsage: &status <long if you want to see the API status too>\nCategory: SOFTWARE") """
-        except:
-            print("Called incorrectly!")
-            print(f"IP: {ip or 'None'} Port: {port or 'None'} Auth: {auth or 'None'} Name: {name or 'None'}", log_only=True)
-            print("IP and Authentication code needed in remote mode!", print_only=True)
+        except Exception as ex:
+            logger.error(f"Exception: {ex}")
+            logger.error(f"IP: {ip or 'None'} Port: {port or 'None'} Auth: {auth or 'None'} Name: {name or 'None'}")
+            logger.error("IP and Authentication code needed in remote mode!")
             stop()
             signal(signals.exit)
 
 def stop():
     global is_running
     if was_online:
-        print("Sending stop signal to discord...")
+        logger.info("Sending stop signal to discord...")
         loop.create_task(client.logout())
         loop.create_task(client.close())
-        print("Waiting for discord to close...")
+        logger.debug("Waiting for discord to close...")
         while not client.is_closed():
             pass
     if _watchdog is not None:
-        print("Stopping watchdogs")
+        logger.info("Stopping watchdogs")
         _watchdog.create_tmp()
         _watchdog.stop()
-    print("Stopping disconnect checker")
+    logger.info("Stopping disconnect checker")
     is_running = False
     if _server is not None and _server.run:
         _server.stop()
@@ -982,33 +972,32 @@ def Main(_loop):
         global _watchdog
         global _server
         global is_running
-        print('---------------------------------------------------------------------', log_only=True)
-        print('Program started', log_only=True)
-        print("Creating loop")
+        logger.info('Program started')
+        logger.debug("Creating loop")
         loop = _loop
         loop.create_task(updater(None))
         load()
         if '--al' in os.sys.argv:
-            print("Starting discord logger", print_only=True)
+            logger.info("Starting discord logger")
             enable_debug_logger()
-        print('Setting up watchdog')
+        logger.info('Setting up watchdog')
         _watchdog = watchdog.watchdog(loop, client, process_list)
         if "--api" in os.sys.argv:
-            print("Setting up the services")
+            logger.info("Setting up the services")
             _server = server(edit_linking, get_status, send_message, get_user, is_admin)
-        print('Starting all processes', print_only=True)
+        logger.info('Starting all processes')
         runner(loop)
     except Exception as ex:
-        print(str(ex), error=True)
+        logger.error(str(ex), error=True)
         stop()
-        print("Restarting...")
-        lg.close()
+        logger.info("Restarting...")
         signal(signals.restart)
 
 if __name__ == "__main__":
-    print("Creating bot thread...")
+    logger.header('STARTUP')
+    logger.debug("Creating bot thread...")
     Bot = Thread(target=Main, args=[asyncio.get_event_loop(), ])
     Bot.name = "Bot thread"
-    print("Starting bot thread...")
+    logger.debug("Starting bot thread...")
     Bot.start()
     Bot.join()

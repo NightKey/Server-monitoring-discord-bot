@@ -1,18 +1,11 @@
 import discord, psutil, os, json
 from copy import deepcopy
-from . import writer, logger, status
+from . import status
+from .logger import logger_class, LEVEL
 from .scanner import scann
 from time import sleep
 
-lg = logger.logger("watchdog", folder="logs")
-def split(text, error=False, log_only=False, print_only=False):
-    """Logs to both stdout and a log file, using both the writer, and the logger module
-    """
-    if not log_only: writer.write(text)
-    if not print_only: lg.log(text, error=error)
-
-writer = writer.writer("Watchdog")
-print = split   #Changed print to the split function
+logger = logger_class("logs/watchdog.log", level=LEVEL.DEBUG, log_to_console=True, use_name=True)
 
 class watchdog():
     def __init__(self, loop, client, process_list=None):
@@ -26,6 +19,7 @@ class watchdog():
         self.run = True
         self.high_temp = 80.0
         self.disks = {}
+        logger.header("Watchdog initialized")
 
     def was_restarted(self):
         """Updates the restarted state
@@ -63,7 +57,7 @@ class watchdog():
 
     async def send_msg(self, msg):
         try: await self.channel.send(msg)
-        except: print(f"Failed sending message '{msg}'")
+        except: logger.error(f"Failed sending message '{msg}'")
 
     def from_tmp(self):
         """Reads the process list from a file. (Used to handle restarts)
@@ -92,7 +86,7 @@ class watchdog():
             if str(channel) in channels:
                 break
         self.channel = channel
-        print("started")
+        logger.info("started")
         battery_warning_number = 0
         temp_warning_number = 0
         n = 5
@@ -104,7 +98,7 @@ class watchdog():
                     if not battery["power_plugged"] and battery_warning_number >= 300:
                         if not self.battery_warning:
                             if self._ready:
-                                print('Power Disconnected!', log_only=True)
+                                logger.debug('Power Disconnected!')
                                 self.loop.create_task(channel.send(f"@everyone The Battery is not plugged in!"))
                                 self.battery_warning = True
                     elif not battery["power_plugged"]:
@@ -117,7 +111,7 @@ class watchdog():
                 if temp != None:
                     if not self.temp_warning:
                         if temp > self.high_temp:
-                            print(f'{temp}°C CPU temp detected!', log_only=True)
+                            logger.warning(f'{temp}°C CPU temp detected!')
                             self.loop.create_task(channel.send(f"@everyone CPU is running hot @ {temp}°C!"))
                             self.temp_warning = True
                     else:
@@ -127,7 +121,7 @@ class watchdog():
                             temp_warning_number = 0
                             self.temp_warning = False
                         if temp_warning_number % 150 == 0:
-                            print('CPU temp constantly high!', log_only=True)
+                            logger.warning('CPU temp constantly high!')
                             self.loop.create_task(channel.send(f"@everyone CPU is running hot @ {temp}°C for more than 5 minutes! The server will be hut down in 5 minutes!"))
                 if n % 5 == 0:
                     disks = status.get_disk_status()
@@ -153,7 +147,7 @@ class watchdog():
                 else:
                     self.process_list[key] = [False, value[1]]
             if self.error != "":
-                print(self.error)
+                logger.error(self.error)
                 if self._ready:
                     self.loop.create_task(channel.send(f"@everyone\n{self.error}"))
                     self.error = ""
