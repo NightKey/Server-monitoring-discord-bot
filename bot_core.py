@@ -1,5 +1,5 @@
-from modules import status, watchdog
-from modules.logger import logger_class, LEVEL
+from modules import status, watchdog, log_level
+from modules.logger import logger_class
 from platform import node
 from modules.services import server, Message, Attachment
 from modules.scanner import scann
@@ -17,7 +17,7 @@ process_list = {}
 ptime = 0
 was_online=False
 id = None
-logger = logger_class("logs/bot.log", level=LEVEL.DEBUG, log_to_console=True, use_name=True)
+logger = logger_class("logs/bot.log", level=log_level, log_to_console=True, use_caller_name=True, use_file_names=True)
 dc_time = None
 bar_size=18
 connections = []

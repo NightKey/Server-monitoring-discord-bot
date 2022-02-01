@@ -1,12 +1,13 @@
 from requests.models import Response
 from typing import Any, Callable, List
-from .logger import logger_class, LEVEL
+from .logger import logger_class
 from .response import response
+from . import log_level
 import socket, select, json, discord
 from hashlib import sha256
 import os
 
-logger = logger_class("logs/api_server.log", level=LEVEL.DEBUG, log_to_console=True, use_name=True)
+logger = logger_class("logs/api_server.log", level=log_level, log_to_console=True, use_caller_name=True, use_file_names=True)
 
 class Attachment:
     """Message attachment"""

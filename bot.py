@@ -4,15 +4,22 @@ from os import system as run
 from os import path, remove, rename
 from sys import argv, gettrace
 from time import sleep
+
+def set_log_level():
+    level = "DEBUG" if is_debugger() else "INFO"
+    with open(path.join("modules", "level"), "w") as f:
+        f.write(level)
+
 from modules.logger import logger_class, LEVEL
 
 interpreter = 'python' if system() == 'Windows' else 'python3'
 dnull = "NUL" if system() == 'Windows' else "/dev/null"
 restart_counter = 0
-logger = logger_class("logs/bot_runner.log", level=LEVEL.DEBUG, log_to_console=True, use_name=True)
 
 def is_debugger():
     return gettrace() is not None
+
+logger = logger_class("logs/bot_runner.log", level=LEVEL.DEBUG if is_debugger() else LEVEL.INFO, log_to_console=True, use_caller_name=True, use_file_names=True)
 
 def install_dependencies():
     pre = "sudo " if system() == 'Linux' else ""
@@ -25,6 +32,7 @@ def main():
     Main loop that handdles starting the server, and deciding what to do after an update.
     """
     global restart_counter
+    set_log_level()
     param = []
     param.extend(argv[1:])
     if is_debugger(): param.extend(['--nowd', '--api', '--scilent'])
