@@ -316,14 +316,13 @@ class server:
 
     def stop(self) -> None:
         self.run = False
-        self.socket.close()
 
     def loop(self) -> None:
         """Handles the clients.
         """
         while self.run:
             try:
-                read_socket, _, exception_socket = select.select(self.socket_list, [], self.socket_list)
+                read_socket, _, exception_socket = select.select(self.socket_list, [], self.socket_list, 30)
                 for notified_socket in read_socket:
                     if notified_socket == self.socket:
                         self.new_client()

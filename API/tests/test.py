@@ -6,8 +6,8 @@ sys.path.insert(0,parentdir)
 import smdb_api
 parentdir = os.path.dirname(parentdir)
 sys.path.insert(0,parentdir) 
-from modules import services
-from modules import response
+from modules import services, response
+from modules.logger import logger_class
 from time import sleep
 
 class API_CreationTest(unittest.TestCase):
@@ -31,13 +31,14 @@ class API_CreationTest(unittest.TestCase):
         self.assertEqual(api.get_username("123"), "123")
 
     def test_6_api_uses_callback(self):
-        api.create_function("Test", "Test Description", dummy_callback)
-        msg = smdb_api.Message("sender", "content", "channel", None, None)
+        api.create_function("Test", "Test Description", self.dummy_callback)
+        msg = smdb_api.Message("sender", "content", "channel", [], "")
+        sleep(1)
         server.Test(server, msg)
 
-def dummy_callback(_input):
-    print("callback called")
-    API_CreationTest.assertEqual(_input.sender, "sender")
+    def dummy_callback(self, _input):
+        print("callback called")
+        self.assertEqual(_input.sender, "sender")
 
 def linking_editor(data, remove=False):
     pass
@@ -64,11 +65,11 @@ class Message_function_test(unittest.TestCase):
     
     def test_2_message_returns_correct_tag(self):
         msg = smdb_api.Message("sender", "the message content <@!000000000000000000>", "channel", [], "called")
-        self.assertEquals("000000000000000000", msg.get_contained_user_id())
+        self.assertEqual("000000000000000000", msg.get_contained_user_id())
         msg = smdb_api.Message("sender", "the message content", "channel", [], "called")
-        self.assertEquals("", msg.get_contained_user_id())
+        self.assertEqual("", msg.get_contained_user_id())
         msg = smdb_api.Message("sender", "the <@!000000000000000000> message content", "channel", [], "called")
-        self.assertEquals("000000000000000000", msg.get_contained_user_id())
+        self.assertEqual("000000000000000000", msg.get_contained_user_id())
 
     def test_3_message_has_attachment(self):
         msg = smdb_api.Message("sender", "the message content", "channel", [], "called")
@@ -78,7 +79,7 @@ class Message_function_test(unittest.TestCase):
 
 if __name__ == "__main__":
     print("Creating dummy server...")
-    services.verbose = False
+    services.logger = logger_class("test", storage_life_extender_mode=True)
     server = services.server(linking_editor, get_status, send_message, get_user, is_admin)
     server._start_for_test()
     th = threading.Thread(target=server.loop)
@@ -95,3 +96,4 @@ if __name__ == "__main__":
     server.stop()
     print("Finished!")
     th.join()
+    exit(0)

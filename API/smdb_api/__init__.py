@@ -1,3 +1,4 @@
+from distutils.filelist import findall
 import select, socket, json, threading, random, discord, re
 from os import path, devnull, system, remove
 from sys import stdout, __stdout__
@@ -130,8 +131,9 @@ class API:
         self.created_function_list=[]
         self.create_function_threads = []
         self.update_function = update_function
+        self.communicateLock = threading.Lock()
 
-    def _send(self, msg: str) -> None:
+    def __send(self, msg: str) -> None:
         """Sends a socket message
         """
         msg = json.dumps(msg)
@@ -146,7 +148,7 @@ class API:
             if msg == '\n': break
             msg = tmp
 
-    def _retrive(self) -> dict:
+    def __retrive(self) -> dict:
         """Retrives a socket message
         """
         ret = ""
@@ -164,14 +166,59 @@ class API:
             print(f"[_retrive exception]: {ex}")
             return None
     
-    def _get_copy_function_list(self):
+    def __listener(self) -> None:
+        """Listens for incoming messages, and stops when the program stops running
+        """
+        while self.running:
+            while self.valid and self.connection_alive:
+                try:
+                    read_socket, _, exception_socket = select.select(self.socket_list, [], self.socket_list)
+                    
+                    if exception_socket != []:
+                        self.__close_connection
+
+                    elif read_socket != []:
+                        msg = self.__retrive()
+                        if msg is None:
+                            self.connection_alive = False
+                            self.socket.close()
+                            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                            self.socket_list = []
+                            if self.sending:
+                                self.buffer.append({"Response":"Internal error", "Data": "Connection closed"})
+                        elif self.sending:
+                            self.buffer.append(msg)
+                        elif not self.sending:
+                            message = Message.from_json(msg)
+                            if message.called is not None and message.called in self.call_list:
+                                call = threading.Thread(target=self.call_list[message.called], args=[message, ])
+                                call.name = message.called
+                                call.start()
+                except Exception as ex: print(f"[Listener thread Inner exception]: {ex}")
+                sleep(0.2)
+
+            try:
+                if self.running: 
+                    self.__validate()
+                    self.connection_alive = True
+            except Exception as ex: print(f"[Listener thread Outer exception]: {ex}")
+
+    def __close_connection(self):
+        self.connection_alive = False
+        self.socket.close()
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket_list = []
+        if self.sending:
+            self.buffer.append({"Response":"Internal error", "Data": "Connection closed"})
+
+    def __get_copy_function_list(self):
         ret = []
         for item in self.created_function_list:
             ret.append(item)
         return ret
 
-    def _re_init_commands(self) -> None:
-        tmp = self._get_copy_function_list()
+    def __re_init_commands(self) -> None:
+        tmp = self.__get_copy_function_list()
         for item in tmp:
             self.create_function(*item)
         del tmp
@@ -182,47 +229,54 @@ class API:
         If the timeout is set to -1, the validation will be in a new thread, and always return true.
         """
         if timeout is not None and timeout == -1:
-            tmp = threading.Thread(target=self._validate)
+            tmp = threading.Thread(target=self.__validate)
             tmp.name = "Validation"
             tmp.start()
             return True
         else:
-            return self._validate(timeout)
+            return self.__validate(timeout)
 
-    def _validate(self, timeout: int = None) -> bool:
+    def __validate(self, timeout: int = None) -> bool:
         start = time()
+        self.communicateLock.acquire()
         self.sending = True
-        while True:
-            try:
-                self.socket.connect((self.ip, self.port))
-                break
-            except: pass
-            if (timeout is not None and timeout > 0 and time() - start > timeout) or not self.running:
-                return False
-        self._send({"Command":self.name, "Value": self.key})
-        ansvear = self._retrive()
-        if not isinstance(ansvear, dict):
-            raise ValueError("Bad value retrived from socket.")
-        elif ansvear["Response"] == 'Denied':
-            raise ValidationError(ansvear["Data"])
-        else:            
-            self.valid = True
-            self.socket_list.append(self.socket)
-            if self.created_function_list != []:
-                self.connection_alive = True
-                self._re_init_commands()
-            if self.initial:
-                self.initial = False
-                self.th = threading.Thread(target=self._listener)
-                self.th.name = "Listener Thread"
-                self.th.start()
-        self.sending = False
+        try:
+            while True:
+                try:
+                    self.socket.connect((self.ip, self.port))
+                    break
+                except: pass
+                if (timeout is not None and timeout > 0 and time() - start > timeout) or not self.running:
+                    return False
+            self.__send({"Command":self.name, "Value": self.key})
+            ansvear = self.__retrive()
+            if not isinstance(ansvear, dict):
+                raise ValueError("Bad value retrived from socket.")
+            elif ansvear["Response"] == 'Denied':
+                raise ValidationError(ansvear["Data"])
+            else:            
+                self.valid = True
+                self.socket_list.append(self.socket)
+                if self.created_function_list != []:
+                    self.connection_alive = True
+                    self.__re_init_commands()
+                if self.initial:
+                    self.initial = False
+                    self.th = threading.Thread(target=self.__listener)
+                    self.th.name = "Listener Thread"
+                    self.th.start()
+            self.sending = False
+        except Exception as ex:
+            raise ex
+        finally:
+            self.sending = False
+            self.communicateLock.release()
         return True
                 
     def is_admin(self, uid: str) -> bool:
         if self.valid:
             self.sending = True
-            self._send({"Command":"Is Admin", "Value":uid})
+            self.__send({"Command":"Is Admin", "Value":uid})
             while self.buffer == []:
                 sleep(0.1)
             self.sending = False
@@ -245,7 +299,7 @@ class API:
         """
         if self.valid:
             self.sending = True
-            self._send({"Command":"Status", "Value":None})
+            self.__send({"Command":"Status", "Value":None})
             while self.buffer == []:
                 sleep(0.1)
             tmp = self.buffer[0]
@@ -256,7 +310,7 @@ class API:
     
     def get_username(self, key: str) -> str:
         self.sending = True
-        self._send({"Command":'Username', "Value":key})
+        self.__send({"Command":'Username', "Value":key})
         while self.buffer == []:
             sleep(0.1)
         self.sending = False
@@ -270,7 +324,7 @@ class API:
         msg = Message("API", message, destination, [Attachment(file_path.split("/")[-1], file_path, path.getsize(file_path))] if file_path is not None else [], "API")
         if self.valid:
             self.sending = True
-            self._send({"Command":"Send", 'Value': msg.to_json()})
+            self.__send({"Command":"Send", 'Value': msg.to_json()})
             while self.buffer == []:
                 sleep(0.1)
             tmp = self.buffer[0]
@@ -283,48 +337,10 @@ class API:
             return True
         else: raise NotValidatedError
 
-    def _listener(self) -> None:
-        """Listens for incoming messages, and stops when the program stops running
-        """
-        while self.running:
-            while self.valid and self.connection_alive:
-                try:
-                    read_socket, _, exception_socket = select.select(self.socket_list, [], self.socket_list)
-                    if read_socket != []:
-                        msg = self._retrive()
-                        if msg is None:
-                            self.connection_alive = False
-                            self.socket.close()
-                            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                            self.socket_list = []
-                            if self.sending:
-                                self.buffer.append({"Response":"Internal error", "Data": "Connection closed"})
-                        elif self.sending:
-                            self.buffer.append(msg)
-                        elif not self.sending:
-                            message = Message.from_json(msg)
-                            if message.called is not None and message.called in self.call_list:
-                                call = threading.Thread(target=self.call_list[message.called], args=[message, ])
-                                call.name = message.called
-                                call.start()
-                    if exception_socket != []:
-                        self.connection_alive = False
-                        self.socket.close()
-                        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                        self.socket_list = []
-                except Exception as ex: print(f"[Listener thread Inner exception]: {ex}")
-                sleep(0.2)
-
-            try:
-                if self.running: 
-                    self._validate()
-                    self.connection_alive = True
-            except Exception as ex: print(f"[Listener thread Outer exception]: {ex}")
-
     def close(self, reason: str = None) -> None:
         """Closes the socket, and stops the listener loop.
         """
-        if self.valid and self.connection_alive: self._send({"Command":"Disconnect", "Value": reason})
+        if self.valid and self.connection_alive: self.__send({"Command":"Disconnect", "Value": reason})
         self.running = False
         self.valid = False
         self.connection_alive = False
@@ -335,26 +351,31 @@ class API:
         """Creates a function in the connected bot. This function creates a thread so it won't block while it waits for validation from the bot.
         Return order: ChannelID, UserID, UserInput. The returned value depends on the return value, but the order is the same.
         """
-        self.create_function_threads.append(threading.Thread(target=self._create_function, args=[name, help_text, callback,]))
+        self.create_function_threads.append(threading.Thread(target=self.__create_function, args=[name, help_text, callback,]))
         self.create_function_threads[-1].name = f"Create thread for {name}"
         self.create_function_threads[-1].start()
 
-    def _create_function(self, name: str, help_text: str, callback: Callable[[Message], None]) -> None:
+    def __create_function(self, name: str, help_text: str, callback: Callable[[Message], None]) -> None:
         """Creates a function in the connected bot when validated.
         """
-        while self.sending:
-            sleep(random.randrange(0, 5))
+        self.communicateLock.acquire()
         self.sending = True
-        if [name, help_text, callback] not in self.created_function_list:
-            self.created_function_list.append([name, help_text, callback])
-        if not self.valid: return
-        self._send({"Command":"Create", "Value": [name, help_text, name]})
-        while self.buffer == []:
-            sleep(0.1)
-        tmp = self.buffer[0]
-        self.buffer = []
-        self.sending = False
-        if tmp["Response"] == "Success":
-            self.call_list[name] = callback
-        elif tmp["Response"] == "Internal error": print(f"[_create_function exception] Internal error: {tmp['Data']}")
-        else: raise ActionFailed(tmp["Data"])
+        try:
+            if [name, help_text, callback] not in self.created_function_list:
+                self.created_function_list.append([name, help_text, callback])
+            if not self.valid: return
+            self.__send({"Command":"Create", "Value": [name, help_text, name]})
+            while self.buffer == []:
+                sleep(0.1)
+            tmp = self.buffer[0]
+            self.buffer = []
+            self.sending = False
+            if tmp["Response"] == "Success":
+                self.call_list[name] = callback
+            elif tmp["Response"] == "Internal error": print(f"[_create_function exception] Internal error: {tmp['Data']}")
+            else: raise ActionFailed(tmp["Data"])
+        except Exception as ex:
+            raise ex
+        finally:
+            self.sending = False
+            self.communicateLock.release()

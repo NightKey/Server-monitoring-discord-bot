@@ -80,14 +80,14 @@ class logger_class:
         for dir_path, _, filenames in walk(path.dirname(self.log_file)):
             return [path.join(dir_path, fname) for fname in filenames if self.log_file.split(".")[-1] in fname]
 
-    def __log_to_file(self, log_msg: str) -> None:
+    def __log_to_file(self, log_msg: str, flush: bool = False) -> None:
         if self.storage_life_extender_mode:
             self.stored_logs.append(log_msg)
         else:
             with open(self.log_file, "a") as f:
                 f.write(log_msg)
                 f.write("\n")
-        if len(self.stored_logs) > 500:
+        if len(self.stored_logs) > 500 or flush:
             with open(self.log_file, "a") as f:
                 f.write("\n".join(self.stored_logs))
                 self.stored_logs = []
@@ -108,7 +108,6 @@ class logger_class:
                 caller = f"{frame.function}->{caller}"
         return f"{previous_filename}->{caller}" if self.use_file_names else caller
             
-
     def __log(self, level: LEVEL, data: str, counter: str, end: str) -> None:
         log_msg = f"[{counter}] [{level.value}]: {data}"
         self.__log_to_file(log_msg)
@@ -120,6 +119,10 @@ class logger_class:
     
     def get_buffer(self) -> List[str]:
         return self.stored_logs if self.storage_life_extender_mode else []
+
+    def flush_buffer(self):
+        if self.storage_life_extender_mode:
+            self.__log_to_file("", True)
 
     def set_level(self, level: LEVEL) -> None:
         self.allowed = LEVEL.get_hierarchy(level)
@@ -154,7 +157,6 @@ class logger_class:
 
     def error(self, data: str, counter: str = str(datetime.now()), end: str = "\n") -> None:
         self.__log(LEVEL.ERROR, data, counter, end)
-
 
 def test():
     logger = logger_class("asd", True, log_to_console=True, use_caller_name=True)
