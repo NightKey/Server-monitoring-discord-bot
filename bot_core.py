@@ -867,6 +867,20 @@ def disconnect_check(loop, channels):
             high_ping_count - 1
         sleep(2)
 
+def get_channel(user: str) -> discord.TextChannel:
+    if usr := client.get_user(int(user)):
+        if usr.dm_channel is not None:
+            return usr.dm_channel
+        else:
+            loop.create_task(usr.create_dm())
+            while usr.dm_channel is None:
+                sleep(0.1)
+            return usr.dm_channel
+    for chn in client.get_all_channels():
+        if (str)(chn.id) == user:
+            return chn
+    return None
+
 def send_message(msg: Message):
     """Callback function to the services.py.
     """
@@ -874,21 +888,15 @@ def send_message(msg: Message):
         loop.create_task(_watchdog.send_msg(msg.content))
         return response("Success")
     else:
-        if usr := client.get_user(int(msg.channel)):
-            if usr.dm_channel is not None:
-                loop.create_task(_send_message(msg, usr.dm_channel))
-                return response("Success")
-            else:
-                loop.create_task(usr.create_dm())
-                while usr.dm_channel is None:
-                    sleep(0.1)
-                loop.create_task(_send_message(msg, usr.dm_channel))
-                return response("Success")
-        for chn in client.get_all_channels():
-            if (str)(chn.id) == msg.channel:
-                loop.create_task(_send_message(msg, chn))
-                return response("Success")
-        return response("Internal error", "User or Channel wasn't found!")
+        if chn := get_channel(msg.channel) != None:
+            task = loop.create_task(_send_message(msg, chn))
+            while not task.done():
+                sleep(0.1)
+            if task.exception() is not None:
+                return response("Internal error", f"{task.exception()}")
+            return response("Success")
+        else:
+            return response("Internal error", "User or Channel wasn't found!")
 
 async def _send_message(msg: Message, channel: discord.TextChannel):
     if len(msg.attachments) > 0:
