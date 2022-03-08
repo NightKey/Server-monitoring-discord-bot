@@ -24,7 +24,11 @@ logger = logger_class("logs/bot_runner.log", level=LEVEL.DEBUG if is_debugger() 
 def install_dependencies():
     pre = "sudo " if system() == 'Linux' else ""
     post = " --user" if system() == 'Windows' else ""
-    resp = run(f"{pre}{interpreter} -m pip install{post} -r dependencies.txt")
+    logger.info("Upgrading pip...")
+    run(f"{pre}{interpreter} -m pip install{post} --upgrade pip > remove")
+    logger.info("Upgrading dependencies...")
+    resp = run(f"{pre}{interpreter} -m pip install{post} --upgrade -r dependencies.txt > remove")
+    remove("remove")
     return resp
 
 def main():
