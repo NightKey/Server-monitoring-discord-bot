@@ -21,9 +21,9 @@ def is_debugger():
 
 logger = logger_class("logs/bot_runner.log", level=LEVEL.DEBUG if is_debugger() else LEVEL.INFO, log_to_console=True, use_caller_name=True, use_file_names=True)
 
-def install_dependencies():
-    pre = "sudo " if system() == 'Linux' else ""
-    post = " --user" if system() == 'Windows' else ""
+def install_dependencies(sudo: bool):
+    pre = "sudo " if system() == 'Linux' and sudo else ""
+    post = " --user" if system() == 'Windows' and sudo else ""
     logger.info("Upgrading pip...")
     run(f"{pre}{interpreter} -m pip install{post} --upgrade pip > remove")
     logger.info("Upgrading dependencies...")
