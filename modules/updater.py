@@ -1,8 +1,9 @@
 from os import system as run
-from os import remove
+from os import remove, open
 
 
 def main():
+    open("Update", "w")
     run('git pull > update.lg')
     with open('update.lg', 'r') as f:
         c = f.read(-1).split('\n')

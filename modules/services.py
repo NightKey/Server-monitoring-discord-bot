@@ -3,6 +3,7 @@ from typing import Any, Callable, List
 from .logger import logger_class
 from .response import response
 from . import log_level
+from .voice_connection import VCConnectionRequest, VCConnectionStatus
 import socket, select, json, discord
 from hashlib import sha256
 import os
@@ -73,7 +74,7 @@ class Message:
         return {"sender":self.sender, "content":self.content, "channel":self.channel, "called":self.called, "attachments":[attachment.to_json() for attachment in self.attachments] if len(self.attachments) > 0 else None}
 
 class server:
-    def __init__(self, linking_editor: Callable[[Any, bool], None], get_status: Callable[[], dict], send_message: Callable[[Message], bool], get_user: Callable[[str], response], is_admin: Callable[[str], bool]) -> None:
+    def __init__(self, linking_editor: Callable[[Any, bool], None], get_status: Callable[[], dict], send_message: Callable[[Message], bool], get_user: Callable[[str], response], is_admin: Callable[[str], bool], voice_connection_controll: Callable[[str, VCConnectionRequest], response]) -> None:
         self.clients = {}
         self.run = True
         self.linking_editor = linking_editor
@@ -88,6 +89,7 @@ class server:
         self.socket.bind((self.ip, self.port))
         self.socket_list = [self.socket]
         self.bad_request = response("Bad request", None)
+        self.voice_connection_controll = voice_connection_controll
         logger.header("Service initialized")
 
     def change_ip_port(self, ip: str, port: int) -> None:
@@ -161,7 +163,9 @@ class server:
             'Remove':self.remove_command,
             'Username':self.return_usrname,
             'Disconnect':self.disconnect,
-            'Is Admin':self.admin_check
+            'Is Admin':self.admin_check,
+            'Connect To User': self.connect_to_user,
+            'Disconnect From User':self.disconnect_from_user
         }
         self.socket.listen()
         logger.info("API Server started")
@@ -178,6 +182,12 @@ class server:
             'Is Admin':self.admin_check
         }
         self.socket.listen()
+
+    def connect_to_user(self, socket: socket, user: str) -> None:
+        self.send(bool(self.voice_connection_controll(user, VCConnectionRequest.connect)), socket)
+    
+    def disconnect_from_user(self, socket: socket, user: str) -> None:
+        self.send(bool(self.voice_connection_controll(user, VCConnectionRequest.disconnect)), socket)
 
     def create_command(self, socket: socket, data: dict) -> None:
         """Creates a command in the discord bot

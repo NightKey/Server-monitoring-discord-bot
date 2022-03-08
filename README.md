@@ -13,18 +13,21 @@ This bot, needs the following permissions to function properly:
 * Read Text Channels & See Voice Channels
 * Send Messages
 * Read Messages
-* Manage Messages - Optional for the '&clear' command
+* Read Message History
+* Use External Emojis
 * Mention @everyone, @here, and All Roles
+* Manage Messages - Optional for the '&clear' command
+* Connect, Speake - Optional if a musicbot is connected to it's API
 
 ## Arguments
 
  - --nowd - Disables the watchdog
  - --nodcc - Disables the disconnect checker
  - --api - Enables the API server
- - --remote - Sets the bot to remote modefor multiple computers (Disables watchdog and disconnect checker)
+ <!-- - --remote - Sets the bot to remote modefor multiple computers (Disables watchdog and disconnect checker) 
     - --ip - Sets the remote discord bot's IP adress
-    - --auth - Sets the authentication code for the bot
-    - --name - Sets the name to use with the remote discord bot
+    - --auth - Sets the authentication code for the bot                                                     This function needs to be developed first!
+    - --name - Sets the name to use with the remote discord bot -->
  - --scilent - Disables startup messages on the discord server
 
 ## API
@@ -61,15 +64,17 @@ Upon validation, the response can be two:
  -  "Accepted" - When the connection was accepted, and the client was added to the client list.
  -  "Denied" - The second message will contain the reason: "Bad API Key" or "Already connected".
 
-|Request                                          |Return Value  |Content                                        |
-|:------------------------------------------------|:-------------|:---------------------------------------------:|
-|[Status](#Status)                                |Json          |The PC's status as it gets sent to the servers |
-|[Send](#Send)<sup><sub>1</sub></sup>             |Boolean       |If the message was sent successfully           |
-|[Create](#Create)<sup><sub>2</sub></sup>         |Boolean       |If the function was added successfully         |
-|[Username](#Username)<sup><sub>3</sub></sup>     |String        |Returns the username connected to the ID       |
-|[Remove](#Remove)<sup><sub>4</sub></sup>         |Boolean       |Rempves the selected command from the list     |
-|[Disconnect](#Disconnect)<sup><sub>5</sub></sup> |Nothing       |Safely disconnect, with an optional reason     |
-|[Is Admin](#Is_Admin)<sup><sub>3</sub></sup>     |Boolean       |Returns if user is an admin of the discord bot |
+|Request                                                              |Return Value  |Content                                        |
+|:--------------------------------------------------------------------|:-------------|:---------------------------------------------:|
+|[Status](#Status)                                                    |Json          |The PC's status as it gets sent to the servers |
+|[Send](#Send)<sup><sub>1</sub></sup>                                 |Boolean       |If the message was sent successfully           |
+|[Create](#Create)<sup><sub>2</sub></sup>                             |Boolean       |If the function was added successfully         |
+|[Username](#Username)<sup><sub>3</sub></sup>                         |String        |Returns the username connected to the ID       |
+|[Remove](#Remove)<sup><sub>4</sub></sup>                             |Boolean       |Rempves the selected command from the list     |
+|[Disconnect](#Disconnect)<sup><sub>5</sub></sup>                     |Nothing       |Safely disconnect, with an optional reason     |
+|[Is Admin](#Is_Admin)<sup><sub>3</sub></sup>                         |Boolean       |Returns if user is an admin of the discord bot |
+|[Connect To User](#Connect_To_User)<sup><sub>3</sub></sup>           |Boolean       |If the client could connect                    |
+|[Disconnect From User](#Disconnect_From_User)<sup><sub>3</sub></sup> |Boolean       |If the client could disconnect                 |
 
 The messages are case sensitive, and 'Bad request' message will be sent, when a message is not applicable.
 
@@ -172,3 +177,11 @@ Can be used to remove every created command from the server, and close the conne
 ## Is Admin
 
 Checks if a user is registered as an administrator for the bot
+
+## Connect To User
+
+Connect the client to the user's current active voice channel if there is one
+
+## Disconnect From User
+
+Disconnect the client from the current voice channel, if the user is present on that channel

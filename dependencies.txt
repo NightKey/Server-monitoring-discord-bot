@@ -2,3 +2,4 @@ psutil
 discord
 fuzzywuzzy
 python-Levenshtein
+PyNaCl

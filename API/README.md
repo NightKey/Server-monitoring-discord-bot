@@ -74,3 +74,11 @@ This command allows you to send messages in the bot's name to selected users/cha
 ### create_function
 
 This command creates a function in the bot that can be called by a user.
+
+### connect_to_voice
+
+This command connects the client to the user's voice channel
+
+### disconnect_from_voice
+
+This command disconnects the client from the user's voice channel

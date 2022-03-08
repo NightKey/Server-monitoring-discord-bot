@@ -1,9 +1,12 @@
+from enum import Enum
+from typing import Any, Union
 from modules import status, watchdog, log_level
 from modules.logger import logger_class
 from platform import node
 from modules.services import server, Message, Attachment
 from modules.scanner import scann
 from modules.response import response
+from modules.voice_connection import VCConnectionStatus, VCConnectionRequest, VoiceConnection
 from threading import Thread
 from time import sleep, process_time
 import datetime, psutil, os, json, webbrowser, asyncio, logging
@@ -37,7 +40,9 @@ class signals:
 
 intents = discord.Intents.default()
 intents.members = True
+intents.voice_states = True
 client = discord.Client(heartbeat_timeout=120, intents=intents)       #Creates a client instance using the discord  module
+voice_connection = VoiceConnection()
 
 def play(link):
     """Opens an URL in the default browser
@@ -384,7 +389,7 @@ Category: SERVER
     """
     try:
         embed = discord.Embed()
-        embed.add_field(name="Server monitoring Discord bot", value=f"You can invite this bot to your server on [this](https://discordapp.com/oauth2/authorize?client_id={id}&scope=bot&permissions=2147953728) link!")
+        embed.add_field(name="Server monitoring Discord bot", value=f"You can invite this bot to your server on [this](https://discord.com/api/oauth2/authorize?client_id={id}&permissions=3615744&scope=bot) link!")
         embed.add_field(name="Warning!", value="This bot only monitors the server it runs on. If you want it to monitor a server you own, wisit [this](https://github.com/NightKey/Server-monitoring-discord-bot) link instead!")
         embed.color=0xFF00F3
         await message.channel.send(embed=embed)
@@ -718,6 +723,43 @@ Category: BOT
             await message.channel.send(f"{str(client.get_user(int(key))).split('#')[0]} is already an admin!")
         save_cfg()
 
+def voice_connection_managger(user_id: str, request: VCConnectionRequest) -> response:
+    user_as_member: discord.Member = None
+    for member in client.get_all_members():
+        if int(user_id) == member.id:
+            user_as_member = member
+            print(user_as_member)
+            break
+    else:
+        return response("Bad request", "User not found")
+    if request in [VCConnectionRequest.connect, VCConnectionRequest.forceConnect]:
+        task = loop.create_task(connect_to_user(user_as_member, request == VCConnectionRequest.forceConnect))
+        while not task.done():
+            sleep(0.1)
+        if task.exception() is not None:
+            return response("Internal error", f"{task.exception()}")
+        return response("Success", _bool=task.result())
+    elif request in [VCConnectionRequest.disconnect, VCConnectionRequest.forceConnect]:
+        task = loop.create_task(disconnect_from_user(user_as_member, request == VCConnectionRequest.forceDisconnect))
+        while not task.done():
+            sleep(0.1)
+        if task.exception() is not None:
+            return response("Internal error", f"{task.exception()}")
+        return response("Success")
+    else:
+        return response("Bad request", "Voice connection request was not from the available list!")
+
+async def connect_to_user(user: discord.Member, forced: bool = False) -> None:
+    user_vc = user.voice.channel
+    if user_vc is not None:
+        if forced: await voice_connection.force_reconnection(user_vc)
+        else: await voice_connection.connect(user_vc)
+
+async def disconnect_from_user(user: discord.Member, forced: bool = False) -> None:
+    user_vc = user.voice.channel
+    if voice_connection.connection_status(user_vc) == VCConnectionStatus.sameChannel:
+        await voice_connection.disconnect(forced)
+
 linking = {
     "add":[add_process, True],
     "admin":[add_admin, False],
@@ -759,15 +801,15 @@ categories = {
     'USER': "Anything that interacts with the users."
 }
 
-def is_admin(uid):
+def is_admin(uid: str) -> bool:
     return response("Success", uid in admins)
 
-def get_user(key):
+def get_user(key: int) -> response:
     for usr in client.users:
         if (str)(usr.id) == key:
             return response("Success", usr.name)
     else:
-        return response("Internal error", "User not found")
+        return response("Bad request", "User not found")
 
 @client.event
 async def on_message(message):
@@ -896,7 +938,7 @@ def send_message(msg: Message):
                 return response("Internal error", f"{task.exception()}")
             return response("Success")
         else:
-            return response("Internal error", "User or Channel wasn't found!")
+            return response("Bad request", "User or Channel wasn't found!")
 
 async def _send_message(msg: Message, channel: discord.TextChannel):
     if len(msg.attachments) > 0:
@@ -919,7 +961,38 @@ def start_thread(name):
     threads[name].name = name
     threads[name].start()
 
-def runner(loop):
+def halth(counter: int) -> bool:
+    return counter >= 3
+
+async def start_discord_client(counter: int) -> None:
+    while True:
+        try:
+            await client.start(token)
+            break
+        except TypeError as te:
+            logger.error("Type error occured while starting client")
+            logger.debug(f"{te}")
+            logger.debug("Closing client")
+            await client.close()
+            stop()
+            break
+        except discord.errors.DiscordServerError as dse:
+            logger.error("Discord server error occured while starting client")
+            logger.debug(f"{dse}")
+            logger.debug("Closing client")
+            await client.close()
+            stop()
+        except Exception as ex:
+            logger.error(f"An Exception with a type '{type(ex)}' occured while startig client")
+            logger.debug(f"{ex}")
+            logger.debug("Closing client")
+            await client.close()
+            if halth(counter):
+                stop()
+                break
+            else: await start_discord_client(counter+1)
+
+def runner(loop: asyncio.AbstractEventLoop) -> None:
     """Runs the needed things in a way, the watchdog can access the bot client."""
     if '--nodcc' not in os.sys.argv and "--remote" not in os.sys.argv:
         start_thread("Disconnect checker")
@@ -928,7 +1001,7 @@ def runner(loop):
     if "--api" in os.sys.argv:
         start_thread("API Server")
     if "--remote" not in os.sys.argv:
-        loop.create_task(client.start(token))
+        loop.create_task(start_discord_client(0))
         loop.run_forever()
     else:
         logger.debug("Started in remote mode...")
@@ -955,6 +1028,8 @@ def runner(loop):
 
 def stop():
     global is_running
+    if voice_connection.is_connected:
+        loop.create_task(voice_connection.disconnect(True))
     if was_online:
         logger.info("Sending stop signal to discord...")
         loop.create_task(client.logout())
@@ -974,7 +1049,7 @@ def stop():
         loop.stop()
     signal(signals.exit)
     
-def Main(_loop):
+def Main(_loop: asyncio.AbstractEventLoop):
     try:
         global loop
         global _watchdog
@@ -992,7 +1067,7 @@ def Main(_loop):
         _watchdog = watchdog.watchdog(loop, client, process_list)
         if "--api" in os.sys.argv:
             logger.info("Setting up the services")
-            _server = server(edit_linking, get_status, send_message, get_user, is_admin)
+            _server = server(edit_linking, get_status, send_message, get_user, is_admin, voice_connection_managger)
         logger.info('Starting all processes')
         runner(loop)
     except Exception as ex:

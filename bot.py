@@ -59,6 +59,9 @@ def main():
                 server.kill()
                 while server.poll() is None:
                     pass
+            if path.exists('Update'):
+                remove('Update')
+                install_dependencies()
         except Exception as ex:
             logger.error(f"{ex}")
         finally:

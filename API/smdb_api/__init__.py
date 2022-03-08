@@ -379,3 +379,23 @@ class API:
         finally:
             self.sending = False
             self.communicateLock.release()
+
+    def connect_to_voice(self, user_id: str) -> bool:
+        self.sending = True
+        self.__send({"Command": "Connect To User", "Value":user_id})
+        while self.buffer == []:
+            sleep(0.1)
+        self.sending = False
+        tmp = self.buffer[0]
+        self.buffer = 0
+        return True if tmp["Response"] == "Success" else False #TODO FIX ME
+    
+    def disconnect_from_voice(self, user_id: str) -> bool:
+        self.sending = True
+        self.__send(self.__send({"Command": "Disconnect From User", "Value":user_id}))
+        while self.buffer == []:
+            sleep(0.1)
+        self.sending = False
+        tmp = self.buffer[0]
+        self.buffer = 0
+        return True if tmp["Response"] == "Success" else False #TODO FIX ME
