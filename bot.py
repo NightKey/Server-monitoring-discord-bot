@@ -65,7 +65,7 @@ def main():
                     pass
             if path.exists('Update'):
                 remove('Update')
-                install_dependencies()
+                install_dependencies(False)
         except Exception as ex:
             logger.error(f"{ex}")
         finally:
@@ -73,7 +73,7 @@ def main():
     if server.returncode == errno.EPERM:
         logger.warning("Permission error! If this occures more than once, please try to run the program in administrator/root mode")
         logger.info("Installing dependencies...")
-        if install_dependencies() == 0:
+        if install_dependencies(True) == 0:
             logger.info("Dependencies installed!")
         else:
             logger.error("Error in installing dependecies, please install them manually!")
