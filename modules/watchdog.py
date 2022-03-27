@@ -19,6 +19,7 @@ class watchdog():
         self.run = True
         self.high_temp = 80.0
         self.disks = {}
+        self.memory = {}
         logger.header("Watchdog initialized")
 
     def was_restarted(self):
@@ -76,6 +77,9 @@ class watchdog():
         with open("data/wd_list.json", "w") as f:
             json.dump(self.process_list, f)
 
+    def send_message(self, channel, message):
+        self.loop.create_task(channel.send(message))
+
     def run_watchdog(self, channels):
         """This method scanns the system for runing processes, and if no process found, sends a mention message to all of the valid channels.
         This scan runs every 10 secound. And every 50 Secound, the program scanns for updates in the process list.
@@ -99,7 +103,7 @@ class watchdog():
                         if not self.battery_warning:
                             if self._ready:
                                 logger.debug('Power Disconnected!')
-                                self.loop.create_task(channel.send(f"@everyone The Battery is not plugged in!"))
+                                self.send_message(channel, f"@everyone The Battery is not plugged in!")
                                 self.battery_warning = True
                     elif not battery["power_plugged"]:
                         battery_warning_number += 1
@@ -112,7 +116,7 @@ class watchdog():
                     if not self.temp_warning:
                         if temp > self.high_temp:
                             logger.warning(f'{temp}°C CPU temp detected!')
-                            self.loop.create_task(channel.send(f"@everyone CPU is running hot @ {temp}°C!"))
+                            self.send_message(channel, f"@everyone CPU is running hot @ {temp}°C!")
                             self.temp_warning = True
                     else:
                         if temp > self.high_temp:
@@ -129,13 +133,21 @@ class watchdog():
                         percentage = round(disk["percent"], 1)
                         if key in self.disks:
                             if percentage > 99 and percentage > (self.disks[key] + 3):
-                                self.loop.create_task(channel.send(f"@everyone The disk '{key}' is full ({percentage}%)!"))
+                                self.send_message(channel, f"@everyone The disk '{key}' is full ({percentage}%)!")
                             elif percentage > 95 and percentage > (self.disks[key] + 3):
-                                self.loop.create_task(channel.send(f"@everyone The disk '{key}' is nearly filled ({percentage}%)!"))
+                                self.send_message(channel, f"@everyone The disk '{key}' is nearly filled ({percentage}%)!")
                             elif percentage > 90 and percentage > (self.disks[key] + 3):
-                                self.loop.create_task(channel.send(f"@everyone The disk '{key}' is {percentage}% filled!"))
+                                self.send_message(channel, f"@everyone The disk '{key}' is {percentage}% filled!")
                         self.disks[key] = percentage
-                    
+                    memory = status.get_memory_status()
+                    for key, data in memory.items():
+                        percentage = round(data["percent"], 1)
+                        if key in self.memory:
+                            if percentage > 90 and percentage > (self.memory[key] + 3):
+                                self.send_message(channel, f"@everyone The {key} is going to be filled! Current status: {percentage}%")
+                            if percentage > 85 and percentage > (self.memory[key] + 3):
+                                self.send_message(channel, f"@everyone The {key} is {percentage}% filled!")
+                        self.memory[key] = percentage
             if n >= 20:
                 n = 0
             else:
@@ -149,6 +161,6 @@ class watchdog():
             if self.error != "":
                 logger.error(self.error)
                 if self._ready:
-                    self.loop.create_task(channel.send(f"@everyone\n{self.error}"))
+                    self.send_message(channel, f"@everyone\n{self.error}")
                     self.error = ""
             sleep(1)

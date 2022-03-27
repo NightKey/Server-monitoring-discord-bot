@@ -1,4 +1,4 @@
-from typing import Collection, Dict, Union
+from typing import Dict, Union
 from modules import bar
 from datetime import timedelta
 import psutil
@@ -21,12 +21,15 @@ def get_disk_status() -> Dict[str, str]:
             disks[partition._asdict()["mountpoint"]] = psutil.disk_usage("{}".format(partition._asdict()["mountpoint"]))._asdict()
     return disks
 
+def get_memory_status() -> Dict[str, Dict[str, str]]:
+    return {"RAM":psutil.virtual_memory()._asdict(), "SWAP": psutil.swap_memory()._asdict()}
+
 def get_pc_status() -> Union[Dict[str, str], Dict[str, dict], Dict[str, str]]:
     """With the help of the psutil module, scanns the PC for information about all the drives, the memory and the battery, if it has one.
     Returns disk, memory, battery in this order.
     """
     disks = get_disk_status()
-    memory = {"RAM":psutil.virtual_memory()._asdict(), "SWAP": psutil.swap_memory()._asdict()}
+    memory = get_memory_status()
     battery = get_battery_status()
     return disks, memory, battery
 
