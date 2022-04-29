@@ -1,9 +1,10 @@
-from distutils.filelist import findall
-import select, socket, json, threading, random, discord, re
+import select, socket, json, threading, discord, re
 from os import path, devnull, system, remove
 from sys import stdout, __stdout__
 from time import sleep, time
-from typing import Callable
+from datetime import datetime
+from typing import Any, Callable, List, Union
+from hashlib import sha256
 
 from requests.models import Response
 
@@ -64,15 +65,23 @@ class Attachment:
 class Message:
     """Message object used by the api"""
     USER_REGX = r"(<@![0-9]+>){1}"
-    def from_json(json):
-        return Message(json["sender"], json["content"], json["channel"], [Attachment.from_json(attachment) for attachment in json["attachments"]] if json["attachments"] is not None else [], json["called"])
+    
+    def from_json(json) -> "Message":
+        msg = Message(json["sender"], json["content"], json["channel"], [Attachment.from_json(attachment) for attachment in json["attachments"]] if json["attachments"] is not None else [], json["called"])
+        if "random_id" in json:
+            msg.random_id = json["random_id"]
+        return msg
 
-    def __init__(self, sender: str, content: str, channel: str, attachments: list, called: str) -> None:
+    def create_message(sender: str, content: str, channel: str, attachments: List[Attachment], called: str) -> "Message":
+        return Message(sender, content if content is not None else "", channel, attachments, called)
+
+    def __init__(self, sender: str, content: str, channel: str, attachments: List[Attachment], called: str) -> None:
         self.sender = sender
         self.content = content
         self.channel = channel
         self.attachments = attachments
         self.called = called
+        self.random_id = sha256(f"{sender}{content}{channel}{called}{datetime.now()}".encode("utf-8")).hexdigest()
 
     def add_called(self, called: str) -> None:
         self.called = called
@@ -90,10 +99,14 @@ class Message:
                     return item.replace("<@!", "").replace(">", "")
     
     def has_attachments(self) -> bool:
-        return len(self.attachments) == 1
+        return len(self.attachments) > 0
 
     def to_json(self) -> dict:
-        return {"sender":self.sender, "content":self.content, "channel":self.channel, "called":self.called, "attachments":[attachment.to_json() for attachment in self.attachments] if len(self.attachments) > 0 else None}
+        return {"sender":self.sender, "content":self.content, "channel":self.channel, "called":self.called, "attachments":[attachment.to_json() for attachment in self.attachments] if len(self.attachments) > 0 else None, "random_id": self.random_id}
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Message): return False
+        return self.sender == other.sender and self.content == other.content and self.channel
 
 def blockPrint() -> None:
     global stdout
@@ -132,6 +145,8 @@ class API:
         self.create_function_threads = []
         self.update_function = update_function
         self.communicateLock = threading.Lock()
+        self.track_hook: Callable[[Message], None] = None
+        self.last_message: Message = None
 
     def __send(self, msg: str) -> None:
         """Sends a socket message
@@ -188,8 +203,11 @@ class API:
                                 self.buffer.append({"Response":"Internal error", "Data": "Connection closed"})
                         elif self.sending:
                             self.buffer.append(msg)
+                            self.last_message = msg
                         elif not self.sending:
                             message = Message.from_json(msg)
+                            if self.last_message is not None and self.last_message == message: continue
+                            self.last_message = message
                             if message.called is not None and message.called in self.call_list:
                                 call = threading.Thread(target=self.call_list[message.called], args=[message, ])
                                 call.name = message.called
@@ -251,7 +269,7 @@ class API:
             self.__send({"Command":self.name, "Value": self.key})
             ansvear = self.__retrive()
             if not isinstance(ansvear, dict):
-                raise ValueError("Bad value retrived from socket.")
+                raise ValueError("Bad value retrieved from socket.")
             elif ansvear["Response"] == 'Denied':
                 raise ValidationError(ansvear["Data"])
             else:            
@@ -277,11 +295,7 @@ class API:
         if self.valid:
             self.sending = True
             self.__send({"Command":"Is Admin", "Value":uid})
-            while self.buffer == []:
-                sleep(0.1)
-            self.sending = False
-            tmp = self.buffer[0]
-            self.buffer = []
+            tmp = self.__wait_for_response()
             if tmp["Response"] == "Success":
                 return tmp["Data"]
         else: NotValidatedError()
@@ -300,22 +314,14 @@ class API:
         if self.valid:
             self.sending = True
             self.__send({"Command":"Status", "Value":None})
-            while self.buffer == []:
-                sleep(0.1)
-            tmp = self.buffer[0]
-            self.buffer = []
-            self.sending = False
+            tmp = self.__wait_for_response()
             return tmp
         else: raise NotValidatedError()
     
     def get_username(self, key: str) -> str:
         self.sending = True
         self.__send({"Command":'Username', "Value":key})
-        while self.buffer == []:
-            sleep(0.1)
-        self.sending = False
-        tmp = self.buffer[0]
-        self.buffer = []
+        tmp = self.__wait_for_response()
         return tmp["Data"] if tmp["Response"] == "Success" else "unknown"
 
     def send_message(self, message: str, destination: str = None, file_path: str = None) -> bool:
@@ -325,11 +331,7 @@ class API:
         if self.valid:
             self.sending = True
             self.__send({"Command":"Send", 'Value': msg.to_json()})
-            while self.buffer == []:
-                sleep(0.1)
-            tmp = self.buffer[0]
-            self.buffer = []
-            self.sending = False
+            tmp = self.__wait_for_response()
             if tmp["Response"] == "Bad request": raise ActionFailed(tmp["Data"])
             elif tmp["Response"] == "Internal error": 
                 print(f"[Message sending exception] Internal error: {tmp['Data']}")
@@ -365,10 +367,7 @@ class API:
                 self.created_function_list.append([name, help_text, callback])
             if not self.valid: return
             self.__send({"Command":"Create", "Value": [name, help_text, name]})
-            while self.buffer == []:
-                sleep(0.1)
-            tmp = self.buffer[0]
-            self.buffer = []
+            tmp = self.__wait_for_response()
             self.sending = False
             if tmp["Response"] == "Success":
                 self.call_list[name] = callback
@@ -380,22 +379,74 @@ class API:
             self.sending = False
             self.communicateLock.release()
 
+    def __wait_for_response(self) -> Any:
+        while self.buffer == []:
+            sleep(0.1)
+        self.sending = False
+        tmp = self.buffer[0]
+        self.buffer = []
+        return tmp
+
     def connect_to_voice(self, user_id: str) -> bool:
         self.sending = True
         self.__send({"Command": "Connect To User", "Value":user_id})
-        while self.buffer == []:
-            sleep(0.1)
-        self.sending = False
-        tmp = self.buffer[0]
-        self.buffer = 0
-        return True if tmp["Response"] == "Success" else False #TODO FIX ME
+        
+        return self.__wait_for_response() 
     
-    def disconnect_from_voice(self, user_id: str) -> bool:
+    def disconnect_from_voice(self) -> bool:
         self.sending = True
-        self.__send(self.__send({"Command": "Disconnect From User", "Value":user_id}))
-        while self.buffer == []:
-            sleep(0.1)
-        self.sending = False
-        tmp = self.buffer[0]
-        self.buffer = 0
-        return True if tmp["Response"] == "Success" else False #TODO FIX ME
+        self.__send({"Command": "Disconnect From Voice", "Value":None})
+        
+        return self.__wait_for_response() 
+
+    def play_file(self, path: str, user_id: str) -> bool:
+        self.sending = True
+        self.__send({"Command": "Play Audio File", "Value": {"Path": path, "User": user_id}})
+        
+        return self.__wait_for_response() 
+
+    def add_file(self, path: str) -> bool:
+        self.sending = True
+        self.__send({"Command": "Add Audio File", "Value": path})
+        return self.__wait_for_response() 
+
+    def pause_currently_playing(self, user_id: str) -> bool:
+        self.sending = True
+        self.__send({"Command": "Pause Currently Playing", "Value":user_id})
+        return self.__wait_for_response() 
+
+    def resume_paused(self, user_id: str) -> bool:
+        self.sending = True
+        self.__send({"Command": "Resume Paused", "Value": user_id})
+        return self.__wait_for_response() 
+
+    def skip_currently_playing(self, user_id: str) -> bool:
+        self.sending = True
+        self.__send({"Command": "Skip Currently Playing", "Value": user_id})
+        return self.__wait_for_response() 
+
+    def stop_currently_playing(self, user_id: str) -> bool:
+        self.sending = True
+        self.__send({"Command": "Stop Currently Playing", "Value": user_id})
+        return self.__wait_for_response() 
+    
+    def get_queue(self) -> Union[List[str], None]:
+        self.sending = True
+        self.__send({"Command": "List Queue", "Value":None})
+        return self.__wait_for_response() 
+
+    def set_as_hook_for_track_finished(self, callable: Callable[[Message], None]) -> None:
+        thread = threading.Thread(target=self.__set_as_hook_for_track_finished, args=[callable,])
+        thread.name = "Hook thread"
+        thread.start()
+
+    def __set_as_hook_for_track_finished(self, callable: Callable[[Message], None]) -> None:
+        self.communicateLock.acquire()
+        try:
+            self.sending = True
+            self.track_hook = callable
+            self.__send({"Command": "Set As Track Finished", "Value": None})
+            tmp = self.__wait_for_response()
+            if not tmp: self.track_hook = None
+        finally:
+            self.communicateLock.release()

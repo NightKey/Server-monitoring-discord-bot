@@ -1,5 +1,6 @@
 import unittest
 import os,sys,inspect,threading
+
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parentdir = os.path.dirname(currentdir)
 sys.path.insert(0,parentdir)
@@ -8,6 +9,7 @@ parentdir = os.path.dirname(parentdir)
 sys.path.insert(0,parentdir) 
 from modules import services, response
 from modules.logger import logger_class
+from modules.voice_connection import VCRequest
 from time import sleep
 
 class API_CreationTest(unittest.TestCase):
@@ -32,12 +34,34 @@ class API_CreationTest(unittest.TestCase):
 
     def test_6_api_uses_callback(self):
         api.create_function("Test", "Test Description", self.dummy_callback)
-        msg = smdb_api.Message("sender", "content", "channel", [], "")
+        msg = smdb_api.Message("sender", "content", "channel", [], "Test")
         sleep(1)
         server.Test(server, msg)
 
+    def test_7_connect_to_user(self):
+        self.assertTrue(api.connect_to_voice("test"))
+        self.assertTrue(api.disconnect_from_voice())
+        self.assertTrue(api.play_file("Test", "123456789"))
+        self.assertTrue(api.add_file("Test2"))
+        self.assertTrue(api.pause_currently_playing("123456789"))
+        self.assertTrue(api.resume_paused("123456789"))
+        self.assertTrue(api.skip_currently_playing("123456789"))
+        self.assertTrue(api.stop_currently_playing("123456789"))
+        self.assertTrue(api.get_queue())
+    
+    def test_8_rejects_same_message(self):
+        self.counter = 0
+        api.create_function("Test2", "Test", self.reject)
+        sleep(1)
+        msg = smdb_api.Message("sender", "content", "channel", [], "Test2")
+        server.Test2(server, msg)
+        server.Test2(server, msg)
+        self.assertEqual(self.counter, 1)
+
+    def reject(self, _input):
+        self.counter += 1
+
     def dummy_callback(self, _input):
-        print("callback called")
         self.assertEqual(_input.sender, "sender")
 
 def linking_editor(data, remove=False):
@@ -54,6 +78,9 @@ def get_user(uid):
 
 def is_admin(uid):
     return response.response("Success", uid=="123")
+
+def voice_connection_managger(request, user_id = None, path = None):
+    return True
 
 class Message_function_test(unittest.TestCase):
 
@@ -80,7 +107,7 @@ class Message_function_test(unittest.TestCase):
 if __name__ == "__main__":
     print("Creating dummy server...")
     services.logger = logger_class("test", storage_life_extender_mode=True)
-    server = services.server(linking_editor, get_status, send_message, get_user, is_admin)
+    server = services.server(linking_editor, get_status, send_message, get_user, is_admin, voice_connection_managger)
     server._start_for_test()
     th = threading.Thread(target=server.loop)
     th.name = "Dummy server"

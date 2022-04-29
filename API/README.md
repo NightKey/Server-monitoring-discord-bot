@@ -82,3 +82,35 @@ This command connects the client to the user's voice channel
 ### disconnect_from_voice
 
 This command disconnects the client from the user's voice channel
+
+### play_file
+
+Starts the audio file on the path provided. If the file is not supported error is returned.
+
+### add_file
+
+Adds the audio file to the play list on the path provided. If the file is not supported error is returned.
+
+### pause_currently_playing
+
+Pauses the currently playing track.
+
+### resume_paused
+
+Resumes playing the paused track.
+
+### skip_currently_playing
+
+Skips the current track if other tracks are in the play list.
+
+### stop_currently_playing
+
+Stops the currently playing track.
+
+### get_queue
+
+Lists the names of the items in the playlist, starting with the currently playing file.
+
+### set_as_hook_for_track_finished
+
+Sets the callback for when the current tack finished playing for possible file removal.

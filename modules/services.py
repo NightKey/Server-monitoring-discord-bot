@@ -1,9 +1,10 @@
+from datetime import datetime
 from requests.models import Response
-from typing import Any, Callable, List
+from typing import Any, Callable, Dict, List, Union
 from .logger import logger_class
 from .response import response
 from . import log_level
-from .voice_connection import VCConnectionRequest, VCConnectionStatus
+from .voice_connection import VCRequest, VCStatus
 import socket, select, json, discord
 from hashlib import sha256
 import os
@@ -52,7 +53,10 @@ class Attachment:
 class Message:
     """Message object used by the api"""
     def from_json(json) -> "Message":
-        return Message(json["sender"], json["content"], json["channel"], [Attachment.from_json(attachment) for attachment in json["attachments"]] if json["attachments"] is not None else [], json["called"])
+        msg = Message(json["sender"], json["content"], json["channel"], [Attachment.from_json(attachment) for attachment in json["attachments"]] if json["attachments"] is not None else [], json["called"])
+        if "random_id" in json:
+            msg.random_id = json["random_id"]
+        return msg
 
     def create_message(sender: str, content: str, channel: str, attachments: List[Attachment], called: str) -> "Message":
         return Message(sender, content if content is not None else "", channel, attachments, called)
@@ -63,6 +67,7 @@ class Message:
         self.channel = channel
         self.attachments = attachments
         self.called = called
+        self.random_id = sha256(f"{sender}{content}{channel}{called}{datetime.now()}".encode("utf-8")).hexdigest()
 
     def add_called(self, called: str) -> None:
         self.called = called
@@ -71,10 +76,22 @@ class Message:
         return len(self.attachments) > 0
 
     def to_json(self) -> dict:
-        return {"sender":self.sender, "content":self.content, "channel":self.channel, "called":self.called, "attachments":[attachment.to_json() for attachment in self.attachments] if len(self.attachments) > 0 else None}
+        return {"sender":self.sender, "content":self.content, "channel":self.channel, "called":self.called, "attachments":[attachment.to_json() for attachment in self.attachments] if len(self.attachments) > 0 else None, "random_id": self.random_id}
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Message): return False
+        return self.sender == other.sender and self.content == other.content and self.channel
 
 class server:
-    def __init__(self, linking_editor: Callable[[Any, bool], None], get_status: Callable[[], dict], send_message: Callable[[Message], bool], get_user: Callable[[str], response], is_admin: Callable[[str], bool], voice_connection_controll: Callable[[str, VCConnectionRequest], response]) -> None:
+    def __init__(
+        self, 
+        linking_editor: Callable[[Any, bool], None], 
+        get_status: Callable[[], dict],
+        send_message: Callable[[Message], bool], 
+        get_user: Callable[[str], response], 
+        is_admin: Callable[[str], bool], 
+        voice_connection_controll: Callable[[VCRequest, Union[str, None], Union[str, None]], Union[response, bool, List[str]]]
+    ) -> None:
         self.clients = {}
         self.run = True
         self.linking_editor = linking_editor
@@ -90,6 +107,7 @@ class server:
         self.socket_list = [self.socket]
         self.bad_request = response("Bad request", None)
         self.voice_connection_controll = voice_connection_controll
+        self.track_finished_socket = None
         logger.header("Service initialized")
 
     def change_ip_port(self, ip: str, port: int) -> None:
@@ -165,7 +183,15 @@ class server:
             'Disconnect':self.disconnect,
             'Is Admin':self.admin_check,
             'Connect To User': self.connect_to_user,
-            'Disconnect From User':self.disconnect_from_user
+            'Disconnect From Voice':self.disconnect_from_voice,
+            'Play Audio File': self.play_file,
+            'Add Audio File': self.add_file,
+            'Pause Currently Playing': self.pause_playing,
+            'Resume Paused': self.resume_paused,
+            'Skip Currently Playing': self.skip_playing,
+            'Stop Currently Playing': self.stop_playing,
+            'List Queue': self.list_queue,
+            'Set As Track Finished': self.set_track_finished_target
         }
         self.socket.listen()
         logger.info("API Server started")
@@ -179,15 +205,54 @@ class server:
             'Remove':self.remove_command,
             'Username':self.return_usrname,
             'Disconnect':self.disconnect,
-            'Is Admin':self.admin_check
+            'Is Admin':self.admin_check,
+            'Connect To User': self.connect_to_user,
+            'Disconnect From Voice':self.disconnect_from_voice,
+            'Play Audio File': self.play_file,
+            'Add Audio File': self.add_file,
+            'Pause Currently Playing': self.pause_playing,
+            'Resume Paused': self.resume_paused,
+            'Skip Currently Playing': self.skip_playing,
+            'Stop Currently Playing': self.stop_playing,
+            'List Queue': self.list_queue
         }
         self.socket.listen()
 
     def connect_to_user(self, socket: socket, user: str) -> None:
-        self.send(bool(self.voice_connection_controll(user, VCConnectionRequest.connect)), socket)
+        self.send(self.voice_connection_controll(VCRequest.connect, user_id=user), socket)
     
-    def disconnect_from_user(self, socket: socket, user: str) -> None:
-        self.send(bool(self.voice_connection_controll(user, VCConnectionRequest.disconnect)), socket)
+    def disconnect_from_voice(self, socket: socket, _) -> None:
+        self.send(self.voice_connection_controll(VCRequest.disconnect), socket)
+    
+    def play_file(self, socket: socket, data: Dict[str, str]) -> None:
+        self.send(self.voice_connection_controll(VCRequest.play, user_id=data["User"], path=data["Path"]), socket)
+    
+    def add_file(self, socket: socket, path: str) -> None:
+        self.send(self.voice_connection_controll(VCRequest.add, path=path), socket)
+
+    def pause_playing(self, socket: socket, user: str) -> None:
+        self.send(self.voice_connection_controll(VCRequest.pause, user_id=user), socket)
+    
+    def resume_paused(self, socket: socket, user: str) -> None:
+        self.send(self.voice_connection_controll(VCRequest.resume, user_id=user), socket)
+
+    def stop_playing(self, socket: socket, user: str) -> None:
+        self.send(self.voice_connection_controll(VCRequest.stop, user_id=user), socket)
+    
+    def skip_playing(self, socket: socket, user: str) -> None:
+        logger.debug("Skip requested")
+        self.send(self.voice_connection_controll(VCRequest.skip, user_id=user), socket)
+    
+    def list_queue(self, socket: socket, _) -> None:
+        self.send(self.voice_connection_controll(VCRequest.queue), socket)
+
+    def set_track_finished_target(self, socket: socket, _) -> None:
+        self.track_finished_socket = socket
+        self.send(response("Accepted"), socket)
+
+    def track_finished(self, track: str) -> None:
+        if self.track_finished_socket is not None:
+            self.send(Message("Bot", track, None, [], "Track Finished").to_json(), self.track_finished_socket)
 
     def create_command(self, socket: socket, data: dict) -> None:
         """Creates a command in the discord bot
@@ -303,7 +368,7 @@ class server:
         """
         try:
             if creator not in self.functions:
-                return response("Internal error", "Function not found", _bool=False)
+                return response("Internal error", "Function not found")
             if name is None:
                 for name in self.functions[creator]:
                     self.linking_editor(name, True)
@@ -313,10 +378,10 @@ class server:
                 self.linking_editor(name, True)
                 delattr(self, name)
                 self.functions[creator].remove(name)
-            return response("Success", _bool=True)
+            return response("Success")
         except Exception as ex:
             logger.error(f"{ex}")
-            return response("Internal error", ex, _bool=False)
+            return response("Internal error", ex)
 
     def return_usrname(self, socket: socket, uid: str) -> None:
         if uid is None:
@@ -343,18 +408,18 @@ class server:
                             self.client_lost(notified_socket)
                             continue
                         else:
-                            self.command_retrived(msg, notified_socket)
+                            self.command_retrieved(msg, notified_socket)
                 for notified_socket in exception_socket:
                     self.client_lost(notified_socket)
             except socket.error: pass
             except Exception as ex: logger.error(f"{ex}")
         self.socket.close()
 
-    def command_retrived(self, msg: Message, socket: socket) -> None:
+    def command_retrieved(self, msg: Message, socket: socket) -> None:
         """Retrives commands
         """
         if msg["Command"] not in self.commands or "Value" not in msg.keys():
-            self.send(self.bad_request.create_altered(Data="Request was not correct"), socket)
+            self.send(self.bad_request.create_altered(Data="Command is not a valid command" if msg["Command"] not in self.commands else "Value is not present!"), socket)
             return
         #logger.debug(f'Command: {msg}')
         self.commands[msg["Command"]](socket, msg["Value"])

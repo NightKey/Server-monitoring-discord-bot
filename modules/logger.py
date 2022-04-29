@@ -35,7 +35,7 @@ class COLOR(Enum):
         return getattr(COLOR, level.value)
 
 class logger_class:
-    __slots__ = "log_file", "allowed", "log_to_console", "storage_life_extender_mode", "stored_logs", "max_logfile_size", "max_logfile_lifetime", "__print", "use_caller_name", "use_file_names"
+    __slots__ = "log_file", "allowed", "log_to_console", "storage_life_extender_mode", "stored_logs", "max_logfile_size", "max_logfile_lifetime", "__print", "use_caller_name", "use_file_names", "header_used"
 
     def __init__(
         self, 
@@ -60,6 +60,7 @@ class logger_class:
         self.__print = __print
         self.use_caller_name = use_caller_name
         self.use_file_names = use_file_names
+        self.header_used = False
         if clear:
             with open(log_file, "w"): pass
 
@@ -84,7 +85,7 @@ class logger_class:
         if self.storage_life_extender_mode:
             self.stored_logs.append(log_msg)
         else:
-            with open(self.log_file, "a") as f:
+            with open(self.log_file, "a", encoding="UTF-8") as f:
                 f.write(log_msg)
                 f.write("\n")
         if len(self.stored_logs) > 500 or flush:
@@ -110,6 +111,7 @@ class logger_class:
             
     def __log(self, level: LEVEL, data: str, counter: str, end: str) -> None:
         log_msg = f"[{counter}] [{level.value}]: {data}"
+        if self.header_used and level != LEVEL.HEADER: log_msg = f"\t{log_msg}"
         self.__log_to_file(log_msg)
         if self.log_to_console and level in self.allowed:
             if self.use_caller_name:
@@ -145,6 +147,7 @@ class logger_class:
         final_decor = decor[0:int(20-len(data) / 2) + 1]
         final_decor.extend(decor[int((20-len(data) / 2) + len(data)):])
         self.__log(LEVEL.HEADER, "".join(final_decor), counter, end)
+        self.header_used = True
 
     def debug(self, data: str, counter: str = str(datetime.now()), end: str = "\n") -> None:
         self.__log(LEVEL.DEBUG, data, counter, end)

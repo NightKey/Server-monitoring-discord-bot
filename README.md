@@ -50,6 +50,46 @@ The responses will be sent the same way.
 }
 ```
 
+Upon validation, the response can be two:
+ -  "Accepted" - When the connection was accepted, and the client was added to the client list.
+ -  "Denied" - The second message will contain the reason: "Bad API Key" or "Already connected".
+
+|Request                                                                     |Return Value                      |Content                                        |
+|:---------------------------------------------------------------------------|:---------------------------------|:---------------------------------------------:|
+|[Status](#Status)                                                           |Json                              |The PC's status as it gets sent to the servers |
+|[Send](#Send)<sup><sub>1</sub></sup>                                        |Boolean                           |If the message was sent successfully           |
+|[Create](#Create)<sup><sub>2</sub></sup>                                    |Boolean                           |If the function was added successfully         |
+|[Username](#Username)<sup><sub>3</sub></sup>                                |String                            |Returns the username connected to the ID       |
+|[Remove](#Remove)<sup><sub>4</sub></sup>                                    |Boolean                           |Rempves the selected command from the list     |
+|[Disconnect](#Disconnect)<sup><sub>5</sub></sup>                            |Nothing                           |Safely disconnect, with an optional reason     |
+|[Is Admin](#Is-Admin)<sup><sub>3</sub></sup>                                |Boolean                           |Returns if user is an admin of the discord bot |
+|[Connect To User](#Connect-To-User)<sup><sub>3</sub></sup>                  |[Response](#Resopnse-object)      |Response from the action                       |
+|[Disconnect From Voice](#Disconnect-From-User)                              |[Response](#Resopnse-object)      |Response from the action                       |
+|[Play Audio File](#Play-Audio-File)<sup><sub>7</sub></sup>                  |Boolean                           |If the audio file was started                  |
+|[Add Audio File](#Add-Audio-File)<sup><sub>6</sub></sup>                    |Boolean                           |If the audio file was added                    |
+|[Pause Currently Playing](#Pause-Currently-Playing)<sup><sub>3</sub></sup>  |Boolean                           |If the audio file was paused                   |
+|[Resume Paused](#Resume-paused)<sup><sub>3</sub></sup>                      |Boolean                           |If the audio file was resumed                  |
+|[Skip Currently Playing](#Skip-Currently-Playing)<sup><sub>3</sub></sup>    |Boolean                           |If a skip could be made                        |
+|[Stop Currently Playing](#Stop-Currently-Playing)<sup><sub>3</sub></sup>    |Boolean                           |If the audio file was stopped                  |
+|[List Queue](#List-Queue)                                                   |List                              |Returns a list of filenames currently queued   |
+
+The messages are case sensitive, and 'Bad request' message will be sent, when a message is not applicable.
+
+#### Keys:
+ -  <sub>1</sub>: Send {text_to_send [string], user_id* [string]}
+ -  <sub>2</sub>: Create {name [string], help_text [string], callback [string], return_key** [integer]}
+ -  <sub>3</sub>: {user_id [string]}
+ -  <sub>4</sub>: Remove {command_name** [string]}
+ -  <sub>5</sub>: Disconnect {reason***}
+ -  <sub>6</sub>: {path [string]}
+ -  <sub>7</sub>: {user_id [string], path [string]}
+
+<sub>* Optional, format: username#1234</sub>
+<sub>** Optional, default value: [NOTHING]</sub>
+<sub>*** Optional, default value: None</sub>
+
+## Response object
+
 Responses are in json format and they have the following structure:
 
 ```javascript
@@ -57,37 +97,9 @@ Responses are in json format and they have the following structure:
     "Response": "Bad request" or "Success" or "Internal error" or "Denied" or "Accepted",
     "Data": None or "Explanation",
     "Code": 1 or 2 or 3 or 4 or 5
+    "bool": True if code is 2 or 5 False otherwise
 }
 ```
-
-Upon validation, the response can be two:
- -  "Accepted" - When the connection was accepted, and the client was added to the client list.
- -  "Denied" - The second message will contain the reason: "Bad API Key" or "Already connected".
-
-|Request                                                              |Return Value  |Content                                        |
-|:--------------------------------------------------------------------|:-------------|:---------------------------------------------:|
-|[Status](#Status)                                                    |Json          |The PC's status as it gets sent to the servers |
-|[Send](#Send)<sup><sub>1</sub></sup>                                 |Boolean       |If the message was sent successfully           |
-|[Create](#Create)<sup><sub>2</sub></sup>                             |Boolean       |If the function was added successfully         |
-|[Username](#Username)<sup><sub>3</sub></sup>                         |String        |Returns the username connected to the ID       |
-|[Remove](#Remove)<sup><sub>4</sub></sup>                             |Boolean       |Rempves the selected command from the list     |
-|[Disconnect](#Disconnect)<sup><sub>5</sub></sup>                     |Nothing       |Safely disconnect, with an optional reason     |
-|[Is Admin](#Is_Admin)<sup><sub>3</sub></sup>                         |Boolean       |Returns if user is an admin of the discord bot |
-|[Connect To User](#Connect_To_User)<sup><sub>3</sub></sup>           |Boolean       |If the client could connect                    |
-|[Disconnect From User](#Disconnect_From_User)<sup><sub>3</sub></sup> |Boolean       |If the client could disconnect                 |
-
-The messages are case sensitive, and 'Bad request' message will be sent, when a message is not applicable.
-
-#### Keys:
- -  <sub>1</sub>: Send {text_to_send [string], user_id* [string]}
- -  <sub>2</sub>: Create {name [string], help_text [string], callback [string], return_key** [integer]}
- -  <sub>3</sub>: Username {user_id [string]}
- -  <sub>4</sub>: Remove {command_name** [string]}
- -  <sub>5</sub>: Disconnect {reason***}
-
-<sub>* Optional, format: username#1234</sub>
-<sub>** Optional, default value: [NOTHING]</sub>
-<sub>*** Optional, default value: None</sub>
 
 ## Status
 
@@ -136,6 +148,7 @@ The 'Usage: ' line is optional, but if present, it should be formated like that,
 |SOFTWARE          |Anything that interacts with the programs running on the host machine. |
 |BOT               |Anything that interacts with the bot's workings.                       |
 |USER              |Anything that interacts with the users.                                |
+|AUDIO             |Anything that plays audio trough the bot.                              |
 
 ### Returns
 
@@ -176,12 +189,44 @@ Can be used to remove every created command from the server, and close the conne
 
 ## Is Admin
 
-Checks if a user is registered as an administrator for the bot
+Checks if a user is registered as an administrator for the bot.
 
 ## Connect To User
 
-Connect the client to the user's current active voice channel if there is one
+Connect the client to the user's current active voice channel if there is one.
 
 ## Disconnect From User
 
-Disconnect the client from the current voice channel, if the user is present on that channel
+Disconnect the client from the current voice channel, if the user is present on that channel.
+
+## Play Audio File
+
+Starts the audio file on the path provided. If the file is not supported error is returned. Will connect if the bot is not yet connected, will only allow to be used by member in the same channel.
+
+## Add Audio File
+
+Adds the audio file to the play list on the path provided. If the file is not supported error is returned.
+
+## Pause Currently Playing
+
+Pauses the currently playing track. Will only succeed, if the requesting member is in the same voice channel.
+
+## Resume Paused
+
+Resumes playing the paused track. Will only succeed, if the requesting member is in the same voice channel.
+
+## Skpi Currently Playing
+
+Skips the current track if other tracks are in the play list. Will only succeed, if the requesting member is in the same voice channel.
+
+## Stop Currently Playing
+
+Stops the currently playing track. Will only succeed, if the requesting member is in the same voice channel.
+
+## List Queue
+
+Lists the names of the items in the playlist, starting with the currently playing file.
+
+## Set As Track Finished
+
+Sets the callback for when the current tack finished playing for possible file removal.

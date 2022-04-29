@@ -1,12 +1,12 @@
-from enum import Enum
-from typing import Any, Union
+from pickle import UnpicklingError
+from typing import Any, List, Union
 from modules import status, watchdog, log_level
 from modules.logger import logger_class
 from platform import node
 from modules.services import server, Message, Attachment
 from modules.scanner import scann
 from modules.response import response
-from modules.voice_connection import VCConnectionStatus, VCConnectionRequest, VoiceConnection
+from modules.voice_connection import VCStatus, VCRequest, VoiceConnection
 from threading import Thread
 from time import sleep, process_time
 import datetime, psutil, os, json, webbrowser, asyncio, logging
@@ -42,7 +42,7 @@ intents = discord.Intents.default()
 intents.members = True
 intents.voice_states = True
 client = discord.Client(heartbeat_timeout=120, intents=intents)       #Creates a client instance using the discord  module
-voice_connection = VoiceConnection()
+voice_connection: VoiceConnection = None
 
 def play(link):
     """Opens an URL in the default browser
@@ -78,7 +78,7 @@ Category: BOT
         os.remove("update.lg")
         if len(tmp) > 2 and message is not None:
             await message.channel.send("API updated!")
-        if _server is not None:
+        if _server is not None and message is not None:
             _server.request_all_update()
         if updater.main():
             if message is not None:
@@ -116,19 +116,19 @@ def get_passcode():
     for _ in range(60):
         passcode += chr(randint(33, 126))
     key = sha256(passcode.encode(encoding="utf-8")).hexdigest()
-    logger.debug(f"Your key is {key}")
+    print(f"Your key is {key}")
     return key
 
 def save_cfg():
     tmp = {"token":token, "id":id, 'connections':connections, "admins":admins, "admin key": admin_key}
-    with open(os.path.join("data", "bot.cfg"), "w") as f:
+    with open(os.path.join("data", "bot.cfg"), 'w') as f:
         json.dump(tmp, f)
 
 def load():
     """This function loads in the data, and sets up the program variables. 
     In the case of a missing, or corrupt cfg file, this function requests the data's input through console inpt.
     The data is stored in a json like cfg file with the following format:
-    {"token":"BOT-TOKEN-HERE", "id":{"bot":BOT-ID-HERE}}
+    {"token":"BOT-TOKEN-HERE", "id":{"bot":BOT-ID-HERE}, [...]}
     """
     if not os.path.exists("data"):
         os.mkdir("data")
@@ -442,8 +442,7 @@ class clear_helper:
     def is_finished(self):
         return self.finished or (self.number is not None and self.count == self.number)
 
-
-async def clear(message: discord.Message, data: None):
+async def clear(message: discord.Message, data: None) -> None:
     """Clears all messages from this channel.
 Usage: &clear [optionally the number of messages or @user]
 Category: SERVER
@@ -477,7 +476,6 @@ Category: SERVER
     except Exception as ex:
         errors[datetime.datetime.now()] = f'Exception occured during cleaning:\n```{ex}```'
         await message.channel.send("Sorry, something went wrong!")
-
 
 async def count(message, channel):
     """Counts the messages for every user in a channel's last 1000 messages. The channel can either be given as a tag, or left empty.
@@ -723,42 +721,52 @@ Category: BOT
             await message.channel.send(f"{str(client.get_user(int(key))).split('#')[0]} is already an admin!")
         save_cfg()
 
-def voice_connection_managger(user_id: str, request: VCConnectionRequest) -> response:
+def voice_connection_managger(request: VCRequest, user_id: Union[str, None] = None, path: Union[str, None] = None) -> Union[response, bool, List[str]]:
+    if VCRequest.need_user(request) and user_id is None: return response("Bad request", "User needed for this action!")
+    if VCRequest.need_path(request) and path is None: return response("Bad request", "Path needed for this action!")
     user_as_member: discord.Member = None
-    for member in client.get_all_members():
-        if int(user_id) == member.id:
-            user_as_member = member
-            print(user_as_member)
-            break
-    else:
-        return response("Bad request", "User not found")
-    if request in [VCConnectionRequest.connect, VCConnectionRequest.forceConnect]:
-        task = loop.create_task(connect_to_user(user_as_member, request == VCConnectionRequest.forceConnect))
-        while not task.done():
-            sleep(0.1)
-        if task.exception() is not None:
-            return response("Internal error", f"{task.exception()}")
-        return response("Success", _bool=task.result())
-    elif request in [VCConnectionRequest.disconnect, VCConnectionRequest.forceConnect]:
-        task = loop.create_task(disconnect_from_user(user_as_member, request == VCConnectionRequest.forceDisconnect))
-        while not task.done():
-            sleep(0.1)
-        if task.exception() is not None:
-            return response("Internal error", f"{task.exception()}")
-        return response("Success")
+    task: asyncio.Task = None
+    logger.debug(f"Voice connection request type: {request}")
+    if user_id is not None:
+        for member in client.get_all_members():
+            if int(user_id) == member.id:
+                user_as_member = member
+                logger.debug(f"Caller: {user_as_member}")
+                break
+        else:
+            return response("Internal error", "User not found")
+    if request == VCRequest.connect:
+        task = loop.create_task(connect_to_user(user_as_member))
+    elif request in [VCRequest.disconnect, VCRequest.forceDisconnect]:
+        task = loop.create_task(voice_connection.disconnect(request == VCRequest.forceDisconnect))
+    elif request == VCRequest.play:
+        return voice_connection.play(path, user=user_as_member)
+    elif request == VCRequest.stop:
+        return voice_connection.stop(user_as_member)
+    elif request == VCRequest.skip:
+        return voice_connection.skip(user_as_member)
+    elif request == VCRequest.add:
+        return voice_connection.add_mp3_file_to_playlist(path)
+    elif request == VCRequest.pause:
+        return voice_connection.pause(user_as_member)
+    elif request == VCRequest.resume:
+        return voice_connection.resume(user_as_member)
+    elif request == VCRequest.queue:
+        return voice_connection.list_queue()
     else:
         return response("Bad request", "Voice connection request was not from the available list!")
+    logger.debug("Waiting on task to finish")
+    while not task.done():
+        sleep(0.1)
+    if task.exception() is not None:
+        return response("Internal error", f"{task.exception()}")
+    return response("Success")
 
-async def connect_to_user(user: discord.Member, forced: bool = False) -> None:
+async def connect_to_user(user: discord.Member) -> None:
     user_vc = user.voice.channel
+    logger.debug(f"User voice channel: {user_vc.name}")
     if user_vc is not None:
-        if forced: await voice_connection.force_reconnection(user_vc)
-        else: await voice_connection.connect(user_vc)
-
-async def disconnect_from_user(user: discord.Member, forced: bool = False) -> None:
-    user_vc = user.voice.channel
-    if voice_connection.connection_status(user_vc) == VCConnectionStatus.sameChannel:
-        await voice_connection.disconnect(forced)
+        await voice_connection.connect(user_vc)
 
 linking = {
     "add":[add_process, True],
@@ -767,7 +775,6 @@ linking = {
     "bar":[set_bar, True],
     "clear":[clear, False],
     "count":[count, False],
-    "echo":[echo, False],
     "end":[stop_at, False],
     "errors":[send_errors, True],
     "exit":[stop_bot, True],
@@ -776,6 +783,7 @@ linking = {
     "link":[send_link, False],
     "lock":[locker, False],
     "open":[open_browser, True],
+    "ping":[echo, False],
     "remove": [remove, True],
     "restart":[restart, True],
     "roll":[roll, False],
@@ -798,7 +806,8 @@ categories = {
     'NETWORK':"Anything that interacts with the host's network.",
     'SOFTWARE':'Anything that interacts with the programs running on the host machine.',
     'BOT':"Anything that interacts with the bot's workings.",
-    'USER': "Anything that interacts with the users."
+    'USER': "Anything that interacts with the users.",
+    'AUDIO': "Anything that plays audio trugh the bot."
 }
 
 def is_admin(uid: str) -> bool:
@@ -930,7 +939,8 @@ def send_message(msg: Message):
         loop.create_task(_watchdog.send_msg(msg.content))
         return response("Success")
     else:
-        if chn := get_channel(msg.channel) != None:
+        chn = get_channel(msg.channel)
+        if  chn != None:
             task = loop.create_task(_send_message(msg, chn))
             while not task.done():
                 sleep(0.1)
@@ -1055,6 +1065,7 @@ def Main(_loop: asyncio.AbstractEventLoop):
         global _watchdog
         global _server
         global is_running
+        global voice_connection
         logger.info('Program started')
         logger.debug("Creating loop")
         loop = _loop
@@ -1068,10 +1079,11 @@ def Main(_loop: asyncio.AbstractEventLoop):
         if "--api" in os.sys.argv:
             logger.info("Setting up the services")
             _server = server(edit_linking, get_status, send_message, get_user, is_admin, voice_connection_managger)
+        voice_connection = VoiceConnection(loop, _server.track_finished if _server is not None else None)
         logger.info('Starting all processes')
         runner(loop)
     except Exception as ex:
-        logger.error(str(ex), error=True)
+        logger.error(str(ex))
         stop()
         logger.info("Restarting...")
         signal(signals.restart)
