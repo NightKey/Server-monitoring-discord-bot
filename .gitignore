@@ -8,3 +8,5 @@ logs*
 *build*
 *toml
 *egg-info*
+*folder
+*level

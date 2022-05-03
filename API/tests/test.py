@@ -8,8 +8,7 @@ import smdb_api
 parentdir = os.path.dirname(parentdir)
 sys.path.insert(0,parentdir) 
 from modules import services, response
-from modules.logger import logger_class
-from modules.voice_connection import VCRequest
+from modules.logger import Logger
 from time import sleep
 
 class API_CreationTest(unittest.TestCase):
@@ -106,7 +105,7 @@ class Message_function_test(unittest.TestCase):
 
 if __name__ == "__main__":
     print("Creating dummy server...")
-    services.logger = logger_class("test", storage_life_extender_mode=True)
+    services.logger = Logger("test", storage_life_extender_mode=True)
     server = services.server(linking_editor, get_status, send_message, get_user, is_admin, voice_connection_managger)
     server._start_for_test()
     th = threading.Thread(target=server.loop)

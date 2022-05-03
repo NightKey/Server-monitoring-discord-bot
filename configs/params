@@ -1,0 +1,13 @@
+--api #Allows API services
+#--al #Allows all discord.py logs
+#--nowd #Disables watchdog services
+#--nodcc #Disables the disconnect checker
+#--scilent #Prevents startup message from showing
+
+#If one is used, all of the following needs to be present!
+
+#--remote #Starts the bot in remote or slave mode, where it needs to connect to a master instance
+#--ip 127.0.0.1 #The Ip address of the master
+#--port 9600 #The port the master is listening on
+#--auth AUTH-TOKEN #The authentication token
+#--name Slave-1 #The name of the slave session

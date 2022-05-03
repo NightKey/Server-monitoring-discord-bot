@@ -34,12 +34,13 @@ class COLOR(Enum):
     def from_level(level: LEVEL) -> "COLOR":
         return getattr(COLOR, level.value)
 
-class logger_class:
-    __slots__ = "log_file", "allowed", "log_to_console", "storage_life_extender_mode", "stored_logs", "max_logfile_size", "max_logfile_lifetime", "__print", "use_caller_name", "use_file_names", "header_used"
+class Logger:
+    __slots__ = "log_file", "allowed", "log_to_console", "storage_life_extender_mode", "stored_logs", "max_logfile_size", "max_logfile_lifetime", "__print", "use_caller_name", "use_file_names", "header_used", "log_folder"
 
     def __init__(
         self, 
-        log_file: str, 
+        log_file: str,
+        log_folder: str = ".",
         clear: bool = False, 
         level: LEVEL = LEVEL.INFO, 
         log_to_console: bool = False, 
@@ -51,6 +52,7 @@ class logger_class:
         use_file_names: bool = True
     ) -> None:
         self.log_file = log_file
+        self.log_folder = log_folder
         self.allowed = LEVEL.get_hierarchy(level)
         self.log_to_console = log_to_console
         self.storage_life_extender_mode = storage_life_extender_mode
@@ -62,14 +64,14 @@ class logger_class:
         self.use_file_names = use_file_names
         self.header_used = False
         if clear:
-            with open(log_file, "w"): pass
+            with open(path.join(log_folder, log_file), "w"): pass
 
     def __check_logfile(self) -> None:
         if self.max_logfile_size != -1 and (path.getsize(self.log_file) / 1024^2) > self.max_logfile_size:
             tmp = self.log_file.split(".")
             tmp[0] += str(datetime.now())
             new_name = ".".join(tmp)
-            copy(self.log_file, new_name)
+            copy(path.join(self.log_folder, self.log_file), path.join(self.log_folder, new_name))
 
         if self.max_logfile_lifetime != -1:
             names = self.__get_all_logfile_names()
@@ -78,18 +80,18 @@ class logger_class:
                     remove(name)
 
     def __get_all_logfile_names(self) -> List[str]:
-        for dir_path, _, filenames in walk(path.dirname(self.log_file)):
+        for dir_path, _, filenames in walk(self.log_folder):
             return [path.join(dir_path, fname) for fname in filenames if self.log_file.split(".")[-1] in fname]
 
     def __log_to_file(self, log_msg: str, flush: bool = False) -> None:
         if self.storage_life_extender_mode:
             self.stored_logs.append(log_msg)
         else:
-            with open(self.log_file, "a", encoding="UTF-8") as f:
+            with open(path.join(self.log_folder, self.log_file), "a", encoding="UTF-8") as f:
                 f.write(log_msg)
                 f.write("\n")
         if len(self.stored_logs) > 500 or flush:
-            with open(self.log_file, "a") as f:
+            with open(path.join(self.log_folder, self.log_file), "a", encoding="UTF-8") as f:
                 f.write("\n".join(self.stored_logs))
                 self.stored_logs = []
         self.__check_logfile()
@@ -162,7 +164,7 @@ class logger_class:
         self.__log(LEVEL.ERROR, data, counter, end)
 
 def test():
-    logger = logger_class("asd", True, log_to_console=True, use_caller_name=True)
+    logger = Logger("asd", True, log_to_console=True, use_caller_name=True)
     logger.info("Info")
     logger.log(LEVEL.INFO, "Log")
 

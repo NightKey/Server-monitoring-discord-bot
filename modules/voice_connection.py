@@ -5,11 +5,11 @@ from typing import Any, Callable, Coroutine, List, Union
 from datetime import timedelta
 from time import sleep
 from discord import VoiceClient, VoiceChannel, opus, FFmpegPCMAudio, Member
-from .logger import logger_class
-from . import log_level
+from .logger import Logger
+from . import log_level, log_folder
 from os import path
 
-logger = logger_class("logs/VCConnectionHelper.log", level=log_level, log_to_console=True, use_caller_name=True, use_file_names=True)
+logger = Logger("VCConnectionHelper.log", log_folder=log_folder, level=log_level, log_to_console=True, use_caller_name=True, use_file_names=True)
 
 class VCStatus(Enum):
     disconnected = 0

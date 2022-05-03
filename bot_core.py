@@ -1,12 +1,11 @@
-from pickle import UnpicklingError
-from typing import Any, List, Union
-from modules import status, watchdog, log_level
-from modules.logger import logger_class
+from typing import List, Union
+from modules import status, watchdog, log_level, log_folder
+from modules.logger import Logger
 from platform import node
 from modules.services import server, Message, Attachment
 from modules.scanner import scann
 from modules.response import response
-from modules.voice_connection import VCStatus, VCRequest, VoiceConnection
+from modules.voice_connection import VCRequest, VoiceConnection
 from threading import Thread
 from time import sleep, process_time
 import datetime, psutil, os, json, webbrowser, asyncio, logging
@@ -20,7 +19,7 @@ process_list = {}
 ptime = 0
 was_online=False
 id = None
-logger = logger_class("logs/bot.log", level=log_level, log_to_console=True, use_caller_name=True, use_file_names=True)
+logger = Logger("bot.log", log_folder=log_folder, level=log_level, log_to_console=True, use_caller_name=True, use_file_names=True)
 dc_time = None
 bar_size=18
 connections = []
@@ -177,6 +176,9 @@ def check_process_list():
     """Looks for update in the process list. To lighten the load, it uses the last modified date.
     As a side effect, too frequent updates are not possible.
     """
+    if not os.path.exists(os.path.join("data", "process_list.json")): 
+        with open(os.path.join("data", "process_list.json"), "w") as f:
+            f.write("{}")
     mtime = os.path.getmtime(os.path.join("data", "process_list.json"))
     global ptime
     if ptime < mtime:

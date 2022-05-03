@@ -5,21 +5,24 @@ from os import path, remove, rename
 from sys import argv, gettrace
 from time import sleep
 
-def set_log_level():
-    level = "DEBUG" if is_debugger() else "INFO"
-    with open(path.join("modules", "level"), "w") as f:
-        f.write(level)
+def is_debugger():
+    return gettrace() is not None
 
-from modules.logger import logger_class, LEVEL
+level = "DEBUG" if is_debugger() else "INFO"
+with open(path.join("configs", "level"), "w") as f:
+    f.write(level)
+
+with open(path.join("configs", "folder"), "w") as f:
+    f.write("logs")
+
+from modules.logger import Logger
+from modules import log_level, log_folder
 
 interpreter = 'python' if system() == 'Windows' else 'python3'
 dnull = "NUL" if system() == 'Windows' else "/dev/null"
 restart_counter = 0
 
-def is_debugger():
-    return gettrace() is not None
-
-logger = logger_class("logs/bot_runner.log", level=LEVEL.DEBUG if is_debugger() else LEVEL.INFO, log_to_console=True, use_caller_name=True, use_file_names=True)
+logger = Logger("bot_runner.log", log_folder=log_folder, level=log_level, log_to_console=True, use_caller_name=True, use_file_names=True)
 
 def install_dependencies(sudo: bool):
     pre = "sudo " if system() == 'Linux' and sudo else ""
@@ -31,15 +34,11 @@ def install_dependencies(sudo: bool):
     remove("remove")
     return resp
 
-def main():
+def main(param):
     """
     Main loop that handdles starting the server, and deciding what to do after an update.
     """
     global restart_counter
-    set_log_level()
-    param = []
-    param.extend(argv[1:])
-    if is_debugger(): param.extend(['--nowd', '--api', '--scilent'])
     logger.debug(f"Calling the bot with the following params: {param}")
     server = subprocess.Popen([interpreter, 'bot_core.py', *param])  #Creates a child process with the 'server.py' script
     while server.poll() is None:    #Works while the child process runs
@@ -82,7 +81,9 @@ if __name__ == '__main__':
     #Starts the server, while required
     logger.header("Bot runner started")
     while True:
-        main()
+        params = argv[1:]
+        if is_debugger(): params.extend(['--nowd', '--api', '--scilent'])
+        main(params)
         logger.warning('Bot killed!')
         ansv = str(input('Do you want to restart the bot? ([Y]/N) ') or 'Y')
         if ansv.upper() == 'N':

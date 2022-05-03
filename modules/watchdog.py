@@ -1,11 +1,11 @@
 import discord, psutil, os, json
 from copy import deepcopy
-from .logger import logger_class
+from .logger import Logger
 from .scanner import scann
-from . import status, log_level
+from . import status, log_level, log_folder
 from time import sleep
 
-logger = logger_class("logs/watchdog.log", level=log_level, log_to_console=True, use_caller_name=True, use_file_names=True)
+logger = Logger("watchdog.log", log_folder=log_folder, level=log_level, log_to_console=True, use_caller_name=True, use_file_names=True)
 
 class watchdog():
     def __init__(self, loop, client, process_list=None):

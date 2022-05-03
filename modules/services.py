@@ -1,15 +1,15 @@
 from datetime import datetime
 from requests.models import Response
 from typing import Any, Callable, Dict, List, Union
-from .logger import logger_class
+from .logger import Logger
 from .response import response
-from . import log_level
+from . import log_level, log_folder
 from .voice_connection import VCRequest, VCStatus
 import socket, select, json, discord
 from hashlib import sha256
 import os
 
-logger = logger_class("logs/api_server.log", level=log_level, log_to_console=True, use_caller_name=True, use_file_names=True)
+logger = Logger("api_server.log", log_folder=log_folder, level=log_level, log_to_console=True, use_caller_name=True, use_file_names=True)
 
 class Attachment:
     """Message attachment"""
