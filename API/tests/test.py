@@ -56,6 +56,17 @@ class API_CreationTest(unittest.TestCase):
         server.Test2(server, msg)
         server.Test2(server, msg)
         self.assertEqual(self.counter, 1)
+    
+    def test_9_can_save_and_load_configs(self):
+        file_name = "test.conf"
+        smdb_api.API.create_config("name", "key", "ip", 12345, file_name)
+        self.assertTrue(os.path.exists(file_name))
+        _api = smdb_api.API.from_config(file_name, print)
+        self.assertEqual(_api.name, "name")
+        self.assertEqual(_api.key, "key")
+        self.assertEqual(_api.ip, "ip")
+        self.assertEqual(_api.port, 12345)
+        os.remove(file_name)
 
     def reject(self, _input):
         self.counter += 1
@@ -106,7 +117,7 @@ class Message_function_test(unittest.TestCase):
 if __name__ == "__main__":
     print("Creating dummy server...")
     services.logger = Logger("test", storage_life_extender_mode=True)
-    server = services.server(linking_editor, get_status, send_message, get_user, is_admin, voice_connection_managger)
+    server = services.Server(linking_editor, get_status, send_message, get_user, is_admin, voice_connection_managger)
     server._start_for_test()
     th = threading.Thread(target=server.loop)
     th.name = "Dummy server"

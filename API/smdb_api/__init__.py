@@ -1,4 +1,4 @@
-import select, socket, json, threading, discord, re
+import select, socket, json, threading, discord, re, pickle
 from os import path, devnull, system, remove
 from sys import stdout, __stdout__
 from time import sleep, time
@@ -124,6 +124,17 @@ CHANNEL = 4
 
 class API:
     """API for the 'Server monitoring Discord bot' application."""
+
+    def from_config(file_name: str, update_function: Callable[[], None] = None) -> "API":
+        data = None
+        with open(file_name, "rb") as f:
+            data = pickle.load(f)
+        return API(data["name"], data["key"], data["ip"], int(data["port"]), update_function)
+    
+    def create_config(name: str, key: str, ip: str, port: int, file_name: str = "api_config.conf") -> None:
+        with open(file_name, "wb") as f:
+            pickle.dump({"name": name, "key": key, "ip": ip, "port": port}, f)
+
     def __init__(self, name: str, key: str, ip: str = "127.0.0.1", port: int = 9600, update_function: Callable[[], None] = None) -> None:
         """Initialises an API that connects to the 'ip' ip and to the 'port' port with the 'name' name and the 'key' api key.
         The update_function should be a vfunction to call, when the bot calls for update (usually when the bot is updated). The function should not require input data.
