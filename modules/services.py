@@ -82,7 +82,7 @@ class Message:
         if not isinstance(other, Message): return False
         return self.sender == other.sender and self.content == other.content and self.channel
 
-class server:
+class Server:
     def __init__(
         self, 
         linking_editor: Callable[[Any, bool], None], 

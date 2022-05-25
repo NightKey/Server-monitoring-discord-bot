@@ -7,7 +7,7 @@ from time import sleep
 
 logger = Logger("watchdog.log", log_folder=log_folder, level=log_level, log_to_console=True, use_caller_name=True, use_file_names=True)
 
-class watchdog():
+class Watchdog():
     def __init__(self, loop, client, process_list=None):
         self.process_list = deepcopy(process_list)
         self.error = ""

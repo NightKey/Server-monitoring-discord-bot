@@ -1,8 +1,10 @@
+from argparse import ArgumentError
 from typing import List, Union
-from modules import status, watchdog, log_level, log_folder
+from modules import status, log_level, log_folder
+from modules.watchdog import Watchdog
 from modules.logger import Logger
 from platform import node
-from modules.services import server, Message, Attachment
+from modules.services import Server, Message, Attachment
 from modules.scanner import scann
 from modules.response import response
 from modules.voice_connection import VCRequest, VoiceConnection
@@ -29,8 +31,8 @@ errors = {}
 threads = {}
 admins = []
 loop: asyncio.AbstractEventLoop = None
-_watchdog: watchdog = None
-_server = None
+watchdog: Watchdog = None
+server: Server = None
 admin_key = None
 
 class signals:
@@ -54,7 +56,7 @@ def signal(what):
     """
     Sends a signal to the runner. It is used to stop the API if it exists.
     """
-    try: _server.run = False
+    try: server.run = False
     except: pass
     with open(what, 'w') as _: pass   
 
@@ -77,8 +79,8 @@ Category: BOT
         os.remove("update.lg")
         if len(tmp) > 2 and message is not None:
             await message.channel.send("API updated!")
-        if _server is not None and message is not None:
-            _server.request_all_update()
+        if server is not None and message is not None:
+            server.request_all_update()
         if updater.main():
             if message is not None:
                 await message.channel.send("Restarting...")
@@ -230,7 +232,7 @@ Category: SOFTWARE
     
     if stype.lower() in ["long", "api"]:
         api_server_status = discord.Embed(title="API Status", color=0x14f9a2)
-        api_status = _server.get_api_status() if _server is not None else {"API":"Offline"}
+        api_status = server.get_api_status() if server is not None else {"API":"Offline"}
         for key, values in api_status.items():
             if values == []: continue
             api_server_status.add_field(name=key, value="\u200B", inline=False)
@@ -327,12 +329,12 @@ def offline(online):
         logger.info("Connection lost!")
         global dc_time
         dc_time = datetime.datetime.now()
-        _watchdog.not_ready()
+        watchdog.not_ready()
 
 @client.event
 async def on_disconnect():
     try:
-        await _watchdog.check_connection(offline)
+        await watchdog.check_connection(offline)
     except Exception as ex:
         errors[datetime.datetime.now()] = f"Exception occured during disconnect event {ex}"
 
@@ -353,7 +355,7 @@ It does a system scann for the running programs.
                     td = f.read(-1)
                 os.remove("Offline")
                 check_process_list()
-                _watchdog.was_restarted()
+                watchdog.was_restarted()
                 if '--scilent' not in os.sys.argv:
                     difference = datetime.datetime.now() - datetime.datetime.fromtimestamp(float(td))
                     await channel.send(f"Bot restarted after being offline for {str(difference).split('.')[0]}")
@@ -374,7 +376,7 @@ It does a system scann for the running programs.
     finish = process_time()
     logger.info('Startup check finished')
     logger.debug(f"Startup check took {finish-start} s")
-    _watchdog.ready()
+    watchdog.ready()
     global trys
     trys = 0
     logger.info("Bot started up correctly!")      #The bot totally started up, and ready.
@@ -507,7 +509,7 @@ Usage: &API <name of the application the key will be created to>
 Category: SOFTWARE
     """
     if str(message.channel) in channels or str(message.author.id) in admins:
-        await message.channel.send(_server.get_api_key_for(name) if _server is not None else "API is not avaleable")
+        await message.channel.send(server.get_api_key_for(name) if server is not None else "API is not avaleable")
 
 async def restart(message, _):
     """Restarts the server it's running on. Admin permissions may be needed for this on the host.
@@ -826,7 +828,7 @@ def get_user(key: int) -> response:
 async def on_message(message):
     """This get's called when a message was sent to the server. It checks for all the usable commands, and executes them, if they were sent to the correct channel.
     """
-    global _server
+    global server
     me = client.get_user(id)
     if message.author != me:
         if message.content.startswith('&') or message.channel.type == discord.ChannelType.private:
@@ -837,7 +839,7 @@ async def on_message(message):
                 await message.add_reaction("dot:577128688433496073")
                 try:
                     if cmd in linking.keys(): await linking[cmd][0](message, etc)
-                    elif cmd in outside_options.keys(): outside_options[cmd](_server, Message.create_message(str(message.author.id), etc, str(message.channel.id), [Attachment.from_discord_attachment(attachment) for attachment in message.attachments], None))
+                    elif cmd in outside_options.keys(): outside_options[cmd](server, Message.create_message(str(message.author.id), etc, str(message.channel.id), [Attachment.from_discord_attachment(attachment) for attachment in message.attachments], None))
                 except Exception as ex:
                     await message.channel.send(f"Error runnig the '{cmd}' command: {ex}")
             else:
@@ -864,7 +866,7 @@ async def on_message(message):
                             mx["value"] = tmp
                     if 'value' in mx and mx['value'] == 100:
                         try:
-                            outside_options[mx["key"]](_server, Message.create_message(str(message.author.id), etc, str(message.channel.id), [Attachment.from_discord_attachment(attachment) for attachment in message.attachments], None))
+                            outside_options[mx["key"]](server, Message.create_message(str(message.author.id), etc, str(message.channel.id), [Attachment.from_discord_attachment(attachment) for attachment in message.attachments], None))
                             await message.add_reaction("dot:577128688433496073")
                         except Exception as ex: await message.channel.send(f"Error runnig the '{cmd}' command: {ex}\nInterpreted command: {mx['key']}")
                     elif 'value' in mx and mx['value'] > 70:
@@ -893,7 +895,7 @@ def disconnect_check(loop, channels):
                 loop.create_task(client.logout())
                 loop.create_task(client.close())
                 while not client.is_closed(): pass
-                _watchdog.create_tmp()
+                watchdog.create_tmp()
                 with open("Offline", "w") as f:
                     f.write(str(dc_time.timestamp()))
                 signal(signals.restart)
@@ -938,7 +940,7 @@ def send_message(msg: Message):
     """Callback function to the services.py.
     """
     if msg.channel is None:
-        loop.create_task(_watchdog.send_msg(msg.content))
+        loop.create_task(watchdog.send_msg(msg.content))
         return response("Success")
     else:
         chn = get_channel(msg.channel)
@@ -965,9 +967,9 @@ async def _send_message(msg: Message, channel: discord.TextChannel):
 def start_thread(name):
     global threads
     if name == "Watchdog":
-        threads[name] = Thread(target=_watchdog.run_watchdog, args=[channels,])
+        threads[name] = Thread(target=watchdog.run_watchdog, args=[channels,])
     elif name == "API Server":
-        threads[name] = Thread(target=_server.start)
+        threads[name] = Thread(target=server.start)
     elif name == "Disconnect checker":
         threads[name] = Thread(target=disconnect_check, args=[loop, channels,])
     threads[name].name = name
@@ -1008,9 +1010,9 @@ def runner(loop: asyncio.AbstractEventLoop) -> None:
     """Runs the needed things in a way, the watchdog can access the bot client."""
     if '--nodcc' not in os.sys.argv and "--remote" not in os.sys.argv:
         start_thread("Disconnect checker")
-    if '--nowd' not in os.sys.argv and "--remote" not in os.sys.argv:
+    if '--nowd' not in os.sys.argv:
         start_thread("Watchdog")
-    if "--api" in os.sys.argv:
+    if "--api" in os.sys.argv and "--remote" not in os.sys.argv:
         start_thread("API Server")
     if "--remote" not in os.sys.argv:
         loop.create_task(start_discord_client(0))
@@ -1020,20 +1022,22 @@ def runner(loop: asyncio.AbstractEventLoop) -> None:
         logger.debug("Gathering IP and Authentication code")
         ip = port = auth = name = None
         try:
-            """ ip = os.sys.argv[os.sys.argv.index('--ip') + 1]
+            ip = os.sys.argv[os.sys.argv.index('--ip') + 1]
             port = int(os.sys.argv[os.sys.argv.index('--port') + 1])
             auth = os.sys.argv[os.sys.argv.index('--auth') + 1]
             name = os.sys.argv[os.sys.argv.index('--name') + 1]
-            from API import smdb_api
-            _api = smdb_api.API(name, auth, ip, port)
+            if ip is None or port is None or auth is None or name is None:
+                raise ArgumentError("Ip, Port, Auth and Name is needed for remote mode!")
+            from smdb_api import API
+            _api = API(name, auth, ip, port)
             _api.validate(10)
             if not _api.valid:
                 logger.debug("Validation failed!")
                 signal(signals.exit)
-            _api.create_function("status", "Scanns the system for the running applications, and creates a message depending on the resoults.\nUsage: &status <long if you want to see the API status too>\nCategory: SOFTWARE") """
+            _api.create_function("status", "Scanns the system for the running applications, and creates a message depending on the resoults.\nUsage: &status <long if you want to see the API status too>\nCategory: SOFTWARE")
         except Exception as ex:
             logger.error(f"Exception: {ex}")
-            logger.error(f"IP: {ip or 'None'} Port: {port or 'None'} Auth: {auth or 'None'} Name: {name or 'None'}")
+            logger.error(f"IP: {ip} Port: {port} Auth: {auth} Name: {name}")
             logger.error("IP and Authentication code needed in remote mode!")
             stop()
             signal(signals.exit)
@@ -1049,14 +1053,14 @@ def stop():
         logger.debug("Waiting for discord to close...")
         while not client.is_closed():
             pass
-    if _watchdog is not None:
+    if watchdog is not None:
         logger.info("Stopping watchdogs")
-        _watchdog.create_tmp()
-        _watchdog.stop()
+        watchdog.create_tmp()
+        watchdog.stop()
     logger.info("Stopping disconnect checker")
     is_running = False
-    if _server is not None and _server.run:
-        _server.stop()
+    if server is not None and server.run:
+        server.stop()
     if loop is not None:
         loop.stop()
     signal(signals.exit)
@@ -1064,8 +1068,8 @@ def stop():
 def Main(_loop: asyncio.AbstractEventLoop):
     try:
         global loop
-        global _watchdog
-        global _server
+        global watchdog
+        global server
         global is_running
         global voice_connection
         logger.info('Program started')
@@ -1077,11 +1081,11 @@ def Main(_loop: asyncio.AbstractEventLoop):
             logger.info("Starting discord logger")
             enable_debug_logger()
         logger.info('Setting up watchdog')
-        _watchdog = watchdog.watchdog(loop, client, process_list)
+        watchdog = watchdog.Watchdog(loop, client, process_list)
         if "--api" in os.sys.argv:
             logger.info("Setting up the services")
-            _server = server(edit_linking, get_status, send_message, get_user, is_admin, voice_connection_managger)
-        voice_connection = VoiceConnection(loop, _server.track_finished if _server is not None else None)
+            server = Server(edit_linking, get_status, send_message, get_user, is_admin, voice_connection_managger)
+        voice_connection = VoiceConnection(loop, server.track_finished if server is not None else None)
         logger.info('Starting all processes')
         runner(loop)
     except Exception as ex:
