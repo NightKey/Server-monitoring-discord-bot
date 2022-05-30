@@ -37,23 +37,23 @@ The consol logging uses colors for the different levels to be more recognisable 
 
 ### DEBUG
 
- - ![#E600E5](https://via.placeholder.com/15/E600E5/000000?text=+) `#E600E5`
+ - ![#E600E5](https://via.placeholder.com/15/e600e5/000000?text=+) `#E600E5`
 
 ### INFO
 
- - ![#0BFF00](https://via.placeholder.com/15/0BFF00/000000?text=+) `#0BFF00`
+ - ![#0BFF00](https://via.placeholder.com/15/0bff00/000000?text=+) `#0BFF00`
 
 ### WARNING
 
- - ![#FEFF00](https://via.placeholder.com/15/FEFF00/000000?text=+) `#FEFF00`
+ - ![#FEFF00](https://via.placeholder.com/15/feff00/000000?text=+) `#FEFF00`
 
 ### ERROR
 
- - ![#FF0000](https://via.placeholder.com/15/FF0000/000000?text=+) `#FF0000`
+ - ![#FF0000](https://via.placeholder.com/15/ff0000/000000?text=+) `#FF0000`
 
 ### HEADER
 
- - ![#4182B7](https://via.placeholder.com/15/4182B7/000000?text=+) `#4182B7`
+ - ![#4182B7](https://via.placeholder.com/15/4182b7/000000?text=+) `#4182B7`
 
 ## Available methods
 
