@@ -49,7 +49,7 @@ The consol logging uses colors for the different levels to be more recognisable 
 
 ### ERROR
 
- - ![](https://via.placeholder.com/150/000000/ff0000?text=FF0000) `#FF0000`
+ - <span style="color: #FF0000">#FF0000</span>
 
 ### HEADER
 
