@@ -2,7 +2,7 @@ from argparse import ArgumentError
 from typing import List, Union
 from modules import status, log_level, log_folder
 from modules.watchdog import Watchdog
-from modules.logger import Logger
+from smdb_logger import Logger
 from platform import node
 from modules.services import Server, Message, Attachment
 from modules.scanner import scann
@@ -1081,7 +1081,7 @@ def Main(_loop: asyncio.AbstractEventLoop):
             logger.info("Starting discord logger")
             enable_debug_logger()
         logger.info('Setting up watchdog')
-        watchdog = watchdog.Watchdog(loop, client, process_list)
+        watchdog = Watchdog(loop, client, process_list)
         if "--api" in os.sys.argv:
             logger.info("Setting up the services")
             server = Server(edit_linking, get_status, send_message, get_user, is_admin, voice_connection_managger)

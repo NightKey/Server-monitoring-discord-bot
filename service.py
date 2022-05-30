@@ -13,7 +13,7 @@ with open(path.join(self_path, "configs", "level"), "w") as f:
 with open(path.join(self_path, "configs", "folder"), "w") as f:
     f.write("Logs" if system() == 'Windows' else "/var/log/smdb")
 
-from modules.logger import Logger
+from smdb_logger import Logger
 from modules import log_folder, log_level
 logger = Logger("service.log", log_folder=log_folder, level=log_level, log_to_console=False)
 

@@ -5,7 +5,7 @@ from typing import Any, Callable, Coroutine, List, Union
 from datetime import timedelta
 from time import sleep
 from discord import VoiceClient, VoiceChannel, opus, FFmpegPCMAudio, Member
-from .logger import Logger
+from smdb_logger import Logger
 from . import log_level, log_folder
 from os import path
 

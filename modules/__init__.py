@@ -1,9 +1,9 @@
-from modules import logger
+from smdb_logger import LEVEL
 from os.path import join
 
-def __level__() -> logger.LEVEL:
+def __level__() -> LEVEL:
     with open(join("configs","level"), 'r') as f:
-        return logger.LEVEL.from_string(f.read(-1))
+        return LEVEL.from_string(f.read(-1))
 
 def __folder__() -> str:
     with open(join("configs","folder"), 'r') as f:

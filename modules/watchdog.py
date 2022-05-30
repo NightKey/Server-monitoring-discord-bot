@@ -1,6 +1,6 @@
 import discord, psutil, os, json
 from copy import deepcopy
-from .logger import Logger
+from smdb_logger import Logger
 from .scanner import scann
 from . import status, log_level, log_folder
 from time import sleep

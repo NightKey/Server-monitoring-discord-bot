@@ -6,6 +6,7 @@ from os import path, walk, remove
 from sys import stdout
 from shutil import copy
 
+
 class LEVEL(Enum):
     WARNING = "WARNING"
     INFO = "INFO"
@@ -15,41 +16,47 @@ class LEVEL(Enum):
 
     def from_string(string: str) -> 'LEVEL':
         for lvl in [LEVEL.DEBUG, LEVEL.INFO, LEVEL.WARNING, LEVEL.ERROR, LEVEL.HEADER]:
-            if lvl.value.lower() == string.lower(): return lvl
+            if lvl.value.lower() == string.lower():
+                return lvl
         return None
 
     def get_hierarchy(selected: 'LEVEL') -> List['LEVEL']:
-        tmp = [LEVEL.DEBUG, LEVEL.INFO, LEVEL.WARNING, LEVEL.ERROR, LEVEL.HEADER]
-        if isinstance(selected, str): selected = LEVEL.from_string(selected)
+        tmp = [LEVEL.DEBUG, LEVEL.INFO,
+               LEVEL.WARNING, LEVEL.ERROR, LEVEL.HEADER]
+        if isinstance(selected, str):
+            selected = LEVEL.from_string(selected)
         return tmp[tmp.index(selected):]
-        
+
+
 class COLOR(Enum):
     INFO = "\033[92m"
     ERROR = "\033[91m"
     WARNING = "\033[93m"
     HEADER = "\033[94m"
-    DEBUG="\033[95m"
+    DEBUG = "\033[95m"
     END = "\033[0m"
 
     def from_level(level: LEVEL) -> "COLOR":
         return getattr(COLOR, level.value)
 
+
 class Logger:
-    __slots__ = "log_file", "allowed", "log_to_console", "storage_life_extender_mode", "stored_logs", "max_logfile_size", "max_logfile_lifetime", "__print", "use_caller_name", "use_file_names", "header_used", "log_folder"
+    __slots__ = "log_file", "allowed", "log_to_console", "storage_life_extender_mode", "stored_logs", "max_logfile_size", "max_logfile_lifetime", "__print", "use_caller_name", "use_file_names", "header_used", "log_folder", "level_only_valid_for_console"
 
     def __init__(
-        self, 
+        self,
         log_file: str,
         log_folder: str = ".",
-        clear: bool = False, 
-        level: LEVEL = LEVEL.INFO, 
-        log_to_console: bool = False, 
-        storage_life_extender_mode: bool = False, 
-        max_logfile_size: int = -1, 
+        clear: bool = False,
+        level: LEVEL = LEVEL.INFO,
+        log_to_console: bool = False,
+        storage_life_extender_mode: bool = False,
+        max_logfile_size: int = -1,
         max_logfile_lifetime: int = -1,
         __print: Callable = stdout.write,
         use_caller_name: bool = False,
-        use_file_names: bool = True
+        use_file_names: bool = True,
+        level_only_valid_for_console: bool = False
     ) -> None:
         self.log_file = log_file
         self.log_folder = log_folder
@@ -63,20 +70,23 @@ class Logger:
         self.use_caller_name = use_caller_name
         self.use_file_names = use_file_names
         self.header_used = False
+        self.level_only_valid_for_console = level_only_valid_for_console
         if clear:
-            with open(path.join(log_folder, log_file), "w"): pass
+            with open(path.join(log_folder, log_file), "w"):
+                pass
 
     def __check_logfile(self) -> None:
-        if self.max_logfile_size != -1 and (path.getsize(self.log_file) / 1024^2) > self.max_logfile_size:
+        if self.max_logfile_size != -1 and (path.getsize(self.log_file) / 1024 ^ 2) > self.max_logfile_size:
             tmp = self.log_file.split(".")
             tmp[0] += str(datetime.now())
             new_name = ".".join(tmp)
-            copy(path.join(self.log_folder, self.log_file), path.join(self.log_folder, new_name))
+            copy(path.join(self.log_folder, self.log_file),
+                 path.join(self.log_folder, new_name))
 
         if self.max_logfile_lifetime != -1:
             names = self.__get_all_logfile_names()
             for name in names:
-                if datetime.now() - datetime.fromtimestamp(path.getctime(name)) > timedelta(days=self.max_logfile_lifetime):
+                if name != self.log_file and datetime.now() - datetime.fromtimestamp(path.getctime(name)) > timedelta(days=self.max_logfile_lifetime):
                     remove(name)
 
     def __get_all_logfile_names(self) -> List[str]:
@@ -91,36 +101,43 @@ class Logger:
                 f.write(log_msg)
                 f.write("\n")
         if len(self.stored_logs) > 500 or flush:
+            if log_msg == "": del self.stored_logs[-1]
             with open(path.join(self.log_folder, self.log_file), "a", encoding="UTF-8") as f:
                 f.write("\n".join(self.stored_logs))
                 self.stored_logs = []
         self.__check_logfile()
 
     def __get_caller_name(self):
-        frames = inspect.getouterframes(inspect.currentframe().f_back.f_back, 2)
+        frames = inspect.getouterframes(
+            inspect.currentframe().f_back.f_back, 2)
         caller = f"{frames[1].function if frames[1].function != 'log' else frames[2].function}"
         start = 3 if frames[1].function == "log" else 2
         previous_filename = path.basename(frames[start-1].filename)
-        if caller == "<module>": return previous_filename
+        if caller == "<module>":
+            return previous_filename
         for frame in frames[start:]:
-            if frame.function in ["<module>", "_run_event", "_run_once", "_bootstrap_inner"] or path.basename(frame.filename) in ["threading.py"]: break
+            if frame.function in ["<module>", "_run_event", "_run_once", "_bootstrap_inner"] or path.basename(frame.filename) in ["threading.py"]:
+                break
             if path.basename(frame.filename) != previous_filename and self.use_file_names:
                 caller = f"{frame.function}->{previous_filename}->{caller}"
                 previous_filename = path.basename(frame.filename)
             else:
                 caller = f"{frame.function}->{caller}"
         return f"{previous_filename}->{caller}" if self.use_file_names else caller
-            
+
     def __log(self, level: LEVEL, data: str, counter: str, end: str) -> None:
         log_msg = f"[{counter}] [{level.value}]: {data}"
-        if self.header_used and level != LEVEL.HEADER: log_msg = f"\t{log_msg}"
-        self.__log_to_file(log_msg)
+        if self.header_used and level != LEVEL.HEADER:
+            log_msg = f"\t{log_msg}"
+        if self.level_only_valid_for_console or level in self.allowed:
+            self.__log_to_file(log_msg)
         if self.log_to_console and level in self.allowed:
             if self.use_caller_name:
                 caller = self.__get_caller_name()
                 log_msg = f"[{counter}] [{caller}]: {data}"
-            self.__print(f"{COLOR.from_level(level).value}{log_msg}{COLOR.END.value}{end}")
-    
+            self.__print(
+                f"{COLOR.from_level(level).value}{log_msg}{COLOR.END.value}{end}")
+
     def get_buffer(self) -> List[str]:
         return self.stored_logs if self.storage_life_extender_mode else []
 
@@ -162,11 +179,3 @@ class Logger:
 
     def error(self, data: str, counter: str = str(datetime.now()), end: str = "\n") -> None:
         self.__log(LEVEL.ERROR, data, counter, end)
-
-def test():
-    logger = Logger("asd", True, log_to_console=True, use_caller_name=True)
-    logger.info("Info")
-    logger.log(LEVEL.INFO, "Log")
-
-if __name__ == "__main__":
-    test()

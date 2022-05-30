@@ -1,7 +1,7 @@
 from datetime import datetime
 from requests.models import Response
 from typing import Any, Callable, Dict, List, Union
-from .logger import Logger
+from smdb_logger import Logger
 from .response import response
 from . import log_level, log_folder
 from .voice_connection import VCRequest, VCStatus

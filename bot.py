@@ -15,7 +15,7 @@ with open(path.join("configs", "level"), "w") as f:
 with open(path.join("configs", "folder"), "w") as f:
     f.write("logs")
 
-from modules.logger import Logger
+from smdb_logger import Logger
 from modules import log_level, log_folder
 
 interpreter = 'python' if system() == 'Windows' else 'python3'
@@ -32,6 +32,10 @@ def install_dependencies(sudo: bool):
     logger.info("Upgrading dependencies...")
     resp = run(f"{pre}{interpreter} -m pip install{post} --upgrade -r dependencies.txt > remove")
     remove("remove")
+    if resp == 0:
+        logger.info("Dependencies installed!")
+    else:
+        logger.error(f"Error in installing dependecies, please install them manually!\nUse the following command: {pre}{interpreter} -m pip install{post} --upgrade -r dependencies.txt")
     return resp
 
 def main(param):
@@ -65,17 +69,18 @@ def main(param):
             if path.exists('Update'):
                 remove('Update')
                 install_dependencies(False)
+            sleep(1)
+        except KeyboardInterrupt:
+            logger.info("Interrupted by user")
+            server.kill()
+            while server.poll() is None:
+                pass
         except Exception as ex:
             logger.error(f"{ex}")
-        finally:
-            sleep(1)
     if server.returncode == errno.EPERM:
         logger.warning("Permission error! If this occures more than once, please try to run the program in administrator/root mode")
         logger.info("Installing dependencies...")
-        if install_dependencies(True) == 0:
-            logger.info("Dependencies installed!")
-        else:
-            logger.error("Error in installing dependecies, please install them manually!")
+        install_dependencies(True)
 
 if __name__ == '__main__':
     #Starts the server, while required
