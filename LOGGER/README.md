@@ -37,59 +37,59 @@ The consol logging uses colors for the different levels to be more recognisable 
 
 ### DEBUG
 
- - ![#E600E5](https://via.placeholder.com/15/e600e5/000000?text=+) `#E600E5`
+ - ![](https://via.placeholder.com/150/000000/e600e5?text=E600E5) `#E600E5`
 
 ### INFO
 
- - ![#0BFF00](https://via.placeholder.com/15/0bff00/000000?text=+) `#0BFF00`
+ - ![](https://via.placeholder.com/150/000000/0bff00?text=0BFF00) `#0BFF00`
 
 ### WARNING
 
- - ![#FEFF00](https://via.placeholder.com/15/feff00/000000?text=+) `#FEFF00`
+ - ![](https://via.placeholder.com/150/000000/feff00?text=FEFF00) `#FEFF00`
 
 ### ERROR
 
- - ![#FF0000](https://via.placeholder.com/15/ff0000/000000?text=+) `#FF0000`
+ - ![](https://via.placeholder.com/150/000000/ff0000?text=FF0000) `#FF0000`
 
 ### HEADER
 
- - ![#4182B7](https://via.placeholder.com/15/4182b7/000000?text=+) `#4182B7`
+ - ![](https://via.placeholder.com/150/000000/4182b7?text=4182B7) `#4182B7`
 
 ## Available methods
 
 ### get_buffer()
 
- Return sthe buffer's content in a list, if the logger is set to use buffers.
+    Return sthe buffer's content in a list, if the logger is set to use buffers.
 
 ### flush_buffer()
 
- Forces a writes of the buffer to the log file.
+    Forces a writes of the buffer to the log file.
 
 ### set_level(level)
 
- Sets the loggers leve to be used from this point onwards.
+    Sets the loggers leve to be used from this point onwards.
 
 ### log(level, data, counter = str(datetime.now()), end = "\n")
 
- Creates a log entry with the given level.
+    Creates a log entry with the given level.
 
 ### header(data, counter = str(datetime.now()), end = "\n")
 
- Creates a HEADER level log entry.
+    Creates a HEADER level log entry.
 
 ### debug(data, counter = str(datetime.now()), end = "\n")
  
- Creates a DEBUG level log entry.
+    Creates a DEBUG level log entry.
 
 ### warning(data, counter = str(datetime.now()), end = "\n")
 
- Creates a WARNING level log entry.
+    Creates a WARNING level log entry.
 
 ### info(data, counter = str(datetime.now()), end = "\n")
 
- Creates a INFO level log entry.
+    Creates a INFO level log entry.
 
 ### error(data, counter = str(datetime.now()), end = "\n")
 
- Creates a ERROR level log entry.
+    Creates a ERROR level log entry.
  
