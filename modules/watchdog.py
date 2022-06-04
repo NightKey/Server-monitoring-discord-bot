@@ -1,11 +1,16 @@
-import discord, psutil, os, json
+import discord
+import psutil
+import os
+import json
 from copy import deepcopy
 from smdb_logger import Logger
 from .scanner import scann
 from . import status, log_level, log_folder
 from time import sleep
 
-logger = Logger("watchdog.log", log_folder=log_folder, level=log_level, log_to_console=True, use_caller_name=True, use_file_names=True)
+logger = Logger("watchdog.log", log_folder=log_folder, level=log_level,
+                log_to_console=True, use_caller_name=True, use_file_names=True)
+
 
 class Watchdog():
     def __init__(self, loop, client, process_list=None):
@@ -54,11 +59,14 @@ class Watchdog():
         try:
             await self.channel.pins()
             call_back(True)
-        except discord.HTTPException: call_back(False)
+        except discord.HTTPException:
+            call_back(False)
 
     async def send_msg(self, msg):
-        try: await self.channel.send(msg)
-        except: logger.error(f"Failed sending message '{msg}'")
+        try:
+            await self.channel.send(msg)
+        except:
+            logger.error(f"Failed sending message '{msg}'")
 
     def from_tmp(self):
         """Reads the process list from a file. (Used to handle restarts)
@@ -84,7 +92,8 @@ class Watchdog():
         """This method scanns the system for runing processes, and if no process found, sends a mention message to all of the valid channels.
         This scan runs every 10 secound. And every 50 Secound, the program scanns for updates in the process list.
         """
-        while not self._ready: pass
+        while not self._ready:
+            pass
         channel = None
         for channel in self.client.get_all_channels():
             if str(channel) in channels:
@@ -103,7 +112,8 @@ class Watchdog():
                         if not self.battery_warning:
                             if self._ready:
                                 logger.debug('Power Disconnected!')
-                                self.send_message(channel, f"@everyone The Battery is not plugged in!")
+                                self.send_message(
+                                    channel, f"@everyone The Battery is not plugged in!")
                                 self.battery_warning = True
                     elif not battery["power_plugged"]:
                         battery_warning_number += 1
@@ -116,7 +126,8 @@ class Watchdog():
                     if not self.temp_warning:
                         if temp > self.high_temp:
                             logger.warning(f'{temp}°C CPU temp detected!')
-                            self.send_message(channel, f"@everyone CPU is running hot @ {temp}°C!")
+                            self.send_message(
+                                channel, f"@everyone CPU is running hot @ {temp}°C!")
                             self.temp_warning = True
                     else:
                         if temp > self.high_temp:
@@ -126,27 +137,33 @@ class Watchdog():
                             self.temp_warning = False
                         if temp_warning_number % 150 == 0:
                             logger.warning('CPU temp constantly high!')
-                            self.loop.create_task(channel.send(f"@everyone CPU is running hot @ {temp}°C for more than 5 minutes! The server will be hut down in 5 minutes!"))
+                            self.loop.create_task(channel.send(
+                                f"@everyone CPU is running hot @ {temp}°C for more than 5 minutes! The server will be hut down in 5 minutes!"))
                 if n % 5 == 0:
                     disks = status.get_disk_status()
                     for key, disk in disks.items():
                         percentage = round(disk["percent"], 1)
                         if key in self.disks:
                             if percentage > 99 and percentage > (self.disks[key] + 3):
-                                self.send_message(channel, f"@everyone The disk '{key}' is full ({percentage}%)!")
+                                self.send_message(
+                                    channel, f"@everyone The disk '{key}' is full ({percentage}%)!")
                             elif percentage > 95 and percentage > (self.disks[key] + 3):
-                                self.send_message(channel, f"@everyone The disk '{key}' is nearly filled ({percentage}%)!")
+                                self.send_message(
+                                    channel, f"@everyone The disk '{key}' is nearly filled ({percentage}%)!")
                             elif percentage > 90 and percentage > (self.disks[key] + 3):
-                                self.send_message(channel, f"@everyone The disk '{key}' is {percentage}% filled!")
+                                self.send_message(
+                                    channel, f"@everyone The disk '{key}' is {percentage}% filled!")
                         self.disks[key] = percentage
                     memory = status.get_memory_status()
                     for key, data in memory.items():
                         percentage = round(data["percent"], 1)
                         if key in self.memory:
                             if percentage > 90 and percentage > (self.memory[key] + 3):
-                                self.send_message(channel, f"@everyone The {key} is going to be filled! Current status: {percentage}%")
+                                self.send_message(
+                                    channel, f"@everyone The {key} is going to be filled! Current status: {percentage}%")
                             if percentage > 85 and percentage > (self.memory[key] + 3):
-                                self.send_message(channel, f"@everyone The {key} is {percentage}% filled!")
+                                self.send_message(
+                                    channel, f"@everyone The {key} is {percentage}% filled!")
                         self.memory[key] = percentage
             if n >= 20:
                 n = 0
@@ -154,8 +171,10 @@ class Watchdog():
                 n += 1
             for key, value in self.process_list.items():
                 if not value[1] and not value[0]:
-                    self.error += f"{key} stopped working!\n"    #Adds the process name, to the message
-                    self.process_list[key] = [False, True]       #Don't want to send the same process more than once every time it stops
+                    # Adds the process name, to the message
+                    self.error += f"{key} stopped working!\n"
+                    # Don't want to send the same process more than once every time it stops
+                    self.process_list[key] = [False, True]
                 else:
                     self.process_list[key] = [False, value[1]]
             if self.error != "":

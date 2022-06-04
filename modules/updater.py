@@ -3,7 +3,8 @@ from os import remove
 
 
 def main():
-    with open("Update", "w") as f: pass
+    with open("Update", "w") as f:
+        pass
     run('git pull > update.lg')
     with open('update.lg', 'r') as f:
         c = f.read(-1).split('\n')
@@ -13,5 +14,6 @@ def main():
     else:
         return False
 
-if __name__=='__main__':
+
+if __name__ == '__main__':
     main()

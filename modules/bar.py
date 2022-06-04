@@ -8,6 +8,7 @@ An easy to use tool to print loading bars in aplications. You may only print one
 """
 import os
 
+
 class loading_bar():
     def writer(self, string):
         """
@@ -40,13 +41,16 @@ class loading_bar():
         string = ("|" if self.corners else "")
         done = self.translate(self.done, 0, 100, 0, self.size)
         for i in range(self.size):
-            if i <= done - 1: 
+            if i <= done - 1:
                 string += self.char
             elif done - i != 0 and i <= done:
                 string += str(int(done*10 - int(done) * 10))
-            else: string += self.off_show
-        if self.corners: string += "|"
-        if self.percentage: string += " {}%".format(self.done)
+            else:
+                string += self.off_show
+        if self.corners:
+            string += "|"
+        if self.percentage:
+            string += " {}%".format(self.done)
         return string
 
     def __init__(self, message, total, size=None, off_show=" ", show="#", corners=True, percentage=True, separator="\t"):
@@ -55,7 +59,8 @@ class loading_bar():
             self.size = size
         else:
             try:
-                self.size = (int(os.popen('stty size', 'r').read().split()[1]) - (len(message) + (2 if corners else 0) + (8 if percentage else 0) + len(separator)))
+                self.size = (int(os.popen('stty size', 'r').read().split()[
+                             1]) - (len(message) + (2 if corners else 0) + (8 if percentage else 0) + len(separator)))
             except:
                 self.size = 100
         self.total = total
@@ -65,11 +70,12 @@ class loading_bar():
         self.percentage = percentage
         self.done = 0
         self.separator = separator
-    
+
     def show(self):
         """ Shows the bar, without changing anything. Handels errors """
         try:
-            self.writer("{}{}{}".format(self.message, self.separator, self.bar()))
+            self.writer("{}{}{}".format(
+                self.message, self.separator, self.bar()))
         except Exception as ex:
             print("\nAn exception occured!")
             print("Exceptyon type: {}".format(str(type(ex))))
@@ -83,11 +89,15 @@ class loading_bar():
         Return: Nothing
         """
         self.done = value
-        if self.total != 100: self.done = self.translate(self.done, 0, self.total, 0, 100)
-        if self.total < 100: self.done = int(self.done)
-        if show: self.show()
+        if self.total != 100:
+            self.done = self.translate(self.done, 0, self.total, 0, 100)
+        if self.total < 100:
+            self.done = int(self.done)
+        if show:
+            self.show()
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     import time
     print("Test 1: 0-100")
     test = loading_bar("Test 1", 100, size=50)

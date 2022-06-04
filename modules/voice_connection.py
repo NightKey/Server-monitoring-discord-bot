@@ -9,7 +9,9 @@ from smdb_logger import Logger
 from . import log_level, log_folder
 from os import path
 
-logger = Logger("VCConnectionHelper.log", log_folder=log_folder, level=log_level, log_to_console=True, use_caller_name=True, use_file_names=True)
+logger = Logger("VCConnectionHelper.log", log_folder=log_folder, level=log_level,
+                log_to_console=True, use_caller_name=True, use_file_names=True)
+
 
 class VCStatus(Enum):
     disconnected = 0
@@ -19,9 +21,10 @@ class VCStatus(Enum):
 
     def from_bool(boolean: bool) -> 'VCStatus':
         return VCStatus.connected if boolean else VCStatus.disconnected
-    
+
     def to_bool(status: 'VCStatus') -> bool:
         return status.value != VCStatus.disconnected.value
+
 
 class VCRequest(Enum):
     queue = -3
@@ -37,9 +40,10 @@ class VCRequest(Enum):
 
     def need_path(value: "VCRequest") -> bool:
         return (value.value > 0 and value.value % 2 != 0) or value.value == 0
-    
+
     def need_user(value: "VCRequest") -> bool:
         return value.value > 0 and value != VCRequest.add
+
 
 class IdleTimer:
     def __init__(self) -> None:
@@ -63,12 +67,14 @@ class IdleTimer:
     def __timer(self) -> None:
         counter = 0
         for _ in range(0, self.time_to_wait, self.sleep_time):
-            if self.cancelled: return self.__reset()
+            if self.cancelled:
+                return self.__reset()
             sleep(self.sleep_time)
             counter += 1
-            if self.cancelled: return self.__reset()
+            if self.cancelled:
+                return self.__reset()
         else:
-            if self.time_to_wait%counter != 0:
+            if self.time_to_wait % counter != 0:
                 sleep(1)
             self.call_after()
             return
@@ -80,8 +86,9 @@ class IdleTimer:
     def cancel(self) -> None:
         self.cancelled = True
 
+
 class VoiceConnection:
-    
+
     def __init__(self, loop: asyncio.AbstractEventLoop, track_finished_callback: Union[Callable[[str], None], None] = None) -> None:
         self.is_connected = False
         self.voice_channel: Union[VoiceChannel, None] = None
@@ -96,30 +103,37 @@ class VoiceConnection:
         self.disconnect_timer = IdleTimer()
         self.manually_stopped = False
         self.track_finished_callback = track_finished_callback
-    
+
     def __connect(self, channel: VoiceChannel) -> None:
         task = self.loop.create_task(self.connect(channel))
         while not task.done():
             sleep(0.1)
 
     def start_disconnect_timer(self):
-        self.disconnect_timer.start(self.disconnect_time.seconds, self.__disconnect)
-    
+        self.disconnect_timer.start(
+            self.disconnect_time.seconds, self.__disconnect)
+
     def connection_status(self, channel: Union[VoiceChannel, None]) -> VCStatus:
-        if channel is None: return VCStatus.from_bool(self.is_connected)
-        elif not self.is_connected: return VCStatus.disconnected
-        elif self.voice_channel == channel: return VCStatus.sameChannel
-        else: return VCStatus.differentChannel
+        if channel is None:
+            return VCStatus.from_bool(self.is_connected)
+        elif not self.is_connected:
+            return VCStatus.disconnected
+        elif self.voice_channel == channel:
+            return VCStatus.sameChannel
+        else:
+            return VCStatus.differentChannel
 
     def __should_proceed(self, user: Member) -> bool:
         return self.connection_status(user.voice.channel) == VCStatus.sameChannel
 
     async def connect(self, channel: VoiceChannel) -> bool:
         logger.debug(f"Connecting to voice channel: {channel.name}")
-        if not opus.is_loaded() and not opus._load_default(): return False
+        if not opus.is_loaded() and not opus._load_default():
+            return False
         status = self.connection_status(channel)
-        if status == VCStatus.sameChannel: return True
-        if status != VCStatus.disconnected: 
+        if status == VCStatus.sameChannel:
+            return True
+        if status != VCStatus.disconnected:
             await self.client.move_to(channel)
             return True
         self.is_connected = True
@@ -134,11 +148,13 @@ class VoiceConnection:
 
     async def disconnect(self, force: bool = False) -> None:
         logger.debug("Disconnecting from current channel")
-        if self.is_connected: await self.client.disconnect(force=force)
+        if self.is_connected:
+            await self.client.disconnect(force=force)
         self.disconnect_timer.cancel()
-        if self.playing: self.stop()
+        if self.playing:
+            self.stop()
         self.__reset_state()
-    
+
     def __reset_state(self) -> None:
         self.playing = False
         self.paused = False
@@ -153,7 +169,7 @@ class VoiceConnection:
             self.track_finished_callback(self.currently_playing)
 
     def __finished_playing(self, ex: BaseException = None) -> bool:
-        if ex is not None: 
+        if ex is not None:
             logger.error("Exception while playing mp3 file!")
             logger.debug(f"Currently playing: {self.currently_playing}")
             logger.debug(f"Playlist: {self.play_list}")
@@ -171,38 +187,45 @@ class VoiceConnection:
         self.start_disconnect_timer()
         self.playing = False
         self.paused = False
-            
+
     def play_next(self) -> Coroutine['VoiceConnection', Any, None]:
         if self.playing:
             self.stop()
-        if len(self.play_list) <= 0: return
+        if len(self.play_list) <= 0:
+            return
         tmp = str(self.play_list[0])
         logger.debug(f"Starting new song {path.split(tmp)[1]}")
         del self.play_list[0]
         self.play(tmp, _forced=True)
 
     def add_mp3_file_to_playlist(self, path: str) -> bool:
-        if path not in self.play_list: self.play_list.append(path)
+        if path not in self.play_list:
+            self.play_list.append(path)
         return True
-    
+
     def pause(self, user: Member) -> bool:
-        if not self.__should_proceed(user): return False
+        if not self.__should_proceed(user):
+            return False
         self.client.pause()
         self.paused = True
         self.start_disconnect_timer()
         return True
 
     def resume(self, user: Member) -> bool:
-        if not self.__should_proceed(user): return False
+        if not self.__should_proceed(user):
+            return False
         self.client.resume()
         self.paused = False
         self.disconnect_timer.cancel()
         return True
 
     def stop(self, user: Member = None, forced: bool = False) -> bool:
-        if (user is not None and not self.__should_proceed(user)): return False
-        if user is None and not forced: return False
-        if not self.playing: return False
+        if (user is not None and not self.__should_proceed(user)):
+            return False
+        if user is None and not forced:
+            return False
+        if not self.playing:
+            return False
         self.playing = False
         self.paused = False
         self.manually_stopped = True
@@ -212,9 +235,11 @@ class VoiceConnection:
         return True
 
     def skip(self, user: Member) -> bool:
-        if not self.__should_proceed(user): return False
-        if self.play_list == [] or not self.playing: 
-            logger.debug("Playlist is empty!" if self.play_list == [] else "Not playing anything!")
+        if not self.__should_proceed(user):
+            return False
+        if self.play_list == [] or not self.playing:
+            logger.debug("Playlist is empty!" if self.play_list ==
+                         [] else "Not playing anything!")
             return False
         self.client.stop()
         self.__track_finished()
@@ -231,15 +256,19 @@ class VoiceConnection:
             return None
 
     def play(self, path: str, user: Union[Member, None] = None, _forced: bool = False) -> bool:
-        if (not opus.is_loaded() and not opus._load_default()): return False
+        if (not opus.is_loaded() and not opus._load_default()):
+            return False
         logger.debug(f"Request file path: {path}")
-        if not _forced and not self.is_connected and user.voice.channel is not None: 
+        if not _forced and not self.is_connected and user.voice.channel is not None:
             thread = Thread(target=self.__connect, args=[user.voice.channel, ])
             thread.start()
             thread.join()
-        elif not _forced and user.voice.channel is None: return False
-        if user is not None and not self.__should_proceed(user): return False
-        if user is None and not _forced: return False
+        elif not _forced and user.voice.channel is None:
+            return False
+        if user is not None and not self.__should_proceed(user):
+            return False
+        if user is None and not _forced:
+            return False
         if self.playing and not self.paused and not _forced:
             self.add_mp3_file_to_playlist(path)
             return True
