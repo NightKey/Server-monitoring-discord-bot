@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 import inspect
 from typing import Callable, List
 from enum import Enum
-from os import path, walk, remove
+from os import path, walk, remove, mkdir
 from sys import stdout
 from shutil import copy
 
@@ -74,6 +74,13 @@ class Logger:
         if clear:
             with open(path.join(log_folder, log_file), "w"):
                 pass
+        if not path.exists(log_folder):
+            if "/" not in log_folder or "\\" not in log_folder:
+                log_folder = path.join(path.curdir, log_folder)
+            mkdir(log_folder)
+        elif not path.isdir(log_folder):
+            raise IOError(
+                "Argument `log_folder` can only reffer to a directory!")
 
     def __check_logfile(self) -> None:
         if self.max_logfile_size != -1 and (path.getsize(self.log_file) / 1024 ^ 2) > self.max_logfile_size:
@@ -101,7 +108,8 @@ class Logger:
                 f.write(log_msg)
                 f.write("\n")
         if len(self.stored_logs) > 500 or flush:
-            if log_msg == "": del self.stored_logs[-1]
+            if log_msg == "":
+                del self.stored_logs[-1]
             with open(path.join(self.log_folder, self.log_file), "a", encoding="UTF-8") as f:
                 f.write("\n".join(self.stored_logs))
                 self.stored_logs = []

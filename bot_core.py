@@ -255,7 +255,7 @@ Category: SOFTWARE
             bot_status.add_field(name=name, value=(
                 "Active" if thread.is_alive() else "Inactive"))
         bot_status.set_author(name="Night Key", url="https://github.com/NightKey",
-                              icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
+                              icon_url="https://avatars.githubusercontent.com/u/8132508?s=400&v=4")
 
     if stype.lower() in ["short", "long", "watchdog"]:
         process_list = scann(process_list, psutil.process_iter())
@@ -283,7 +283,7 @@ Category: SOFTWARE
         host_status = discord.Embed(
             title=f"{pc_name}'s status", color=0x14f9a2)
         host_status.set_footer(text="Created by Night Key @ https://github.com/NightKey",
-                               icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
+                               icon_url="https://avatars.githubusercontent.com/u/8132508?s=400&v=4")
         stts = status.get_graphical(bar_size, True)
         for key, value in stts.items():
             val = ("Status" if len(value) > 1 else value[0])
@@ -713,14 +713,14 @@ Category: BOT
         embed = discord.Embed(
             title="Help", description=f"Currently {len(linking.keys())+len(outside_options.keys())} commands and {len(categories.keys())} categories are avaleable", color=0x0083fb)
         embed.set_author(name="Night Key", url="https://github.com/NightKey",
-                         icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
+                         icon_url="https://avatars.githubusercontent.com/u/8132508?s=400&v=4")
         for key, value in categories.items():
             embed.add_field(name=key, value=value, inline=False)
     elif what == 'all':
         embed = discord.Embed(
             title="Help", description=f"Showing all commands!", color=0x0083fb)
         embed.set_author(name="Night Key", url="https://github.com/NightKey",
-                         icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
+                         icon_url="https://avatars.githubusercontent.com/u/8132508?s=400&v=4")
         for key, value in linking.items():
             if value[1] and not is_admin:
                 continue
@@ -758,7 +758,7 @@ Category: BOT
         embed = discord.Embed(title=f"Help for the {what.upper()} category",
                               description=f"Currently {len(linking.keys())+len(outside_options.keys())} commands and {len(categories.keys())} categories are avaleable", color=0x0083fb)
         embed.set_author(name="Night Key", url="https://github.com/NightKey",
-                         icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
+                         icon_url="https://avatars.githubusercontent.com/u/8132508?s=400&v=4")
         for key, value in linking.items():
             if value[1] and not is_admin:
                 continue
@@ -805,13 +805,13 @@ Category: BOT
             embed = discord.Embed(
                 title=f"Help for the {what} command", description=linking[what][0].__doc__, color=0xb000ff)
             embed.set_author(name="Night Key", url="https://github.com/NightKey",
-                             icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
+                             icon_url="https://avatars.githubusercontent.com/u/8132508?s=400&v=4")
     elif f"{what}" in outside_options.keys():
         if is_admin:
             embed = discord.Embed(
                 title=f"Help for the {what} command", description=outside_options[what].__doc__, color=0xb000ff)
             embed.set_author(name="Night Key", url="https://github.com/NightKey",
-                             icon_url="https://cdn.discordapp.com/avatars/165892968283242497/e2dd1a75340e182d73dda34e5f1d9e38.png?size=128")
+                             icon_url="https://avatars.githubusercontent.com/u/8132508?s=400&v=4")
     try:
         await message.channel.send(embed=embed)
     except:
@@ -961,7 +961,7 @@ async def on_message(message):
                 try:
                     if cmd in linking.keys():
                         await linking[cmd][0](message, etc)
-                    elif cmd in outside_options.keys():
+                    if cmd in outside_options.keys():
                         outside_options[cmd](server, Message.create_message(str(message.author.id), etc, str(message.channel.id), [
                                              Attachment.from_discord_attachment(attachment) for attachment in message.attachments], None))
                 except Exception as ex:
@@ -982,26 +982,24 @@ async def on_message(message):
                 elif mx['value'] > 70:
                     await message.add_reaction("👎")
                     await message.channel.send(f"Did you mean `{mx['key']}`? Probability: {mx['value']}%")
+                for key in outside_options.keys():
+                    tmp = fuzz.ratio(cmd.lower(), key.lower())
+                    if 'value' not in mx or mx["value"] < tmp:
+                        mx["key"] = key
+                        mx["value"] = tmp
+                if 'value' in mx and mx['value'] == 100:
+                    try:
+                        outside_options[mx["key"]](server, Message.create_message(str(message.author.id), etc, str(message.channel.id), [
+                            Attachment.from_discord_attachment(attachment) for attachment in message.attachments], None))
+                        await message.add_reaction("dot:577128688433496073")
+                    except Exception as ex:
+                        await message.channel.send(f"Error runnig the '{cmd}' command: {ex}\nInterpreted command: {mx['key']}")
+                elif 'value' in mx and mx['value'] > 70:
+                    await message.add_reaction("👎")
+                    await message.channel.send(f"Did you mean `{mx['key']}`? Probability: {mx['value']}%")
                 else:
-                    mx = {}
-                    for key in outside_options.keys():
-                        tmp = fuzz.ratio(cmd.lower(), key.lower())
-                        if 'value' not in mx or mx["value"] < tmp:
-                            mx["key"] = key
-                            mx["value"] = tmp
-                    if 'value' in mx and mx['value'] == 100:
-                        try:
-                            outside_options[mx["key"]](server, Message.create_message(str(message.author.id), etc, str(message.channel.id), [
-                                                       Attachment.from_discord_attachment(attachment) for attachment in message.attachments], None))
-                            await message.add_reaction("dot:577128688433496073")
-                        except Exception as ex:
-                            await message.channel.send(f"Error runnig the '{cmd}' command: {ex}\nInterpreted command: {mx['key']}")
-                    elif 'value' in mx and mx['value'] > 70:
-                        await message.add_reaction("👎")
-                        await message.channel.send(f"Did you mean `{mx['key']}`? Probability: {mx['value']}%")
-                    else:
-                        await message.add_reaction("👎")
-                        await message.channel.send("Not a valid command!\nUse '&help' for the avaleable commands")
+                    await message.add_reaction("👎")
+                    await message.channel.send("Not a valid command!\nUse '&help' for the avaleable commands")
 
 
 def disconnect_check(loop, channels):
@@ -1093,11 +1091,18 @@ def send_message(msg: Message):
 
 
 async def _send_message(msg: Message, channel: discord.TextChannel):
-    embed = None
+    embed: Union[discord.Embed, None] = None
     try:
-        embed = json.loads(msg.content)
-        embed["footer"] = {"text": "Created using SMDB API"}
-        embed["color"] = 0xB200FF
+        tmp = json.loads(msg.content)
+        logger.debug(f"Creating embed with data: {tmp}")
+        embed = discord.Embed()
+        [embed.add_field(name=key, value=value)
+         for key, value in tmp["fields"].items()]
+        embed.title = tmp["title"]
+        embed.description = "Created using SMDB API"
+        embed.color = 0xB200FF
+        embed.set_author(name="Night Key", url="https://github.com/NightKey",
+                         icon_url="https://avatars.githubusercontent.com/u/8132508?s=400&v=4")
     except:
         pass
     if len(msg.attachments) > 0:
