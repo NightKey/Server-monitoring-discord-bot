@@ -41,6 +41,7 @@ loop: asyncio.AbstractEventLoop = None
 watchdog: Watchdog = None
 server: Server = None
 admin_key = None
+me = None
 
 
 class signals:
@@ -401,6 +402,7 @@ It does a system scann for the running programs.
     logger.debug('Startup check started')
     start = process_time()
     global was_online
+    global me
     # Sets the channel to the first valid channel, and runs a scann.
     for channel in client.get_all_channels():
         if str(channel) in channels:
@@ -435,6 +437,7 @@ It does a system scann for the running programs.
     global trys
     trys = 0
     # The bot totally started up, and ready.
+    me = client.get_user(id)
     logger.info("Bot started up correctly!")
 
 
@@ -950,7 +953,6 @@ async def on_message(message):
     """This get's called when a message was sent to the server. It checks for all the usable commands, and executes them, if they were sent to the correct channel.
     """
     global server
-    me = client.get_user(id)
     if message.author != me:
         if message.content.startswith('&') or message.channel.type == discord.ChannelType.private:
             splt = message.content.replace('&', '').split(' ')
