@@ -442,10 +442,10 @@ It does a system scann for the running programs.
 
 
 async def echo(message, _):
-    """Responds with 'echo' and shows the current latency
+    """Responds with 'ping' and shows the current latency, and the PID if the user was an admin
 Category: SERVER
     """
-    await message.channel.send(f'echo {int(client.latency*1000)} ms')
+    await message.channel.send(f'ping: {int(client.latency*1000)} ms{ f" PID: {os.getpid()}" if str(message.author.id) in admins else ""}')
 
 
 async def send_link(message, _):
