@@ -1,5 +1,3 @@
-from modules import log_level, log_folder
-from smdb_logger import Logger
 import subprocess
 import errno
 from platform import system
@@ -7,6 +5,14 @@ from os import system as run
 from os import path, remove, rename
 from sys import argv, gettrace
 from time import sleep
+try:
+    from modules import log_level, log_folder
+    from smdb_logger import Logger
+except:
+    run("pip install -r dependencies.txt > remove")
+    remove("remove")
+    from modules import log_level, log_folder
+    from smdb_logger import Logger
 
 
 def is_debugger():
