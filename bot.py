@@ -32,6 +32,7 @@ logger = Logger("bot_runner.log", log_folder=log_folder, level=log_level,
 def install_dependencies(sudo: bool):
     pre = "sudo " if system() == 'Linux' and sudo else ""
     post = " --user" if system() == 'Windows' and sudo else ""
+    logger.debug(f"System: {system()}")
     if sudo:
         logger.info("Upgrading pip...")
         run(f"{pre}{interpreter} -m pip install{post} --upgrade pip > remove")
