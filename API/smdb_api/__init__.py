@@ -62,20 +62,20 @@ class Attachment:
         import requests
         return requests.get(self.url)
 
-    def save(self, path: str) -> str:
-        if not path.exists(path):
+    def save(self, save_path: str) -> str:
+        if not path.exists(save_path):
             return ""
         tmp = self.filename
         n = 1
-        while path.exists(path.join(path, tmp)):
+        while path.exists(path.join(save_path, tmp)):
             tmp = "".join((".".join(self.filename.split(
                 ".")[:-1]), f"({n}).", self.filename.split(".")[-1]))
             n += 1
         self.filename = tmp
         file = self.download()
-        with open(path.join(path, self.filename), "wb") as f:
+        with open(path.join(save_path, self.filename), "wb") as f:
             f.write(file.content)
-        return path.join(path, self.filename)
+        return path.join(save_path, self.filename)
 
     def to_json(self) -> dict:
         return {"filename": self.filename, "size": self.size, "url": self.url}

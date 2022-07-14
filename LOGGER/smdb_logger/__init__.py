@@ -43,6 +43,22 @@ class COLOR(Enum):
 class Logger:
     __slots__ = "log_file", "allowed", "log_to_console", "storage_life_extender_mode", "stored_logs", "max_logfile_size", "max_logfile_lifetime", "__print", "use_caller_name", "use_file_names", "header_used", "log_folder", "level_only_valid_for_console"
 
+    """
+    Creates a logger with specific functions needed for server monitoring discord bot.
+    log_file: Log file name
+    log_folder: Absoluth path to the log file's location
+    clear (False): Clear the (last used) log file from it's contents
+    level (LEVEL.INFO): Sets the level of the logging done
+    log_to_console (False): Allows the logger to show logs in the console window if exists
+    storage_life_extender_mode (False): Stores the logs in memory instead of on storage media and only saves sometimes to preserve it's lifetime
+    max_logfile_size (-1): Sets the maximum allowed log file size in MiB. By default it's set to -1 meaning no limit.
+    max_logfile_lifetime (-1): Sets the maximum allowed log file life time in Days. By default it's set to -1 meaning no limit.
+    __print (stdout.write): The function to use to log to console.
+    use_caller_name (False): Allows the logger to use the caller functions name (with full call path) instead of the level. It only concerns logging to console.
+    use_file_names (True): Sets if the file name should be added to the begining of the caller name. It only concerns logging to console.
+    level_only_valid_for_console (False): Sets if the level set is only concerns the logging to console, or to file as well.
+    """
+
     def __init__(
         self,
         log_file: str,
@@ -71,9 +87,6 @@ class Logger:
         self.use_file_names = use_file_names
         self.header_used = False
         self.level_only_valid_for_console = level_only_valid_for_console
-        if clear:
-            with open(path.join(log_folder, log_file), "w"):
-                pass
         if not path.exists(log_folder):
             if "/" not in log_folder or "\\" not in log_folder:
                 log_folder = path.join(path.curdir, log_folder)
@@ -81,6 +94,9 @@ class Logger:
         elif not path.isdir(log_folder):
             raise IOError(
                 "Argument `log_folder` can only reffer to a directory!")
+        if clear:
+            with open(path.join(log_folder, log_file), "w"):
+                pass
 
     def __check_logfile(self) -> None:
         if self.max_logfile_size != -1 and (path.getsize(self.log_file) / 1024 ^ 2) > self.max_logfile_size:
