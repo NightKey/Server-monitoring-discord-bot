@@ -69,6 +69,10 @@ The consol logging uses colors for the different levels to be more recognisable 
 
     Sets the loggers leve to be used from this point onwards.
 
+### set_folder(folder)
+
+    Sets the loggers folder to be used from thi point. It also runs the basic validation on the inputed path.
+
 ### log(level, data, counter = str(datetime.now()), end = "\n")
 
     Creates a log entry with the given level.
