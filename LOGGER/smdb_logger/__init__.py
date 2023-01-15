@@ -1,10 +1,11 @@
-from datetime import datetime, timedelta
+from datetime import timedelta, datetime
+from time import time
 import inspect
 from typing import Callable, List
 from enum import Enum
 from os import path, walk, remove, mkdir
 from sys import stdout
-from shutil import copy
+from shutil import move
 
 
 class LEVEL(Enum):
@@ -91,18 +92,21 @@ class Logger:
             with open(path.join(log_folder, log_file), "w"):
                 pass
 
+    def get_date(self, timestamp: float = time(), format_string: str = r"%Y.%m.%d-%I:%M:%S") -> datetime:
+        return datetime.fromtimestamp(timestamp).strftime(format_string)
+
     def __check_logfile(self) -> None:
         if self.max_logfile_size != -1 and path.exists(path.join(self.log_folder, self.log_file)) and (path.getsize(path.join(self.log_folder, self.log_file)) / (1024 ^ 2)) > self.max_logfile_size:
             tmp = self.log_file.split(".")
-            tmp[0] += str(datetime.now())
+            tmp[0] += str(self.get_date(format_string=r"%y.%m.%d-%I"))
             new_name = ".".join(tmp)
-            copy(path.join(self.log_folder, self.log_file),
+            move(path.join(self.log_folder, self.log_file),
                  path.join(self.log_folder, new_name))
 
         if self.max_logfile_lifetime != -1:
             names = self.__get_all_logfile_names()
             for name in names:
-                if name != self.log_file and datetime.now() - datetime.fromtimestamp(path.getctime(name)) > timedelta(days=self.max_logfile_lifetime):
+                if name != self.log_file and self.get_date() - self.get_date(path.getctime(name)) > timedelta(days=self.max_logfile_lifetime):
                     remove(name)
 
     def __get_all_logfile_names(self) -> List[str]:
@@ -143,6 +147,8 @@ class Logger:
         return f"{previous_filename}->{caller}" if self.use_file_names else caller
 
     def __log(self, level: LEVEL, data: str, counter: str, end: str) -> None:
+        if (counter is None):
+            counter = str(self.get_date())
         log_msg = f"[{counter}] [{level.value}]: {data}"
         if self.header_used and level != LEVEL.HEADER:
             log_msg = f"\t{log_msg}"
@@ -178,7 +184,7 @@ class Logger:
             raise IOError(
                 "Argument `log_folder` can only reffer to a directory!")
 
-    def log(self, level: LEVEL, data: str, counter: str = str(datetime.now()), end: str = "\n") -> None:
+    def log(self, level: LEVEL, data: str, counter: str = None, end: str = "\n") -> None:
         if level == LEVEL.INFO:
             self.info(data, counter, end)
         elif level == LEVEL.WARNING:
@@ -190,7 +196,7 @@ class Logger:
         else:
             self.debug(data, counter, end)
 
-    def header(self, data: str, counter: str = str(datetime.now()), end: str = "\n") -> None:
+    def header(self, data: str, counter: str = None, end: str = "\n") -> None:
         decor = list("="*40)
         decor.insert(int(20-len(data) / 2), data)
         final_decor = decor[0:int(20-len(data) / 2) + 1]
@@ -198,14 +204,14 @@ class Logger:
         self.__log(LEVEL.HEADER, "".join(final_decor), counter, end)
         self.header_used = True
 
-    def debug(self, data: str, counter: str = str(datetime.now()), end: str = "\n") -> None:
+    def debug(self, data: str, counter: str = None, end: str = "\n") -> None:
         self.__log(LEVEL.DEBUG, data, counter, end)
 
-    def warning(self, data: str, counter: str = str(datetime.now()), end: str = "\n") -> None:
+    def warning(self, data: str, counter: str = None, end: str = "\n") -> None:
         self.__log(LEVEL.WARNING, data, counter, end)
 
-    def info(self, data: str, counter: str = str(datetime.now()), end: str = "\n") -> None:
+    def info(self, data: str, counter: str = None, end: str = "\n") -> None:
         self.__log(LEVEL.INFO, data, counter, end)
 
-    def error(self, data: str, counter: str = str(datetime.now()), end: str = "\n") -> None:
+    def error(self, data: str, counter: str = None, end: str = "\n") -> None:
         self.__log(LEVEL.ERROR, data, counter, end)
