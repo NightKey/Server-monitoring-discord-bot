@@ -1,15 +1,20 @@
-import unittest
-import os,sys,inspect,threading
-
-currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-parentdir = os.path.dirname(currentdir)
-sys.path.insert(0,parentdir)
-import smdb_api
-parentdir = os.path.dirname(parentdir)
-sys.path.insert(0,parentdir) 
-from modules import services, response
-from modules.logger import Logger
 from time import sleep
+from smdb_logger import Logger
+from modules import services, response
+import smdb_api
+import unittest
+import os
+import sys
+import inspect
+import threading
+
+currentdir = os.path.dirname(os.path.abspath(
+    inspect.getfile(inspect.currentframe())))
+parentdir = os.path.dirname(currentdir)
+sys.path.insert(0, parentdir)
+parentdir = os.path.dirname(parentdir)
+sys.path.insert(0, parentdir)
+
 
 class API_CreationTest(unittest.TestCase):
 
@@ -17,9 +22,10 @@ class API_CreationTest(unittest.TestCase):
         self.assertTrue(api.validate())
         sleep(0.5)
         self.assertTrue(api.valid)
-    
+
     def test_2_api_gets_status(self):
-        self.assertEqual(api.get_status(), {"dummy server status":"Avaleable"})
+        self.assertEqual(api.get_status(), {
+                         "dummy server status": "Avaleable"})
 
     def test_3_api_sends_message(self):
         api.send_message("Test", destination="123456789")
@@ -47,7 +53,7 @@ class API_CreationTest(unittest.TestCase):
         self.assertTrue(api.skip_currently_playing("123456789"))
         self.assertTrue(api.stop_currently_playing("123456789"))
         self.assertTrue(api.get_queue())
-    
+
     def test_8_rejects_same_message(self):
         self.counter = 0
         api.create_function("Test2", "Test", self.reject)
@@ -56,7 +62,7 @@ class API_CreationTest(unittest.TestCase):
         server.Test2(server, msg)
         server.Test2(server, msg)
         self.assertEqual(self.counter, 1)
-    
+
     def test_9_can_save_and_load_configs(self):
         file_name = "test.conf"
         smdb_api.API.create_config("name", "key", "ip", 12345, file_name)
@@ -74,50 +80,66 @@ class API_CreationTest(unittest.TestCase):
     def dummy_callback(self, _input):
         self.assertEqual(_input.sender, "sender")
 
+
 def linking_editor(data, remove=False):
     pass
 
+
 def get_status():
-    return {"dummy server status":"Avaleable"}
+    return {"dummy server status": "Avaleable"}
+
 
 def send_message(msg, user=None):
-    return response.response("Success")
+    return response.Response(response.ResponseCode.Success)
+
 
 def get_user(uid):
-    return response.response("Success", uid)
+    return response.Response(response.ResponseCode.Success, uid)
+
 
 def is_admin(uid):
-    return response.response("Success", uid=="123")
+    return response.Response(response.ResponseCode.Success, uid == "123")
 
-def voice_connection_managger(request, user_id = None, path = None):
+
+def voice_connection_managger(request, user_id=None, path=None):
     return True
+
 
 class Message_function_test(unittest.TestCase):
 
     def test_1_message_contains_user(self):
-        msg = smdb_api.Message("sender", "the message content <@!000000000000000000>", "channel", [], "called")
+        msg = smdb_api.Message(
+            "sender", "the message content <@!000000000000000000>", "channel", [], "called")
         self.assertTrue(msg.contains_user())
-        msg = smdb_api.Message("sender", "the message content", "channel", [], "called")
+        msg = smdb_api.Message(
+            "sender", "the message content", "channel", [], "called")
         self.assertFalse(msg.contains_user())
-    
+
     def test_2_message_returns_correct_tag(self):
-        msg = smdb_api.Message("sender", "the message content <@!000000000000000000>", "channel", [], "called")
+        msg = smdb_api.Message(
+            "sender", "the message content <@!000000000000000000>", "channel", [], "called")
         self.assertEqual("000000000000000000", msg.get_contained_user_id())
-        msg = smdb_api.Message("sender", "the message content", "channel", [], "called")
+        msg = smdb_api.Message(
+            "sender", "the message content", "channel", [], "called")
         self.assertEqual("", msg.get_contained_user_id())
-        msg = smdb_api.Message("sender", "the <@!000000000000000000> message content", "channel", [], "called")
+        msg = smdb_api.Message(
+            "sender", "the <@!000000000000000000> message content", "channel", [], "called")
         self.assertEqual("000000000000000000", msg.get_contained_user_id())
 
     def test_3_message_has_attachment(self):
-        msg = smdb_api.Message("sender", "the message content", "channel", [], "called")
+        msg = smdb_api.Message(
+            "sender", "the message content", "channel", [], "called")
         self.assertFalse(msg.has_attachments())
-        msg = smdb_api.Message("sender", "the message content", "channel", [smdb_api.Attachment("name", "url", 12)], "called")
+        msg = smdb_api.Message("sender", "the message content", "channel", [
+                               smdb_api.Attachment("name", "url", 12)], "called")
         self.assertTrue(msg.has_attachments())
+
 
 if __name__ == "__main__":
     print("Creating dummy server...")
     services.logger = Logger("test", storage_life_extender_mode=True)
-    server = services.Server(linking_editor, get_status, send_message, get_user, is_admin, voice_connection_managger)
+    server = services.Server(linking_editor, get_status, send_message,
+                             get_user, is_admin, voice_connection_managger)
     server._start_for_test()
     th = threading.Thread(target=server.loop)
     th.name = "Dummy server"
@@ -126,7 +148,8 @@ if __name__ == "__main__":
     print("Setting up unit test data")
     name = "Test"
     key = server.get_api_key_for("Test")
-    api = smdb_api.API(name, key, update_function=lambda: print("Update called"))
+    api = smdb_api.API(
+        name, key, update_function=lambda: print("Update called"))
     print("Unit test started")
     unittest.main(exit=False)
     print("Stopping dummy server")

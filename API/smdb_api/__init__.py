@@ -11,6 +11,7 @@ from time import sleep, time
 from datetime import datetime
 from typing import Any, Callable, List, Union
 from hashlib import sha256
+from enum import Enum
 
 from requests.models import Response
 
@@ -81,26 +82,32 @@ class Attachment:
         return {"filename": self.filename, "size": self.size, "url": self.url}
 
 
+class Interface(Enum):
+    Discord = 0
+    Telegramm = 1
+
+
 class Message:
     """Message object used by the api"""
     USER_REGX = r"(<@![0-9]+>){1}"
 
     def from_json(json) -> "Message":
         msg = Message(json["sender"], json["content"], json["channel"], [Attachment.from_json(attachment)
-                      for attachment in json["attachments"]] if json["attachments"] is not None else [], json["called"])
+                      for attachment in json["attachments"]] if json["attachments"] is not None else [], json["called"], json["interface"])
         if "random_id" in json:
             msg.random_id = json["random_id"]
         return msg
 
-    def create_message(sender: str, content: str, channel: str, attachments: List[Attachment], called: str) -> "Message":
-        return Message(sender, content if content is not None else "", channel, attachments, called)
+    def create_message(sender: str, content: str, channel: str, attachments: List[Attachment], called: str, interface: Interface) -> "Message":
+        return Message(sender, content if content is not None else "", channel, attachments, called, interface)
 
-    def __init__(self, sender: str, content: str, channel: str, attachments: List[Attachment], called: str) -> None:
+    def __init__(self, sender: str, content: str, channel: str, attachments: List[Attachment], called: str, interface: Interface) -> None:
         self.sender = sender
         self.content = content
         self.channel = channel
         self.attachments = attachments
         self.called = called
+        self.interface = interface
         self.random_id = sha256(
             f"{sender}{content}{channel}{called}{datetime.now()}".encode("utf-8")).hexdigest()
 
@@ -123,7 +130,15 @@ class Message:
         return len(self.attachments) > 0
 
     def to_json(self) -> dict:
-        return {"sender": self.sender, "content": self.content, "channel": self.channel, "called": self.called, "attachments": [attachment.to_json() for attachment in self.attachments] if len(self.attachments) > 0 else None, "random_id": self.random_id}
+        return {
+            "sender": self.sender,
+            "content": self.content,
+            "channel": self.channel,
+            "called": self.called,
+            "attachments": [attachment.to_json() for attachment in self.attachments] if len(self.attachments) > 0 else None,
+            "interface": self.interface,
+            "random_id": self.random_id
+        }
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Message):
@@ -377,11 +392,11 @@ class API:
         tmp = self.__wait_for_response()
         return tmp["Data"] if tmp["Response"] == "Success" else "unknown"
 
-    def send_message(self, message: str, destination: str = None, file_path: str = None) -> bool:
+    def send_message(self, message: str, interface: Interface, destination: str = None, file_path: str = None) -> bool:
         """Sends a message trough the discord bot.
         """
         msg = Message("API", message, destination, [Attachment(file_path.split(
-            "/")[-1], file_path, path.getsize(file_path))] if file_path is not None else [], "API")
+            "/")[-1], file_path, path.getsize(file_path))] if file_path is not None else [], "API", interface)
         if self.valid:
             self.sending = True
             self.__send({"Command": "Send", 'Value': msg.to_json()})
