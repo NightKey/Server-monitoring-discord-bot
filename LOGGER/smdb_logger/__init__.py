@@ -92,7 +92,9 @@ class Logger:
             with open(path.join(log_folder, log_file), "w"):
                 pass
 
-    def get_date(self, timestamp: float = time(), format_string: str = r"%Y.%m.%d-%I:%M:%S") -> datetime:
+    def get_date(self, timestamp: float = None, format_string: str = r"%Y.%m.%d-%I:%M:%S") -> datetime:
+        if timestamp is None:
+            timestamp = time()
         return datetime.fromtimestamp(timestamp).strftime(format_string)
 
     def __check_logfile(self) -> None:
