@@ -404,6 +404,7 @@ It does a system scann for the running programs.
     start = process_time()
     global was_online
     global me
+    me = client.get_user(id)
     # Sets the channel to the first valid channel, and runs a scann.
     for channel in client.get_all_channels():
         if str(channel) in channels:
@@ -438,7 +439,6 @@ It does a system scann for the running programs.
     global trys
     trys = 0
     # The bot totally started up, and ready.
-    me = client.get_user(id)
     logger.info("Bot started up correctly!")
 
 
