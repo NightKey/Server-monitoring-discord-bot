@@ -1,25 +1,26 @@
-from time import sleep
-from smdb_logger import Logger
-from modules import services, response
-import smdb_api
-import unittest
-import os
-import sys
-import inspect
-import threading
-
-currentdir = os.path.dirname(os.path.abspath(
-    inspect.getfile(inspect.currentframe())))
-parentdir = os.path.dirname(currentdir)
-sys.path.insert(0, parentdir)
-parentdir = os.path.dirname(parentdir)
-sys.path.insert(0, parentdir)
+try:
+    from time import sleep
+    from smdb_logger import Logger
+    import unittest
+    import os
+    import sys
+    import inspect
+    import threading
+finally:
+    currentdir = os.path.dirname(os.path.abspath(
+        inspect.getfile(inspect.currentframe())))
+    parentdir = os.path.dirname(currentdir)
+    sys.path.insert(0, parentdir)
+    import smdb_api
+    parentdir = os.path.dirname(parentdir)
+    sys.path.insert(0, parentdir)
+    from modules import services
 
 
 class API_CreationTest(unittest.TestCase):
 
     def test_1_api_validates(self):
-        self.assertTrue(api.validate())
+        self.assertTrue(api.validate(100))
         sleep(0.5)
         self.assertTrue(api.valid)
 
@@ -137,7 +138,8 @@ class Message_function_test(unittest.TestCase):
 
 if __name__ == "__main__":
     print("Creating dummy server...")
-    services.logger = Logger("test", storage_life_extender_mode=True)
+    services.logger = Logger(
+        "test", storage_life_extender_mode=True, log_to_console=True)
     server = services.Server(linking_editor, get_status, send_message,
                              get_user, is_admin, voice_connection_managger)
     server._start_for_test()
