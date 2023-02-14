@@ -223,31 +223,3 @@ class Telegramm():
             self.logger.warning("Shutdown callback is not found!")
             self.send_message(
                 chat_id, "Shutdown is not available at the moment!")
-
-
-if __name__ == "__main__":
-    print("Starting Telegramm bot")
-    bot = Telegramm(
-        "5738974434:AAFhpRt_qdN6-B7GWf230JPUoekBPirACbA", LEVEL.DEBUG, "logs")
-    bot.start()
-    admins = []
-
-    @bot.callback()
-    def is_admin(id: int) -> bool:
-        bot.logger.debug("Outside IsAdmin called")
-        return id in admins
-
-    @bot.callback()
-    def check_admin_password(psw: str) -> bool:
-        bot.logger.debug("Outside CheckAmdinPassword called")
-        return psw == "ASD"
-
-    @bot.callback()
-    def add_admin(id: int) -> None:
-        bot.logger.debug("Outside AddAdmin called")
-        admins.append(id)
-        return True
-
-    bot.send_default_action_buttons(5965064964)
-    input("Waiting on return to stop")
-    bot.stop()
