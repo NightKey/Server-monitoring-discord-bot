@@ -174,14 +174,15 @@ class Watchdog():
                 n = 0
             else:
                 n += 1
-            for key, value in self.process_list.items():
-                if not value[1] and not value[0]:
-                    # Adds the process name, to the message
-                    self.error += f"{key} stopped working!\n"
-                    # Don't want to send the same process more than once every time it stops
-                    self.process_list[key] = [False, True]
-                else:
-                    self.process_list[key] = [False, value[1]]
+            if self.process_list is not None:
+                for key, value in self.process_list.items():
+                    if not value[1] and not value[0]:
+                        # Adds the process name, to the message
+                        self.error += f"{key} stopped working!\n"
+                        # Don't want to send the same process more than once every time it stops
+                        self.process_list[key] = [False, True]
+                    else:
+                        self.process_list[key] = [False, value[1]]
             if self.error != "":
                 logger.error(self.error)
                 if self._ready:
