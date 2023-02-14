@@ -161,6 +161,9 @@ class ResponseCode(Enum):
     def __repr__(self):
         return str(self.value)
 
+    def __eq__(self, __o: object) -> bool:
+        return str(__o) == str(self.value)
+
 
 class Response:
 
@@ -188,7 +191,7 @@ class Response:
 
     @staticmethod
     def from_message(json: dict) -> "Response":
-        return Response(ResponseCode(json["response"]), json["Data"], json["__bool"] if "__bool" in json.keys() else None)
+        return Response(ResponseCode(json["response"]), json["data"], json["__bool"] if "__bool" in json.keys() else None)
 
 
 class MessageSendingResponse():
@@ -327,7 +330,7 @@ class API:
                             self.socket_list = []
                             if self.sending:
                                 self.buffer.append(
-                                    {"response": ResponseCode.InternalError, "Data": "Connection closed"})
+                                    {"response": ResponseCode.InternalError, "data": "Connection closed"})
                         elif self.sending:
                             self.buffer.append(msg)
                             self.last_message = msg
@@ -359,7 +362,7 @@ class API:
         self.socket_list = []
         if self.sending:
             self.buffer.append(
-                {"response": ResponseCode.InternalError, "Data": "Connection closed"})
+                {"response": ResponseCode.InternalError, "data": "Connection closed"})
 
     def __get_copy_function_list(self):
         ret = []
@@ -404,7 +407,7 @@ class API:
             if not isinstance(ansvear, dict):
                 raise ValueError("Bad value retrieved from socket.")
             elif ansvear["response"] == ResponseCode.Denied:
-                raise ValidationError(ansvear["Data"])
+                raise ValidationError(ansvear["data"])
             else:
                 self.valid = True
                 self.socket_list.append(self.socket)
@@ -430,7 +433,7 @@ class API:
             self.__send({"Command": "Is Admin", "Value": uid})
             tmp = self.__wait_for_response()
             if tmp["response"] == ResponseCode.Success:
-                return tmp["Data"]
+                return tmp["data"]
         else:
             NotValidatedError()
 
@@ -457,7 +460,7 @@ class API:
         self.sending = True
         self.__send({"Command": 'Username', "Value": key})
         tmp = self.__wait_for_response()
-        return tmp["Data"] if tmp["response"] == ResponseCode.Success else "unknown"
+        return tmp["data"] if tmp["response"] == ResponseCode.Success else "unknown"
 
     def send_message(self, message: str, interface: Interface, destination: str = None, file_path: str = None) -> bool:
         """Sends a message trough the discord bot.
@@ -469,7 +472,7 @@ class API:
             self.__send({"Command": "Send", 'Value': msg.to_json()})
             tmp = self.__wait_for_response()
             if tmp["response"] == ResponseCode.BadRequest:
-                raise ActionFailed(tmp["Data"])
+                raise ActionFailed(tmp["data"])
             elif tmp["response"] == ResponseCode.InternalError:
                 print(
                     f"[Message sending exception] Internal error: {tmp['Data']}")
@@ -518,7 +521,7 @@ class API:
                 print(
                     f"[_create_function exception] Internal error: {tmp['Data']}")
             else:
-                raise ActionFailed(tmp["Data"])
+                raise ActionFailed(tmp["data"])
         except Exception as ex:
             raise ex
         finally:

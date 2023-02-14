@@ -1,3 +1,4 @@
+from os import path
 from typing import Any, Callable, Dict, List, Union
 from smdb_logger import Logger
 from smdb_api import Message, Response, ResponseCode
@@ -291,7 +292,7 @@ class Server:
         self.send(self.is_admin(uid), socket)
 
     def __read_template__(self, name: str, creator: str, help_text: str) -> str:
-        with open("service_command_template.template", 'r') as f:
+        with open(path.join("templates", "service_command_template.template"), 'r') as f:
             data = f.read(-1)
         return data.replace(r'{help_text}', help_text).replace(
             r'{name}', name).replace(r'{creator}', creator)
@@ -375,8 +376,8 @@ class Server:
                             self.command_retrieved(msg, notified_socket)
                 for notified_socket in exception_socket:
                     self.client_lost(notified_socket)
-            except socket.error:
-                pass
+            except socket.error as er:
+                logger.error(f"{er}")
             except Exception as ex:
                 logger.error(f"{ex}")
         self.socket.close()
