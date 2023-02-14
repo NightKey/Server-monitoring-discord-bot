@@ -20,11 +20,12 @@ def is_debugger():
 
 
 level = "DEBUG" if is_debugger() else "INFO"
-with open(path.join("configs", "level"), "w") as f:
-    f.write(level)
-
-with open(path.join("configs", "folder"), "w") as f:
-    f.write("logs")
+if not path.exists(path.join("configs", "level")):
+    with open(path.join("configs", "level"), "w") as f:
+        f.write(level)
+if not path.exists(path.join("configs", "folder")):
+    with open(path.join("configs", "folder"), "w") as f:
+        f.write("logs")
 
 
 interpreter = 'python' if system() == 'Windows' else 'python3'
