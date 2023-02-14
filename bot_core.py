@@ -1,5 +1,5 @@
 from argparse import ArgumentError
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Dict
 from modules import status, log_level, log_folder
 from modules.watchdog import Watchdog
 from smdb_logger import Logger
@@ -37,7 +37,7 @@ channels = ["commands"]
 is_running = True
 errors = {}
 threads = {}
-admins: dict[str, list] = {}
+admins: Dict[str, list] = {}
 telegramm_bot: Telegramm = None
 telegramm_api_key: str = ""
 loop: asyncio.AbstractEventLoop = None

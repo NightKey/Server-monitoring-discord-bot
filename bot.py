@@ -36,21 +36,20 @@ logger = Logger("bot_runner.log", log_folder=log_folder, level=log_level,
 
 
 def install_dependencies(sudo: bool):
-    pre = "" if system() == 'Linux' and sudo else ""
     post = " --user" if system() == 'Windows' and sudo else ""
     logger.debug(f"System: {system()}")
     if sudo:
         logger.info("Upgrading pip...")
-        run(f"{pre}{interpreter} -m pip install{post} --upgrade pip > remove")
+        run(f"{interpreter} -m pip install{post} --upgrade pip > remove")
     logger.info("Upgrading dependencies...")
     resp = run(
-        f"{pre}{interpreter} -m pip install{post} --upgrade -r dependencies.txt > remove")
+        f"{interpreter} -m pip install{post} --upgrade -r dependencies.txt > remove")
     remove("remove")
     if resp == 0:
         logger.info("Dependencies installed!")
     else:
         logger.error(
-            f"Error in installing dependecies, please install them manually!\nUse the following command: {pre}{interpreter} -m pip install{post} --upgrade -r dependencies.txt")
+            f"Error in installing dependecies, please install them manually!\nUse the following command: {interpreter} -m pip install{post} --upgrade -r dependencies.txt")
     return resp
 
 
