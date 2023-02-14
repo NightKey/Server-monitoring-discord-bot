@@ -4,3 +4,4 @@ fuzzywuzzy
 python-Levenshtein
 PyNaCl
 smdb_logger
+pyTelegramBotAPI

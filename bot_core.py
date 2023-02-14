@@ -1,12 +1,12 @@
 from argparse import ArgumentError
-from typing import List, Union
+from typing import List, Optional, Union
 from modules import status, log_level, log_folder
 from modules.watchdog import Watchdog
 from smdb_logger import Logger
+from smdb_api import Message, Attachment, Interface, Response, MessageSendingResponse, ResponseCode
 from platform import node
-from modules.services import Server, Message, Attachment
+from modules.services import Server
 from modules.scanner import scann
-from modules.response import response
 from modules.voice_connection import VCRequest, VoiceConnection
 from threading import Thread
 from time import sleep, process_time
@@ -19,6 +19,7 @@ import asyncio
 import logging
 import discord
 from fuzzywuzzy import fuzz
+from connectors.telegramm import Telegramm
 
 trys = 0
 token = ""
@@ -36,7 +37,9 @@ channels = ["commands"]
 is_running = True
 errors = {}
 threads = {}
-admins = []
+admins: dict[str, list] = {}
+telegramm_bot: Telegramm = None
+telegramm_api_key: str = ""
 loop: asyncio.AbstractEventLoop = None
 watchdog: Watchdog = None
 server: Server = None
@@ -52,6 +55,7 @@ class signals:
 intents = discord.Intents.default()
 intents.members = True
 intents.voice_states = True
+intents.message_content = True
 # Creates a client instance using the discord  module
 client = discord.Client(heartbeat_timeout=120, intents=intents)
 voice_connection: VoiceConnection = None
@@ -91,7 +95,7 @@ async def updater(message, _=None):
     """Updates the bot, and restarts it after a successfull update.
 Category: BOT
     """
-    if message is None or str(message.channel) in channels or str(message.author.id) in admins:
+    if message is None or str(message.channel) in channels or str(message.author.id) in admins["discord"]:
         from modules import updater
         os.system("pip3 install --user --upgrade smdb_api > update.lg")
         os.system("pip3 install --user --upgrade smdb_logger > update.lg")
@@ -148,7 +152,7 @@ def get_passcode():
 
 def save_cfg():
     tmp = {"token": token, "id": id, 'connections': connections,
-           "admins": admins, "admin key": admin_key}
+           "admins": admins, "admin key": admin_key, "telegramm": telegramm_bot}
     with open(os.path.join("data", "bot.cfg"), 'w') as f:
         json.dump(tmp, f)
 
@@ -166,9 +170,11 @@ def load():
     global connections
     global admins
     global admin_key
+    global telegramm_api_key
     logger.debug("Loading data...")
     if os.path.exists(os.path.join("data", "bot.cfg")):
         try:
+            should_save = False
             with open(os.path.join("data", "bot.cfg"), "r") as f:
                 tmp = json.load(f)
             token = tmp["token"]
@@ -178,12 +184,26 @@ def load():
             except:
                 connections = []
             admins = tmp["admins"]
+            if (isinstance(admins, (list))):
+                admins = {"discord": admins, "telegramm": []}
+                should_save = True
             try:
                 admin_key = tmp['admin key']
             except:
                 admin_key = get_passcode()
-                save_cfg()
+                should_save = True
+            try:
+                telegramm_api_key = tmp['telegramm']
+            except:
+                telegramm_api_key = ""
+                logger.warning(
+                    "No Telegramm token found, please add a Telegramm token, if you wish to use Telegramm as well.")
+                should_save = True
             logger.info("Data loading finished!")
+            if (should_save):
+                logger.info(
+                    "Some config data was not found, re-creating the config files")
+                save_cfg()
             del tmp
         except Exception as ex:  # incase there is an error, the program deletes the file, and restarts
             from datetime import datetime
@@ -197,13 +217,104 @@ def load():
         logger.warning("Data not found!")
         token = input("Type in the token: ")
         me = int(input("Type in this bot's user id: "))
-        admins = str(
-            input("Type in the admin user's ID, separated by a coma (,): ")).split(',')
+        admins = {
+            "discord":
+            str(input("Type in the admin user's Discord ID, separated by a coma (,): ")).split(
+                ','),
+            "telegramm":
+            str(input(
+                "Type in the admin user's Telegramm chat ID, separated by a coma (,): ")).split(',')
+        }
         id = me
         save_cfg()
     check_process_list()
 
 
+def runner(loop: asyncio.AbstractEventLoop) -> None:
+    """Runs the needed things in a way, the watchdog can access the bot client."""
+    if '--nodcc' not in os.sys.argv and "--remote" not in os.sys.argv:
+        start_thread("Disconnect checker")
+    if '--nowd' not in os.sys.argv:
+        start_thread("Watchdog")
+    if "--api" in os.sys.argv and "--remote" not in os.sys.argv:
+        start_thread("API Server")
+    if "--remote" not in os.sys.argv:
+        loop.create_task(start_discord_client(0))
+        loop.run_forever()
+    else:
+        logger.debug("Started in remote mode...")
+        logger.debug("Gathering IP and Authentication code")
+        ip = port = auth = name = None
+        try:
+            ip = os.sys.argv[os.sys.argv.index('--ip') + 1]
+            port = int(os.sys.argv[os.sys.argv.index('--port') + 1])
+            auth = os.sys.argv[os.sys.argv.index('--auth') + 1]
+            name = os.sys.argv[os.sys.argv.index('--name') + 1]
+            if ip is None or port is None or auth is None or name is None:
+                raise ArgumentError(
+                    "Ip, Port, Auth and Name is needed for remote mode!")
+            from smdb_api import API
+            _api = API(name, auth, ip, port)
+            _api.validate(10)
+            if not _api.valid:
+                logger.debug("Validation failed!")
+                signal(signals.exit)
+            _api.create_function(
+                "status", "Scanns the system for the running applications, and creates a message depending on the resoults.\nUsage: &status <long if you want to see the API status too>\nCategory: SOFTWARE")
+        except Exception as ex:
+            logger.error(f"Exception: {ex}")
+            logger.error(f"IP: {ip} Port: {port} Auth: {auth} Name: {name}")
+            logger.error("IP and Authentication code needed in remote mode!")
+            stop()
+            signal(signals.exit)
+
+
+def stop():
+    global is_running
+    if voice_connection is not None and voice_connection.is_connected:
+        loop.create_task(voice_connection.disconnect(True))
+    if was_online:
+        logger.info("Sending stop signal to discord...")
+        loop.create_task(client.logout())
+        loop.create_task(client.close())
+        logger.debug("Waiting for discord to close...")
+        while not client.is_closed():
+            pass
+    if watchdog is not None:
+        logger.info("Stopping watchdogs")
+        watchdog.create_tmp()
+        watchdog.stop()
+    logger.info("Stopping disconnect checker")
+    is_running = False
+    if server is not None and server.run:
+        server.stop()
+    if loop is not None:
+        loop.stop()
+    if telegramm_bot is not None:
+        telegramm_bot.stop()
+    signal(signals.exit)
+
+
+def send_message(msg: Message):
+    """Callback function to the services.py.
+    """
+    if msg.channel is None:
+        loop.create_task(watchdog.send_msg(msg.content))
+        return Response(ResponseCode.Success)
+    else:
+        if (msg.interface == Interface.Discord):
+            response = send_discord_message(msg)
+        elif (msg.interface == Interface.Telegramm and telegramm_bot is not None):
+            response = send_telegramm_message(msg)
+        if (response == ResponseState.Success):
+            return Response(ResponseCode.Success)
+        elif (response == ResponseState.NotFound):
+            return Response(ResponseCode.BadRequest, "User or Channel wasn't found!")
+        elif (response == ResponseState.Failed):
+            Response(ResponseCode.InternalError, f"{response.message}")
+
+
+# region DISCORD
 def check_process_list():
     """Looks for update in the process list. To lighten the load, it uses the last modified date.
     As a side effect, too frequent updates are not possible.
@@ -225,8 +336,9 @@ def get_status():
     """Callback function for services.py. Returns the bot's inner status"""
     status = {}
     status['Network'] = "Available" if is_running else "Unavailable"
-    status["SupportingFunctions"] = {name: ("Active" if thread.is_alive(
-    ) else "Inactive") for name, thread in threads.items()}
+    status["SupportingFunctions"] = {
+        name: ("Active" if thread.is_alive() else "Inactive") for name, thread in threads.items()
+    }
     try:
         status["Ping"] = int(client.latency*1000)
     except:
@@ -246,7 +358,7 @@ Category: SOFTWARE
         channel = message.channel
     except:
         channel = message
-    if str(channel) not in channels and isinstance(message, discord.Message) and str(message.author.id) not in admins:
+    if str(channel) not in channels and isinstance(message, discord.Message) and str(message.author.id) not in admins["discord"]:
         await echo(message)
         return
     if stype.lower() in ["short", "long", "bot"]:
@@ -321,7 +433,7 @@ async def add_process(message, name):
 Usage: &add <existing process name>
 Category: BOT
     """
-    if str(message.channel) in channels or str(message.author.id) in admins:
+    if str(message.channel) in channels or str(message.author.id) in admins["discord"]:
         global process_list
         process_list[name] = [False, False]
         with open(os.path.join("data", "process_list.json"), "w") as f:
@@ -334,7 +446,7 @@ async def remove(message, name):
 Usage: &remove <watched process name>
 Category: BOT
     """
-    if str(message.channel) in channels or str(message.author.id) in admins:
+    if str(message.channel) in channels or str(message.author.id) in admins["discord"]:
         global process_list
         try:
             del process_list[name]
@@ -344,16 +456,21 @@ Category: BOT
             json.dump(process_list, f)
 
 
-async def roll(message, value):
+async def roll(message, original):
     """Rolls the dice specifyed.
 Usage: &roll <(# of dices)d(# of sides) or default 1d20>
 Category: SERVER
     """
     import random
-    if value is None:
-        value = '1d20'
-    num = int(value.split('d')[0])
-    sides = int(value.split('d')[1])
+    if original is None:
+        original = '1d20'
+    value = original.split('d')
+    if '+' in original:
+        value[-1] = value[-1].split('+')[0]
+        value.append(original.split('+')[-1])
+    num = int(value[0])
+    sides = int(value[1])
+    addition = int(value[2]) if (len(value) > 2) else None
     if num > 1000 or sides > 10000:
         await message.channel.send("A maximum of 1000 dice with a maximum of 10000 sides are allowed!")
         return
@@ -368,7 +485,8 @@ Category: SERVER
     except discord.Forbidden:
         pass
     # Add a preferrence setting option for more costumisable bot
-    await message.channel.send(f"{tag}{message.author.name}`[{num}d{sides}]` rolled [{'+'.join([str(n) for n in res])}]: {sum(res)}")
+    get_addition = f' + {addition}' if addition is not None else ''
+    await message.channel.send(f"{tag}{message.author.name}`[{num}d{sides}{get_addition}]` rolled [{'+'.join([str(n) for n in res])}]{get_addition}: {sum(res)+addition if addition is not None else 0}")
 
 
 @client.event
@@ -446,7 +564,7 @@ async def echo(message, _):
     """Responds with 'ping' and shows the current latency, and the PID if the user was an admin
 Category: SERVER
     """
-    await message.channel.send(f'ping: {int(client.latency*1000)} ms{ f" PID: {os.getpid()}" if str(message.author.id) in admins else ""}')
+    await message.channel.send(f'ping: {int(client.latency*1000)} ms{ f" PID: {os.getpid()}" if str(message.author.id) in admins["discord"] else ""}')
 
 
 async def send_link(message, _):
@@ -471,7 +589,7 @@ async def stop_bot(message, _):
 Category: BOT
     """
     global is_running
-    if str(message.channel) in channels or str(message.author.id) in admins:
+    if str(message.channel) in channels or str(message.author.id) in admins["discord"]:
         await message.channel.send("Exiting")
         stop()
 
@@ -586,7 +704,7 @@ async def get_api_key(message, name):
 Usage: &API <name of the application the key will be created to>
 Category: SOFTWARE
     """
-    if str(message.channel) in channels or str(message.author.id) in admins:
+    if str(message.channel) in channels or str(message.author.id) in admins["discord"]:
         await message.channel.send(server.get_api_key_for(name) if server is not None else "API is not avaleable")
 
 
@@ -595,7 +713,7 @@ async def restart(message, _):
 To use this command, you need to be an admin, or need to call it from a selected channel!
 Category: HARDWARE
     """
-    if str(message.channel) in channels or str(message.author.id) in admins:
+    if str(message.channel) in channels or str(message.author.id) in admins["discord"]:
         await message.channel.send("Attempting to restart the pc...")
         try:
             if os.name == 'nt':
@@ -615,7 +733,7 @@ async def send_errors(message, _=None):
     """Sends all stored errors to the channel the command was sent to.
 Category: BOT
     """
-    if str(message.channel) in channels or str(message.author.id) in admins:
+    if str(message.channel) in channels or str(message.author.id) in admins["discord"]:
         global errors
         msg = ""
         for date, item in errors.items():
@@ -632,7 +750,7 @@ async def terminate_process(message, target):
 Usage: &terminate <existing process' name>
 Category: SOFTWARE
     """
-    if str(message.channel) in channels or str(message.author.id) in admins:
+    if str(message.channel) in channels or str(message.author.id) in admins["discord"]:
         if target not in process_list:
             for p in process_list:
                 if target in p:
@@ -659,7 +777,7 @@ async def open_browser(message, link):
 Usage: &open <url to open>
 Category: SOFTWARE
     """
-    if str(message.channel) in channels or str(message.author.id) in admins:
+    if str(message.channel) in channels or str(message.author.id) in admins["discord"]:
         if play(link):
             await message.channel.send('Started playing the link')
         else:
@@ -671,7 +789,7 @@ async def set_bar(message, value):
 Usage: &bar <integer value to change to>
 Category: BOT
     """
-    if str(message.channel) in channels or str(message.author.id) in admins:
+    if str(message.channel) in channels or str(message.author.id) in admins["discord"]:
         global bar_size
         bar_size = int(value)
         await message.channel.send(f"Barsize set to {bar_size}")
@@ -712,7 +830,7 @@ Usage: &help <optionaly a specific without the '&' character>
 Category: BOT
     """
     is_admin = (str(message.channel) in channels or str(
-        message.author.id) in admins)
+        message.author.id) in admins["discord"])
     if what == None:
         embed = discord.Embed(
             title="Help", description=f"Currently {len(linking.keys())+len(outside_options.keys())} commands and {len(categories.keys())} categories are avaleable", color=0x0083fb)
@@ -827,25 +945,25 @@ async def add_admin(message, key):
 Usage: &admin <admin key or mention a user>
 Category: BOT
     """
-    if key == admin_key and str(message.author.id) not in admins:
-        admins.append(str(message.author.id))
+    if key == admin_key and str(message.author.id) not in admins["discord"]:
+        admins["discord"].append(str(message.author.id))
         await message.channel.send("You are now an admin!")
         save_cfg()
-    elif str(message.author.id) in admins and '<@' in key:
+    elif str(message.author.id) in admins["discord"] and '<@' in key:
         key = key.replace('<@', '').replace(">", '')
-        if key not in admins:
-            admins.append(key)
+        if key not in admins["discord"]:
+            admins["discord"].append(key)
             await message.channel.send(f"{str(client.get_user(int(key))).split('#')[0]} is now an admin!")
         else:
             await message.channel.send(f"{str(client.get_user(int(key))).split('#')[0]} is already an admin!")
         save_cfg()
 
 
-def voice_connection_managger(request: VCRequest, user_id: Union[str, None] = None, path: Union[str, None] = None) -> Union[response, bool, List[str]]:
+def voice_connection_managger(request: VCRequest, user_id: Union[str, None] = None, path: Union[str, None] = None) -> Union[Response, bool, List[str]]:
     if VCRequest.need_user(request) and user_id is None:
-        return response("Bad request", "User needed for this action!")
+        return Response(ResponseCode.BadRequest, "User needed for this action!")
     if VCRequest.need_path(request) and path is None:
-        return response("Bad request", "Path needed for this action!")
+        return Response(ResponseCode.BadRequest, "Path needed for this action!")
     user_as_member: discord.Member = None
     task: asyncio.Task = None
     logger.debug(f"Voice connection request type: {request}")
@@ -856,7 +974,7 @@ def voice_connection_managger(request: VCRequest, user_id: Union[str, None] = No
                 logger.debug(f"Caller: {user_as_member}")
                 break
         else:
-            return response("Internal error", "User not found")
+            return Response(ResponseCode.InternalError, "User not found")
     if request == VCRequest.connect:
         task = loop.create_task(connect_to_user(user_as_member))
     elif request in [VCRequest.disconnect, VCRequest.forceDisconnect]:
@@ -877,13 +995,13 @@ def voice_connection_managger(request: VCRequest, user_id: Union[str, None] = No
     elif request == VCRequest.queue:
         return voice_connection.list_queue()
     else:
-        return response("Bad request", "Voice connection request was not from the available list!")
+        return Response(ResponseCode.BadRequest, "Voice connection request was not from the available list!")
     logger.debug("Waiting on task to finish")
     while not task.done():
         sleep(0.1)
     if task.exception() is not None:
-        return response("Internal error", f"{task.exception()}")
-    return response("Success")
+        return Response(ResponseCode.InternalError, f"{task.exception()}")
+    return Response(ResponseCode.Success)
 
 
 async def connect_to_user(user: discord.Member) -> None:
@@ -938,19 +1056,19 @@ categories = {
 
 
 def is_admin(uid: str) -> bool:
-    return response("Success", uid in admins)
+    return Response(ResponseCode.Success, uid in admins["discord"])
 
 
-def get_user(key: int) -> response:
+def get_user(key: int) -> Response:
     for usr in client.users:
         if (str)(usr.id) == key:
-            return response("Success", usr.name)
+            return Response(ResponseCode.Success, usr.name)
     else:
-        return response("Bad request", "User not found")
+        return Response(ResponseCode.BadRequest, "User not found")
 
 
 @client.event
-async def on_message(message):
+async def on_message(message: discord.Message):
     """This get's called when a message was sent to the server. It checks for all the usable commands, and executes them, if they were sent to the correct channel.
     """
     global server
@@ -966,7 +1084,7 @@ async def on_message(message):
                         await linking[cmd][0](message, etc)
                     if cmd in outside_options.keys():
                         outside_options[cmd](server, Message.create_message(str(message.author.id), etc, str(message.channel.id), [
-                                             Attachment.from_discord_attachment(attachment) for attachment in message.attachments], None))
+                                             Attachment.from_discord_attachment(attachment) for attachment in message.attachments], None, Interface.Discord))
                 except Exception as ex:
                     await message.channel.send(f"Error runnig the '{cmd}' command: {ex}")
             else:
@@ -993,7 +1111,7 @@ async def on_message(message):
                 if 'value' in mx and mx['value'] == 100:
                     try:
                         outside_options[mx["key"]](server, Message.create_message(str(message.author.id), etc, str(message.channel.id), [
-                            Attachment.from_discord_attachment(attachment) for attachment in message.attachments], None))
+                            Attachment.from_discord_attachment(attachment) for attachment in message.attachments], None, Interface.Discord))
                         await message.add_reaction("dot:577128688433496073")
                     except Exception as ex:
                         await message.channel.send(f"Error runnig the '{cmd}' command: {ex}\nInterpreted command: {mx['key']}")
@@ -1074,23 +1192,16 @@ def get_channel(user: str) -> discord.TextChannel:
     return None
 
 
-def send_message(msg: Message):
-    """Callback function to the services.py.
-    """
-    if msg.channel is None:
-        loop.create_task(watchdog.send_msg(msg.content))
-        return response("Success")
-    else:
-        chn = get_channel(msg.channel)
-        if chn != None:
-            task = loop.create_task(_send_message(msg, chn))
-            while not task.done():
-                sleep(0.1)
-            if task.exception() is not None:
-                return response("Internal error", f"{task.exception()}")
-            return response("Success")
-        else:
-            return response("Bad request", "User or Channel wasn't found!")
+def send_discord_message(msg: Message) -> MessageSendingResponse:
+    chn = get_channel(msg.channel)
+    if chn == None:
+        return MessageSendingResponse(ResponseCode.NotFound)
+    task = loop.create_task(_send_message(msg, chn))
+    while not task.done():
+        sleep(0.1)
+    if task.exception() is not None:
+        return MessageSendingResponse(ResponseCode.Failed, task.exception())
+    return MessageSendingResponse(ResponseCode.Success)
 
 
 async def _send_message(msg: Message, channel: discord.TextChannel):
@@ -1172,69 +1283,73 @@ async def start_discord_client(counter: int) -> None:
                 break
             else:
                 await start_discord_client(counter+1)
+# endregion
 
 
-def runner(loop: asyncio.AbstractEventLoop) -> None:
-    """Runs the needed things in a way, the watchdog can access the bot client."""
-    if '--nodcc' not in os.sys.argv and "--remote" not in os.sys.argv:
-        start_thread("Disconnect checker")
-    if '--nowd' not in os.sys.argv:
-        start_thread("Watchdog")
-    if "--api" in os.sys.argv and "--remote" not in os.sys.argv:
-        start_thread("API Server")
-    if "--remote" not in os.sys.argv:
-        loop.create_task(start_discord_client(0))
-        loop.run_forever()
-    else:
-        logger.debug("Started in remote mode...")
-        logger.debug("Gathering IP and Authentication code")
-        ip = port = auth = name = None
-        try:
-            ip = os.sys.argv[os.sys.argv.index('--ip') + 1]
-            port = int(os.sys.argv[os.sys.argv.index('--port') + 1])
-            auth = os.sys.argv[os.sys.argv.index('--auth') + 1]
-            name = os.sys.argv[os.sys.argv.index('--name') + 1]
-            if ip is None or port is None or auth is None or name is None:
-                raise ArgumentError(
-                    "Ip, Port, Auth and Name is needed for remote mode!")
-            from smdb_api import API
-            _api = API(name, auth, ip, port)
-            _api.validate(10)
-            if not _api.valid:
-                logger.debug("Validation failed!")
-                signal(signals.exit)
-            _api.create_function(
-                "status", "Scanns the system for the running applications, and creates a message depending on the resoults.\nUsage: &status <long if you want to see the API status too>\nCategory: SOFTWARE")
-        except Exception as ex:
-            logger.error(f"Exception: {ex}")
-            logger.error(f"IP: {ip} Port: {port} Auth: {auth} Name: {name}")
-            logger.error("IP and Authentication code needed in remote mode!")
-            stop()
-            signal(signals.exit)
+# region TELEGRAMM
+def create_telegramm():
+    global telegramm_bot
+    telegramm_bot = Telegramm(telegramm_api_key, log_level, log_folder)
+
+    @telegramm_bot.callback("is_admin")
+    def is_telegram_admin(telegramm_id: int) -> bool:
+        return telegramm_id in admins["telegramm"]
+
+    @telegramm_bot.callback()
+    def check_admin_password(key: str) -> bool:
+        return key == admin_key
+
+    @telegramm_bot.callback("add_admin")
+    def add_telegramm_admin(telegramm_id: int) -> bool:
+        if (telegramm_id in admins["telegramm"]):
+            return False
+        admins["telegramm"].append(telegramm_id)
+        return True
+
+    @telegramm_bot.callback()
+    def send_status() -> str:
+        host_status = ""
+        stts = status.get_graphical(int(bar_size/2), True)
+        for key, value in stts.items():
+            val = ("Status" if len(value) > 1 else value[0])
+            host_status += f"{key} {val}\n"
+            if len(value) > 1 and key != "Battery":
+                host_status += f'Max: {value[0]}\n'
+                host_status += f'{"Used" if key in ["RAM", "SWAP"] else "Free"}: {value[1]}\n'
+                host_status += f'Status: {value[2]}\n'
+            elif len(value) > 1:
+                host_status += f"Battery life: {value[0]}\n"
+                host_status += f"Power status: {value[1]}\n"
+                host_status += f"Status: {value[2]}\n"
+            host_status += "========================\n"
+        temp = status.get_temp()
+        host_status += f'Temperature: {(f"{temp}°C" if temp is not None else "Not detected!")}'
+        return host_status
+
+    @telegramm_bot.callback()
+    def wake(id: int) -> None:
+        if ("wake" in outside_options):
+            outside_options["wake"](server, Message.create_message(
+                str(id), "wake", str(id), [], None, Interface.Telegramm))
+
+    @telegramm_bot.callback()
+    def shut_down(id: int, options: Optional[str]) -> None:
+        command = "shutdown"
+        if (options is not None):
+            command += f" {options}"
+        if ("shutdown" in outside_options):
+            outside_options["shutdown"](server, Message.create_message(
+                str(id), command, str(id), [], None, Interface.Telegramm))
+
+    telegramm_bot.start()
 
 
-def stop():
-    global is_running
-    if voice_connection.is_connected:
-        loop.create_task(voice_connection.disconnect(True))
-    if was_online:
-        logger.info("Sending stop signal to discord...")
-        loop.create_task(client.logout())
-        loop.create_task(client.close())
-        logger.debug("Waiting for discord to close...")
-        while not client.is_closed():
-            pass
-    if watchdog is not None:
-        logger.info("Stopping watchdogs")
-        watchdog.create_tmp()
-        watchdog.stop()
-    logger.info("Stopping disconnect checker")
-    is_running = False
-    if server is not None and server.run:
-        server.stop()
-    if loop is not None:
-        loop.stop()
-    signal(signals.exit)
+def send_telegramm_message(msg: Message) -> MessageSendingResponse:
+    if (telegramm_bot is None):
+        return MessageSendingResponse(ResponseCode.Failed, "Telegramm API is not initialized!")
+    telegramm_bot.send_message(msg.channel, msg.content)
+    return MessageSendingResponse(ResponseCode.Success)
+    # endregion
 
 
 def Main(_loop: asyncio.AbstractEventLoop):
@@ -1258,6 +1373,10 @@ def Main(_loop: asyncio.AbstractEventLoop):
             logger.info("Setting up the services")
             server = Server(edit_linking, get_status, send_message,
                             get_user, is_admin, voice_connection_managger)
+        if "--telegramm" in os.sys.argv:
+            logger.info("Setting up Telegramm")
+            create_telegramm()
+            telegramm_bot.start()
         voice_connection = VoiceConnection(
             loop, server.track_finished if server is not None else None)
         logger.info('Starting all processes')

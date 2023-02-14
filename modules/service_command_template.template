@@ -1,0 +1,4 @@
+def {name}(self, message):
+    \"\"\"{help_text}\"\"\"
+    message.add_called('{name}')
+    self.send(message.to_json(), '{creator}')

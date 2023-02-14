@@ -1,100 +1,16 @@
-from datetime import datetime
-from requests.models import Response
 from typing import Any, Callable, Dict, List, Union
 from smdb_logger import Logger
-from .response import response
+from smdb_api import Message, Response, ResponseCode
 from . import log_level, log_folder
-from .voice_connection import VCRequest, VCStatus
+from .voice_connection import VCRequest
+from hashlib import sha256
 import socket
 import select
 import json
-import discord
-from hashlib import sha256
-import os
+
 
 logger = Logger("api_server.log", log_folder=log_folder, level=log_level,
                 log_to_console=True, use_caller_name=True, use_file_names=True)
-
-
-class Attachment:
-    """Message attachment"""
-    def from_json(json: dict) -> "Attachment":
-        if json is None:
-            return None
-        return Attachment(json["filename"], json["url"], json["size"])
-
-    def from_discord_attachment(atch: discord.Attachment) -> "Attachment":
-        if atch is None:
-            return None
-        return Attachment(atch.filename, atch.url, atch.size)
-
-    def __init__(self, filename: str, url: str, size: int) -> None:
-        if not isinstance(size, int):
-            raise AttributeError(f"{type(size)} is not int type")
-        self.url = url
-        self.filename = filename
-        self.size = size
-
-    def size(self) -> int:
-        return self.size
-
-    def download(self) -> Response:
-        import requests
-        return requests.get(self.url)
-
-    def save(self, path: str) -> str:
-        if not os.path.exists(path):
-            return ""
-        tmp = self.filename
-        n = 1
-        while os.path.exists(os.path.join(path, tmp)):
-            tmp = "".join((".".join(self.filename.split(
-                ".")[:-1]), f"({n}).", self.filename.split(".")[-1]))
-            n += 1
-        self.filename = tmp
-        file = self.download()
-        with open(os.path.join(path, self.filename), "wb") as f:
-            f.write(file.content)
-        return os.path.join(path, self.filename)
-
-    def to_json(self) -> dict:
-        return {"filename": self.filename, "size": self.size, "url": self.url}
-
-
-class Message:
-    """Message object used by the api"""
-    def from_json(json) -> "Message":
-        msg = Message(json["sender"], json["content"], json["channel"], [Attachment.from_json(attachment)
-                      for attachment in json["attachments"]] if json["attachments"] is not None else [], json["called"])
-        if "random_id" in json:
-            msg.random_id = json["random_id"]
-        return msg
-
-    def create_message(sender: str, content: str, channel: str, attachments: List[Attachment], called: str) -> "Message":
-        return Message(sender, content if content is not None else "", channel, attachments, called)
-
-    def __init__(self, sender: str, content: str, channel: str, attachments: List[Attachment], called: str) -> None:
-        self.sender = sender
-        self.content = content
-        self.channel = channel
-        self.attachments = attachments
-        self.called = called
-        self.random_id = sha256(
-            f"{sender}{content}{channel}{called}{datetime.now()}".encode("utf-8")).hexdigest()
-
-    def add_called(self, called: str) -> None:
-        self.called = called
-
-    def has_attachments(self) -> bool:
-        return len(self.attachments) > 0
-
-    def to_json(self) -> dict:
-        return {"sender": self.sender, "content": self.content, "channel": self.channel, "called": self.called, "attachments": [attachment.to_json() for attachment in self.attachments] if len(self.attachments) > 0 else None, "random_id": self.random_id}
-
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, Message):
-            return False
-        return self.sender == other.sender and self.content == other.content and self.channel
 
 
 class Server:
@@ -103,10 +19,10 @@ class Server:
         linking_editor: Callable[[Any, bool], None],
         get_status: Callable[[], dict],
         send_message: Callable[[Message], bool],
-        get_user: Callable[[str], response],
+        get_user: Callable[[str], Response],
         is_admin: Callable[[str], bool],
         voice_connection_controll: Callable[[
-            VCRequest, Union[str, None], Union[str, None]], Union[response, bool, List[str]]]
+            VCRequest, Union[str, None], Union[str, None]], Union[Response, bool, List[str]]]
     ) -> None:
         self.clients = {}
         self.run = True
@@ -121,7 +37,7 @@ class Server:
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.bind((self.ip, self.port))
         self.socket_list = [self.socket]
-        self.bad_request = response("Bad request", None)
+        self.bad_request = Response(ResponseCode.BadRequest, None)
         self.voice_connection_controll = voice_connection_controll
         self.track_finished_socket = None
         logger.header("Service initialized")
@@ -236,6 +152,7 @@ class Server:
         }
         self.socket.listen()
 
+    # region MUSIC
     def connect_to_user(self, socket: socket, user: str) -> None:
         self.send(self.voice_connection_controll(
             VCRequest.connect, user_id=user), socket)
@@ -273,12 +190,13 @@ class Server:
 
     def set_track_finished_target(self, socket: socket, _) -> None:
         self.track_finished_socket = socket
-        self.send(response("Accepted"), socket)
+        self.send(Response(ResponseCode.Accepted), socket)
 
     def track_finished(self, track: str) -> None:
         if self.track_finished_socket is not None:
             self.send(Message("Bot", track, None, [],
                       "Track Finished").to_json(), self.track_finished_socket)
+    # endregion
 
     def create_command(self, socket: socket, data: dict) -> None:
         """Creates a command in the discord bot
@@ -331,13 +249,14 @@ class Server:
         r"""Sends a message to the socket. Every message is '\n' terminated (terminator does not required)
         """
         try:
+            logger.debug(f"Sending total message: {msg}")
             if isinstance(socket, str):
                 for key, value in self.clients.items():
                     if value == socket:
                         socket = key
                         break
-            if isinstance(msg, response):
-                msg = json.dumps(msg.__dict__)
+            if isinstance(msg, Response):
+                msg = json.dumps(msg.__repr__())
             else:
                 msg = json.dumps(msg)
             while True:
@@ -345,8 +264,12 @@ class Server:
                 if len(msg) > 9:
                     tmp = msg[9:]
                     msg = msg[:9]
-                socket.send(str(len(msg)).encode(encoding='utf-8'))
-                socket.send(msg.encode(encoding="utf-8"))
+                length = str(len(msg)).encode(encoding='utf-8')
+                logger.debug(f"Sending legth: {length}")
+                socket.send(length)
+                chunk = msg.encode(encoding="utf-8")
+                logger.debug(f"Sending chunk: {chunk}")
+                socket.send(chunk)
                 if tmp == '':
                     tmp = '\n'
                 if msg == '\n':
@@ -367,28 +290,31 @@ class Server:
             return
         self.send(self.is_admin(uid), socket)
 
-    def create_function(self, creator: str, name: str, help_text: str, callback: str) -> response:
+    def __read_template__(self, name: str, creator: str, help_text: str) -> str:
+        with open("service_command_template.template", 'r') as f:
+            data = f.read(-1)
+        return data.replace(r'{help_text}', help_text).replace(
+            r'{name}', name).replace(r'{creator}', creator)
+
+    def create_function(self, creator: str, name: str, help_text: str, callback: str) -> Response:
         """Creates a function with the given parameters, and stores it in the self.functions dictionary, with the 'name' as key
         """
         logger.debug(f'Creating function with the name {name}')
         logger.debug(f'Creating function with the call back {callback}')
         logger.debug(f'Creating function with the creator as {creator}')
-        body = f"""def {name}(self, message):
-    \"\"\"{help_text}\"\"\"
-    message.add_called('{name}')
-    self.send(message.to_json(), '{creator}')"""
+        body = self.__read_template__(name, creator, help_text)
         try:
             exec(body)
         except Exception as ex:
             logger.error(f"{body}")
             logger.error(ex)
-            return response("Internal error", ex)
+            return Response(ResponseCode.InternalError, ex)
         setattr(self, name, locals()[name])
         self.linking_editor([name, getattr(self, name)])
         if creator not in self.functions:
             self.functions[creator] = []
         self.functions[creator].append(name)
-        return response("Success")
+        return Response(ResponseCode.Success)
 
     def remove_command(self, socket: socket, name) -> None:
         """Removes a function. Removes all functions, if empty message was sent instead of a function name!
@@ -398,12 +324,12 @@ class Server:
         self.send(self.remove_function(
             creator=self.clients[socket], name=name), socket)
 
-    def remove_function(self, creator: str, name: str = None) -> response:
+    def remove_function(self, creator: str, name: str = None) -> Response:
         """Removes a function from the created functions
         """
         try:
             if creator not in self.functions:
-                return response("Internal error", "Function not found")
+                return Response(ResponseCode.InternalError, "Function not found")
             if name is None:
                 for name in self.functions[creator]:
                     self.linking_editor(name, True)
@@ -413,10 +339,10 @@ class Server:
                 self.linking_editor(name, True)
                 delattr(self, name)
                 self.functions[creator].remove(name)
-            return response("Success")
+            return Response(ResponseCode.Success)
         except Exception as ex:
             logger.error(f"{ex}")
-            return response("Internal error", ex)
+            return Response(ResponseCode.InternalError, ex)
 
     def return_usrname(self, socket: socket, uid: str) -> None:
         if uid is None:
@@ -502,21 +428,21 @@ class Server:
             name, key = retrived['Command'], retrived['Value']
         except:
             self.send(self.bad_request.create_altered(
-                Response="Denied", Data="Bad API protocoll was used!"), client_socket)
+                response=ResponseCode.Denied, Data="Bad API protocoll was used!"), client_socket)
             client_socket.close()
             return
         if key != sha256(f"{self.key}{name}".encode('utf-8')).hexdigest():
             self.send(self.bad_request.create_altered(
-                Response="Denied", Data="Bad API Key"), client_socket)
+                response=ResponseCode.Denied, Data="Bad API Key"), client_socket)
             client_socket.close()
             return
         if name in self.clients:
             self.send(self.bad_request.create_altered(
-                Response="Denied", Data="Already connected"), client_socket)
+                response=ResponseCode.Denied, Data="Already connected"), client_socket)
             client_socket.close()
             return
         self.send(self.bad_request.create_altered(
-            Response="Success"), client_socket)
+            response=ResponseCode.Success), client_socket)
         logger.debug(f"Adding {name} to the connections")
         self.socket_list.append(client_socket)
         self.clients[client_socket] = name

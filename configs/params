@@ -1,4 +1,5 @@
 --api #Allows API services
+--telegramm #Enables telegramm bot
 #--al #Allows all discord.py logs
 #--nowd #Disables watchdog services
 #--nodcc #Disables the disconnect checker

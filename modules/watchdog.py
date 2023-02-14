@@ -13,7 +13,7 @@ logger = Logger("watchdog.log", log_folder=log_folder, level=log_level,
 
 
 class Watchdog():
-    def __init__(self, loop, client, process_list=None):
+    def __init__(self, loop, client, admins, process_list=None, telegramm=None):
         self.process_list = deepcopy(process_list)
         self.error = ""
         self.battery_warning = False
@@ -25,6 +25,8 @@ class Watchdog():
         self.high_temp = 80.0
         self.disks = {}
         self.memory = {}
+        self.telegramm = telegramm
+        self.admins = admins
         logger.header("Watchdog initialized")
 
     def was_restarted(self):
@@ -87,6 +89,9 @@ class Watchdog():
 
     def send_message(self, channel, message):
         self.loop.create_task(channel.send(message))
+        if (self.telegramm is not None):
+            for admin in self.admins['telegramm']:
+                self.telegramm.send_message(admin, message)
 
     def run_watchdog(self, channels):
         """This method scanns the system for runing processes, and if no process found, sends a mention message to all of the valid channels.

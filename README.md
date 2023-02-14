@@ -2,6 +2,7 @@
 
 This bot monitors the computer that it's running on.
 For it to work, you will need to create one [Discord bot account](https://discordapp.com/developers/applications/).
+If you want to use the Telegramm bot API, you will need to create a [Telegramm bot](https://core.telegram.org/api/obtaining_api_id) as well
 Both the watchdog, and the bot is capable of running without one another.
 
 ## The bot
@@ -24,6 +25,7 @@ This bot, needs the following permissions to function properly:
  - --nowd - Disables the watchdog
  - --nodcc - Disables the disconnect checker
  - --api - Enables the API server
+ - --telegramm - Enables Telegramm bot API
  <!-- - --remote - Sets the bot to remote modefor multiple computers (Disables watchdog and disconnect checker) 
     - --ip - Sets the remote discord bot's IP adress
     - --auth - Sets the authentication code for the bot                                                     This function needs to be developed first!
@@ -54,24 +56,27 @@ Upon validation, the response can be two:
  -  "Accepted" - When the connection was accepted, and the client was added to the client list.
  -  "Denied" - The second message will contain the reason: "Bad API Key" or "Already connected".
 
-|Request                                                                     |Return Value                      |Content                                        |
-|:---------------------------------------------------------------------------|:---------------------------------|:---------------------------------------------:|
-|[Status](#Status)                                                           |Json                              |The PC's status as it gets sent to the servers |
-|[Send](#Send)<sup><sub>1</sub></sup>                                        |Boolean                           |If the message was sent successfully           |
-|[Create](#Create)<sup><sub>2</sub></sup>                                    |Boolean                           |If the function was added successfully         |
-|[Username](#Username)<sup><sub>3</sub></sup>                                |String                            |Returns the username connected to the ID       |
-|[Remove](#Remove)<sup><sub>4</sub></sup>                                    |Boolean                           |Rempves the selected command from the list     |
-|[Disconnect](#Disconnect)<sup><sub>5</sub></sup>                            |Nothing                           |Safely disconnect, with an optional reason     |
-|[Is Admin](#Is-Admin)<sup><sub>3</sub></sup>                                |Boolean                           |Returns if user is an admin of the discord bot |
-|[Connect To User](#Connect-To-User)<sup><sub>3</sub></sup>                  |[Response](#Resopnse-object)      |Response from the action                       |
-|[Disconnect From Voice](#Disconnect-From-User)                              |[Response](#Resopnse-object)      |Response from the action                       |
-|[Play Audio File](#Play-Audio-File)<sup><sub>7</sub></sup>                  |Boolean                           |If the audio file was started                  |
-|[Add Audio File](#Add-Audio-File)<sup><sub>6</sub></sup>                    |Boolean                           |If the audio file was added                    |
-|[Pause Currently Playing](#Pause-Currently-Playing)<sup><sub>3</sub></sup>  |Boolean                           |If the audio file was paused                   |
-|[Resume Paused](#Resume-paused)<sup><sub>3</sub></sup>                      |Boolean                           |If the audio file was resumed                  |
-|[Skip Currently Playing](#Skip-Currently-Playing)<sup><sub>3</sub></sup>    |Boolean                           |If a skip could be made                        |
-|[Stop Currently Playing](#Stop-Currently-Playing)<sup><sub>3</sub></sup>    |Boolean                           |If the audio file was stopped                  |
-|[List Queue](#List-Queue)                                                   |List                              |Returns a list of filenames currently queued   |
+### Available commands
+
+|Request                                                                     |Return Value                                             |Content                                                     |
+|:---------------------------------------------------------------------------|:--------------------------------------------------------|:----------------------------------------------------------:|
+|[Status](#Status)                                                           |Json                                                     |The PC's status as it gets sent to the servers              |
+|[Send](#Send)<sup><sub>1</sub></sup>                                        |Boolean                                                  |If the message was sent successfully                        |
+|[Create](#Create)<sup><sub>2</sub></sup>                                    |[Response](#Resopnse-object)                             |If the function was added successfully                      |
+|[Username](#Username)<sup><sub>3</sub></sup>                                |[MessageSendignResponse](#Message-sendign-response)      |Returns the username connected to the ID                    |
+|[Remove](#Remove)<sup><sub>4</sub></sup>                                    |[Response](#Resopnse-object)                             |Rempves the selected command from the list                  |
+|[Disconnect](#Disconnect)<sup><sub>5</sub></sup>                            |Nothing                                                  |Safely disconnect, with an optional reason                  |
+|[Is Admin](#Is-Admin)<sup><sub>3</sub></sup>                                |Boolean                                                  |Returns if user is an admin of the discord bot              |
+|[Connect To User](#Connect-To-User)<sup><sub>3</sub></sup>                  |[Response](#Resopnse-object)                             |Response from the action                                    |
+|[Disconnect From Voice](#Disconnect-From-User)                              |[Response](#Resopnse-object)                             |Response from the action                                    |
+|[Play Audio File](#Play-Audio-File)<sup><sub>7</sub></sup>                  |Boolean                                                  |If the audio file was started                               |
+|[Add Audio File](#Add-Audio-File)<sup><sub>6</sub></sup>                    |Boolean                                                  |If the audio file was added                                 |
+|[Pause Currently Playing](#Pause-Currently-Playing)<sup><sub>3</sub></sup>  |Boolean                                                  |If the audio file was paused                                |
+|[Resume Paused](#Resume-paused)<sup><sub>3</sub></sup>                      |Boolean                                                  |If the audio file was resumed                               |
+|[Skip Currently Playing](#Skip-Currently-Playing)<sup><sub>3</sub></sup>    |Boolean                                                  |If a skip could be made                                     |
+|[Stop Currently Playing](#Stop-Currently-Playing)<sup><sub>3</sub></sup>    |Boolean                                                  |If the audio file was stopped                               |
+|[List Queue](#List-Queue)                                                   |List                                                     |Returns a list of filenames currently queued                |
+|[Set As Track Finished](#Set-as-track-finished)                             |[Response](#Resopnse-object)                             |Sets the client as a callback when a track finishes playing |
 
 The messages are case sensitive, and 'Bad request' message will be sent, when a message is not applicable.
 
@@ -88,20 +93,89 @@ The messages are case sensitive, and 'Bad request' message will be sent, when a 
 <sub>** Optional, default value: [NOTHING]</sub>
 <sub>*** Optional, default value: None</sub>
 
-## Response object
+## Objects
+
+### Response object
 
 Responses are in json format and they have the following structure:
 
 ```javascript
 {
     "Response": "Bad request" or "Success" or "Internal error" or "Denied" or "Accepted",
-    "Data": None or "Explanation",
+    "Data": None or "Explanation" or "Response value",
     "Code": 1 or 2 or 3 or 4 or 5
     "bool": True if code is 2 or 5 False otherwise
 }
 ```
 
-## Status
+### Message
+
+This class is used to send complex messages between the bot and the connected API-s.
+
+|Property name|Types                         |Description                            |
+|:-----------:|:-----------------------------|--------------------------------------:|
+|sender       |String                        |The name of the sender                 |
+|content      |String                        |The message the user provided          |
+|channel      |String                        |The channel name where it was used     |
+|attachment   |[attachment](#Attachment)/None|The attachment sent with the message   |
+|called       |String                        |The metthod called by the user         |
+|interface    |[interface](#Interface)       |The interface used to send this message|
+
+The class is sent as a Json object.
+
+### Attachment
+
+A class used to represent attachments sent by the user.
+
+|Property or method name|Type or return type|Description                                            |
+|:---------------------:|:------------------|------------------------------------------------------:|
+|filename               |String             |The sent file's name with extention                    |
+|url                    |String             |The url from where the file can be downloaded          |
+|size/size()            |Int                |The size of the file                                   |
+|download()             |bite like          |Returns the file's bite like representation            |
+|save(valid_path)       |String             |Returns the full path to where the file was downloaded |
+
+
+### Interface
+
+An enum class used to tell what interface was used for triggering the message sending.
+
+|Name value | Int value |
+|:---------:|:----------|
+|Discord    |0          |
+|Telegramm  |1          |
+
+### Message sending response
+
+A class that contains the results of a message sending request.
+
+|Property name|Prooperty value                  |Description                |
+|:-----------:|:--------------------------------|--------------------------:|
+|state        |[ResponseState](#Response-state) |The state of the response  |
+|message      |String/None                      |The optional message/reason|
+
+Json example
+
+```Javascript
+{
+    'state': 0
+    'message': 'Example'
+}
+```
+
+### Response status
+
+An enum class to represent the success of a message sending request
+
+|Name value | Int value |Meaning                   |
+|:---------:|:----------|-------------------------:|
+|Success    |0          |Message successfully sent |
+|NotFound   |1          |User/Channel not found    |
+|Failed     |2          |Failed to send message    |
+
+## Commands
+
+### Status
 
 The Status' Json value has the following format:
 
@@ -115,12 +189,12 @@ The Status' Json value has the following format:
 }
 ```
 
-## Send
+### Send
 
 This command allows the program to send messages to the servers the bot is connected to, or to individual users. This message can be formatted, but can only be string message.
 To send message to a specific user, the user's ID must be provided in the 'user_id'. For specific channels, the channel ID must be provided.
 
-## Create
+### Create
 
 When using the `Create` command, the parameters will describe the following:
  -  name - The name to call on Discord
@@ -138,7 +212,7 @@ Category: {a category from the list below}
 The 'Usage: ' line is optional, but if present, it should be formated like that, and be on it's own line.
 ```
 
-### Categories
+#### Categories
 
 |Category name     |What comes here                                                        |
 |:----------------:|:----------------------------------------------------------------------|
@@ -150,83 +224,62 @@ The 'Usage: ' line is optional, but if present, it should be formated like that,
 |USER              |Anything that interacts with the users.                                |
 |AUDIO             |Anything that plays audio trough the bot.                              |
 
-### Returns
+#### Returns
 
-When it's called, it returns a message object. This object has the following properties:
+When it's called, it returns a [message](#Message) object.
 
-|Property name|Types                         |Description                          |
-|:-----------:|:-----------------------------|------------------------------------:|
-|sender       |String                        |The name of the sender               |
-|content      |String                        |The message the user provided        |
-|channel      |String                        |The channel name where it was used   |
-|attachment   |[attachment](#Attachment)/None|The attachment sent with the message |
-|called       |String                        |The metthod called by the user       |
-
-### Attachment
-
-A class used to represent attachments sent by the user.
-
-|Property or method name|Type or return type|Description                                            |
-|:---------------------:|:------------------|------------------------------------------------------:|
-|filename               |String             |The sent file's name with extention                    |
-|url                    |String             |The url from where the file can be downloaded          |
-|size/size()            |Int                |The size of the file                                   |
-|download()             |bite like          |Returns the file's bite like representation            |
-|save(valid_path)       |String             |Returns the full path to where the file was downloaded |
-
-
-## Username
+### Username
 
 Returns the current name of the selected user, where the user's ID is match the given ID.
 
-## Remove
+### Remove
 
 Can be called with or without a specific name. If called with a command name, it attempts to remove the selected function. When called without any name, removes all functions linked to the socket it was called from.
 
-## Disconnect
+### Disconnect
 
 Can be used to remove every created command from the server, and close the connection between the server, and the client.
 
-## Is Admin
+#### Is Admin
 
 Checks if a user is registered as an administrator for the bot.
 
-## Connect To User
+### Connect To User
 
 Connect the client to the user's current active voice channel if there is one.
 
-## Disconnect From User
+### Disconnect From User
 
 Disconnect the client from the current voice channel, if the user is present on that channel.
 
-## Play Audio File
+### Play Audio File
 
 Starts the audio file on the path provided. If the file is not supported error is returned. Will connect if the bot is not yet connected, will only allow to be used by member in the same channel.
 
-## Add Audio File
+### Add Audio File
 
 Adds the audio file to the play list on the path provided. If the file is not supported error is returned.
 
-## Pause Currently Playing
+### Pause Currently Playing
 
 Pauses the currently playing track. Will only succeed, if the requesting member is in the same voice channel.
 
-## Resume Paused
+### Resume Paused
 
 Resumes playing the paused track. Will only succeed, if the requesting member is in the same voice channel.
 
-## Skpi Currently Playing
+### Skpi Currently Playing
 
 Skips the current track if other tracks are in the play list. Will only succeed, if the requesting member is in the same voice channel.
 
-## Stop Currently Playing
+### Stop Currently Playing
 
 Stops the currently playing track. Will only succeed, if the requesting member is in the same voice channel.
 
-## List Queue
+### List Queue
 
 Lists the names of the items in the playlist, starting with the currently playing file.
 
-## Set As Track Finished
+### Set As Track Finished
 
 Sets the callback for when the current tack finished playing for possible file removal.
