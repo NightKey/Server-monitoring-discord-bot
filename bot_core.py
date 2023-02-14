@@ -306,11 +306,11 @@ def send_message(msg: Message):
             response = send_discord_message(msg)
         elif (msg.interface == Interface.Telegramm and telegramm_bot is not None):
             response = send_telegramm_message(msg)
-        if (response == ResponseState.Success):
+        if (response == ResponseCode.Success):
             return Response(ResponseCode.Success)
-        elif (response == ResponseState.NotFound):
+        elif (response == ResponseCode.NotFound):
             return Response(ResponseCode.BadRequest, "User or Channel wasn't found!")
-        elif (response == ResponseState.Failed):
+        elif (response == ResponseCode.Failed):
             Response(ResponseCode.InternalError, f"{response.message}")
 
 

@@ -151,7 +151,9 @@ class ResponseCode(Enum):
     BadRequest = 1
     InternalError = 2
     Denied = 3
-    Accepted = 4
+    Accepted = 4,
+    Failed = 5,
+    NotFound = 6
 
     def __str__(self) -> str:
         return str(self.value)
