@@ -3,7 +3,7 @@ from time import time
 import inspect
 from typing import Callable, List
 from enum import Enum
-from os import path, walk, remove, mkdir
+from os import path, rename, walk, remove, mkdir
 from sys import stdout
 from shutil import move
 
@@ -92,18 +92,20 @@ class Logger:
             with open(path.join(log_folder, log_file), "w"):
                 pass
 
-    def get_date(self, timestamp: float = None, format_string: str = r"%Y.%m.%d-%I:%M:%S") -> datetime:
+    def get_date(self, timestamp: float = None) -> datetime:
         if timestamp is None:
             timestamp = time()
-        return datetime.fromtimestamp(timestamp).strftime(format_string)
+        return datetime.fromtimestamp(timestamp)
 
     def __check_logfile(self) -> None:
         if self.max_logfile_size != -1 and path.exists(path.join(self.log_folder, self.log_file)) and (path.getsize(path.join(self.log_folder, self.log_file)) / (1024 ^ 2)) > self.max_logfile_size:
             tmp = self.log_file.split(".")
-            tmp[0] += str(self.get_date(format_string=r"%y.%m.%d-%I"))
+            tmp[0] += str(self.get_date().strftime(format_string=r"%y.%m.%d-%I"))
             new_name = ".".join(tmp)
-            move(path.join(self.log_folder, self.log_file),
-                 path.join(self.log_folder, new_name))
+            rename(path.join(self.log_folder, self.log_file),
+                   path.join(self.log_folder, new_name))
+            with open(path.join(self.log_folder, self.log_file), "w") as f:
+                pass
 
         if self.max_logfile_lifetime != -1:
             names = self.__get_all_logfile_names()
@@ -150,13 +152,13 @@ class Logger:
 
     def __log(self, level: LEVEL, data: str, counter: str, end: str) -> None:
         if (counter is None):
-            counter = str(self.get_date())
+            counter = str(self.get_date().strftime(r"%Y.%m.%d-%I:%M:%S"))
         log_msg = f"[{counter}] [{level.value}]: {data}"
         if self.header_used and level != LEVEL.HEADER:
             log_msg = f"\t{log_msg}"
         if self.level_only_valid_for_console or level in self.allowed:
             self.__log_to_file(log_msg)
-        if self.log_to_console and level in self.allowed:
+        if self.log_to_console and level in self.allowed and not LEVEL.HEADER:
             if self.use_caller_name:
                 caller = self.__get_caller_name()
                 log_msg = f"[{counter}] [{caller}]: {data}"

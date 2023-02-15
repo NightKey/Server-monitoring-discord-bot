@@ -93,7 +93,7 @@ class Message:
 
     def from_json(json) -> "Message":
         msg = Message(json["sender"], json["content"], json["channel"], [Attachment.from_json(attachment)
-                      for attachment in json["attachments"]] if json["attachments"] is not None else [], json["called"], json["interface"])
+                      for attachment in json["attachments"]] if json["attachments"] is not None else [], json["called"], Interface(json["interface"]))
         if "random_id" in json:
             msg.random_id = json["random_id"]
         return msg
@@ -136,7 +136,7 @@ class Message:
             "channel": self.channel,
             "called": self.called,
             "attachments": [attachment.to_json() for attachment in self.attachments] if len(self.attachments) > 0 else None,
-            "interface": self.interface,
+            "interface": self.interface.value,
             "random_id": self.random_id
         }
 
@@ -196,7 +196,7 @@ class Response:
 
 class MessageSendingResponse():
 
-    def __init__(self, state: ResponseCode, message: Optional[str]) -> None:
+    def __init__(self, state: ResponseCode, message: Optional[str] = None) -> None:
         self.state = state
         self.message = message
 

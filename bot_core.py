@@ -309,9 +309,9 @@ def send_message(msg: Message):
         if (response == ResponseCode.Success):
             return Response(ResponseCode.Success)
         elif (response == ResponseCode.NotFound):
-            return Response(ResponseCode.BadRequest, "User or Channel wasn't found!")
+            return Response(ResponseCode.BadRequest, response.message)
         elif (response == ResponseCode.Failed):
-            Response(ResponseCode.InternalError, f"{response.message}")
+            return Response(ResponseCode.InternalError, f"{response.message}")
 
 
 # region DISCORD
@@ -1195,7 +1195,7 @@ def get_channel(user: str) -> discord.TextChannel:
 def send_discord_message(msg: Message) -> MessageSendingResponse:
     chn = get_channel(msg.channel)
     if chn == None:
-        return MessageSendingResponse(ResponseCode.NotFound)
+        return MessageSendingResponse(ResponseCode.NotFound, "User or channel not found")
     task = loop.create_task(_send_message(msg, chn))
     while not task.done():
         sleep(0.1)
