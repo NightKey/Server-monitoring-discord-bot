@@ -158,7 +158,7 @@ class Logger:
             log_msg = f"\t{log_msg}"
         if self.level_only_valid_for_console or level in self.allowed:
             self.__log_to_file(log_msg)
-        if self.log_to_console and level in self.allowed and not LEVEL.HEADER:
+        if self.log_to_console and level in self.allowed and level is not LEVEL.HEADER:
             if self.use_caller_name:
                 caller = self.__get_caller_name()
                 log_msg = f"[{counter}] [{caller}]: {data}"
