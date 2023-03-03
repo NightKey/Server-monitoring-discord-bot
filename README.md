@@ -82,14 +82,14 @@ Upon validation, the response can be two:
 The messages are case sensitive, and 'Bad request' message will be sent, when a message is not applicable.
 
 #### Keys:
- -  <sub>1</sub>: Send {text_to_send [string], user_id* [string]}
- -  <sub>2</sub>: Create {name [string], help_text [string], callback [string], return_key** [integer]}
+ -  <sub>1</sub>: {text_to_send [string], user_id* [string]}
+ -  <sub>2</sub>: {name [string], help_text [string], callback [string], return_key** [integer]}
  -  <sub>3</sub>: {user_id [string]}
- -  <sub>4</sub>: Remove {command_name** [string]}
- -  <sub>5</sub>: Disconnect {reason***}
+ -  <sub>4</sub>: {command_name** [string]}
+ -  <sub>5</sub>: {reason***}
  -  <sub>6</sub>: {path [string]}
  -  <sub>7</sub>: {user_id [string], path [string]}
- -  <sub>8</sub>: [Event](#events)
+ -  <sub>8</sub>: [Events](#events)
 
 <sub>* Optional, format: username#1234</sub>
 <sub>** Optional, default value: [NOTHING]</sub>
@@ -306,6 +306,7 @@ Here will be some callbacks listed that will be sent out when subscribed to them
 ### Update
 
 Sent when an update is requested from the bot. Contains no usefull data. :exclamation: This is an automatic callback. :exclamation:
+
 Data ([Message object](#message)): 
 ```javascript
 {
