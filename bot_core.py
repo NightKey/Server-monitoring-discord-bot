@@ -3,7 +3,7 @@ from typing import List, Optional, Union, Dict
 from modules import status, log_level, log_folder
 from modules.watchdog import Watchdog
 from smdb_logger import Logger
-from smdb_api import Message, Attachment, Interface, Response, MessageSendingResponse, ResponseCode
+from smdb_api import Message, Attachment, Interface, Response, MessageSendingResponse, ResponseCode, Events
 from platform import node
 from modules.services import Server
 from modules.scanner import scann
@@ -487,6 +487,17 @@ Category: SERVER
     # Add a preferrence setting option for more costumisable bot
     get_addition = f' + {addition}' if addition is not None else ''
     await message.channel.send(f"{tag}{message.author.name}`[{num}d{sides}{get_addition}]` rolled [{'+'.join([str(n) for n in res])}]{get_addition}: {sum(res)+addition if addition is not None else 0}")
+
+
+@client.event
+async def on_presence_update(before: discord.Member, after: discord.Member):
+    dm_channel = get_channel(before.id)
+    if(before.activity != after.activity and before.activity.name != after.activity.name):
+        server.event_trigger(Events.activity,
+                             before.activity.name, after.activity.name, dm_channel.id)
+    if(before.status != after.status):
+        server.event_trigger(Events.presence_update,
+                             before.status.name, after.status.name, dm_channel.id)
 
 
 @client.event

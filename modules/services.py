@@ -1,7 +1,7 @@
 from os import path
 from typing import Any, Callable, Dict, List, Union
 from smdb_logger import Logger
-from smdb_api import Message, Response, ResponseCode
+from smdb_api import Message, Response, ResponseCode, Events, Interface
 from . import log_level, log_folder
 from .voice_connection import VCRequest
 from hashlib import sha256
@@ -41,6 +41,10 @@ class Server:
         self.bad_request = Response(ResponseCode.BadRequest, None)
         self.voice_connection_controll = voice_connection_controll
         self.track_finished_socket = None
+        self.subscribers_for_event: Dict[Events, List[socket.socket]] = {
+            Events.presence_update: [],
+            Events.activity: []
+        }
         logger.header("Service initialized")
 
     def change_ip_port(self, ip: str, port: int) -> None:
@@ -104,7 +108,7 @@ class Server:
         """Requests an update from the target. This update should request the application used to update itself and the API
         """
         self.send(Message("0000000000", "", "0000000000",
-                  [], "update").to_json(), target)
+                  [], "UPDATE").to_json(), target)
 
     def start(self) -> None:
         """Starts the API server
@@ -126,7 +130,8 @@ class Server:
             'Skip Currently Playing': self.skip_playing,
             'Stop Currently Playing': self.stop_playing,
             'List Queue': self.list_queue,
-            'Set As Track Finished': self.set_track_finished_target
+            'Set As Track Finished': self.set_track_finished_target,
+            'Subscribe To Event': self.subscribe_to_event
         }
         self.socket.listen()
         logger.info("API Server started")
@@ -196,7 +201,7 @@ class Server:
     def track_finished(self, track: str) -> None:
         if self.track_finished_socket is not None:
             self.send(Message("Bot", track, None, [],
-                      "Track Finished").to_json(), self.track_finished_socket)
+                      "TRACK FINISHED", Interface.Discord).to_json(), self.track_finished_socket)
     # endregion
 
     def create_command(self, socket: socket, data: dict) -> None:
@@ -297,6 +302,15 @@ class Server:
         return data.replace(r'{help_text}', help_text).replace(
             r'{name}', name).replace(r'{creator}', creator)
 
+    def event_trigger(self, event: Events, before: str, after: str, channel: int) -> None:
+        for recepient in self.subscribers_for_event[event]:
+            self.send(Message("Bot", f"{event.value}|{before}|{after}",
+                      channel, [], "EVENT", Interface.Discord), recepient)
+
+    def subscribe_to_event(self, socket: socket, msg: str) -> None:
+        self.subscribers_for_event[Events(int(msg))].append(socket)
+        self.send(Response(ResponseCode.Success))
+
     def create_function(self, creator: str, name: str, help_text: str, callback: str) -> Response:
         """Creates a function with the given parameters, and stores it in the self.functions dictionary, with the 'name' as key
         """
@@ -382,14 +396,13 @@ class Server:
                 logger.error(f"{ex}")
         self.socket.close()
 
-    def command_retrieved(self, msg: Message, socket: socket) -> None:
+    def command_retrieved(self, msg: Dict[str, str], socket: socket) -> None:
         """Retrives commands
         """
         if msg["Command"] not in self.commands or "Value" not in msg.keys():
             self.send(self.bad_request.create_altered(
                 Data="Command is not a valid command" if msg["Command"] not in self.commands else "Value is not present!"), socket)
             return
-        #logger.debug(f'Command: {msg}')
         self.commands[msg["Command"]](socket, msg["Value"])
 
     def disconnect(self, socket: socket, reason: str) -> None:
