@@ -32,7 +32,7 @@ This bot, needs the following permissions to function properly:
     - --name - Sets the name to use with the remote discord bot -->
  - --scilent - Disables startup messages on the discord server
 
-## API
+# API
 
 The bot uses a tcp server as it's API, where plaintext messages will yield results. The API can be turned on with the `-api` switch.
  -  default port: `9600`
@@ -60,23 +60,24 @@ Upon validation, the response can be two:
 
 |Request                                                                     |Return Value                                             |Content                                                     |
 |:---------------------------------------------------------------------------|:--------------------------------------------------------|:----------------------------------------------------------:|
-|[Status](#Status)                                                           |Json                                                     |The PC's status as it gets sent to the servers              |
-|[Send](#Send)<sup><sub>1</sub></sup>                                        |Boolean                                                  |If the message was sent successfully                        |
-|[Create](#Create)<sup><sub>2</sub></sup>                                    |[Response](#Resopnse-object)                             |If the function was added successfully                      |
-|[Username](#Username)<sup><sub>3</sub></sup>                                |[MessageSendignResponse](#Message-sendign-response)      |Returns the username connected to the ID                    |
-|[Remove](#Remove)<sup><sub>4</sub></sup>                                    |[Response](#Resopnse-object)                             |Rempves the selected command from the list                  |
-|[Disconnect](#Disconnect)<sup><sub>5</sub></sup>                            |Nothing                                                  |Safely disconnect, with an optional reason                  |
-|[Is Admin](#Is-Admin)<sup><sub>3</sub></sup>                                |Boolean                                                  |Returns if user is an admin of the discord bot              |
-|[Connect To User](#Connect-To-User)<sup><sub>3</sub></sup>                  |[Response](#Resopnse-object)                             |Response from the action                                    |
-|[Disconnect From Voice](#Disconnect-From-User)                              |[Response](#Resopnse-object)                             |Response from the action                                    |
-|[Play Audio File](#Play-Audio-File)<sup><sub>7</sub></sup>                  |Boolean                                                  |If the audio file was started                               |
-|[Add Audio File](#Add-Audio-File)<sup><sub>6</sub></sup>                    |Boolean                                                  |If the audio file was added                                 |
-|[Pause Currently Playing](#Pause-Currently-Playing)<sup><sub>3</sub></sup>  |Boolean                                                  |If the audio file was paused                                |
-|[Resume Paused](#Resume-paused)<sup><sub>3</sub></sup>                      |Boolean                                                  |If the audio file was resumed                               |
-|[Skip Currently Playing](#Skip-Currently-Playing)<sup><sub>3</sub></sup>    |Boolean                                                  |If a skip could be made                                     |
-|[Stop Currently Playing](#Stop-Currently-Playing)<sup><sub>3</sub></sup>    |Boolean                                                  |If the audio file was stopped                               |
-|[List Queue](#List-Queue)                                                   |List                                                     |Returns a list of filenames currently queued                |
-|[Set As Track Finished](#Set-as-track-finished)                             |[Response](#Resopnse-object)                             |Sets the client as a callback when a track finishes playing |
+|[Status](#status)                                                           |Json                                                     |The PC's status as it gets sent to the servers              |
+|[Send](#send)<sup><sub>1</sub></sup>                                        |Boolean                                                  |If the message was sent successfully                        |
+|[Create](#create)<sup><sub>2</sub></sup>                                    |[Response](#resopnse-object)                             |If the function was added successfully                      |
+|[Username](#username)<sup><sub>3</sub></sup>                                |[MessageSendignResponse](#message-sendign-response)      |Returns the username connected to the ID                    |
+|[Remove](#remove)<sup><sub>4</sub></sup>                                    |[Response](#response-object)                             |Rempves the selected command from the list                  |
+|[Disconnect](#disconnect)<sup><sub>5</sub></sup>                            |Nothing                                                  |Safely disconnect, with an optional reason                  |
+|[Is Admin](#is-admin)<sup><sub>3</sub></sup>                                |Boolean                                                  |Returns if user is an admin of the discord bot              |
+|[Connect To User](#connect-to-user)<sup><sub>3</sub></sup>                  |[Response](#response-object)                             |Response from the action                                    |
+|[Disconnect From Voice](#disconnect-from-user)                              |[Response](#response-object)                             |Response from the action                                    |
+|[Play Audio File](#play-audio-file)<sup><sub>7</sub></sup>                  |Boolean                                                  |If the audio file was started                               |
+|[Add Audio File](#add-audio-file)<sup><sub>6</sub></sup>                    |Boolean                                                  |If the audio file was added                                 |
+|[Pause Currently Playing](#pause-currently-playing)<sup><sub>3</sub></sup>  |Boolean                                                  |If the audio file was paused                                |
+|[Resume Paused](#resume-paused)<sup><sub>3</sub></sup>                      |Boolean                                                  |If the audio file was resumed                               |
+|[Skip Currently Playing](#skip-currently-playing)<sup><sub>3</sub></sup>    |Boolean                                                  |If a skip could be made                                     |
+|[Stop Currently Playing](#stop-currently-playing)<sup><sub>3</sub></sup>    |Boolean                                                  |If the audio file was stopped                               |
+|[List Queue](#list-queue)                                                   |List                                                     |Returns a list of filenames currently queued                |
+|[Set As Track Finished](#set-as-track-finished)                             |[Response](#response-object)                             |Sets the client as a callback when a track finishes playing |
+|[Subscribe To Event](#subscribe-to-event)<sup><sub>8</sub></sup>            |[Response](#response-object)                             |Subscribes to a specified event                             |
 
 The messages are case sensitive, and 'Bad request' message will be sent, when a message is not applicable.
 
@@ -88,6 +89,7 @@ The messages are case sensitive, and 'Bad request' message will be sent, when a 
  -  <sub>5</sub>: Disconnect {reason***}
  -  <sub>6</sub>: {path [string]}
  -  <sub>7</sub>: {user_id [string], path [string]}
+ -  <sub>8</sub>: [Event](#events)
 
 <sub>* Optional, format: username#1234</sub>
 <sub>** Optional, default value: [NOTHING]</sub>
@@ -112,14 +114,14 @@ Responses are in json format and they have the following structure:
 
 This class is used to send complex messages between the bot and the connected API-s.
 
-|Property name|Types                         |Description                            |
-|:-----------:|:-----------------------------|--------------------------------------:|
-|sender       |String                        |The name of the sender                 |
-|content      |String                        |The message the user provided          |
-|channel      |String                        |The channel name where it was used     |
-|attachment   |[attachment](#Attachment)/None|The attachment sent with the message   |
-|called       |String                        |The metthod called by the user         |
-|interface    |[interface](#Interface)       |The interface used to send this message|
+|Property name|Types                          |Description                            |
+|:-----------:|:------------------------------|--------------------------------------:|
+|sender       |String                         |The name of the sender                 |
+|content      |String                         |The message the user provided          |
+|channel      |String                         |The channel name where it was used     |
+|attachment   |[attachment](#attachment)/None |The attachment sent with the message   |
+|called       |String                         |The metthod called by the user         |
+|interface    |[interface](#interface)/None   |The interface used to send this message|
 
 The class is sent as a Json object.
 
@@ -149,10 +151,10 @@ An enum class used to tell what interface was used for triggering the message se
 
 A class that contains the results of a message sending request.
 
-|Property name|Prooperty value                  |Description                |
-|:-----------:|:--------------------------------|--------------------------:|
-|state        |[ResponseState](#Response-state) |The state of the response  |
-|message      |String/None                      |The optional message/reason|
+|Property name|Prooperty value                     |Description                |
+|:-----------:|:-----------------------------------|--------------------------:|
+|state        |[Response status](#response-status) |The state of the response  |
+|message      |String/None                         |The optional message/reason|
 
 Json example
 
@@ -172,6 +174,15 @@ An enum class to represent the success of a message sending request
 |Success    |0          |Message successfully sent |
 |NotFound   |1          |User/Channel not found    |
 |Failed     |2          |Failed to send message    |
+
+### Events
+
+An enum class to represent possible events to subscribe to
+
+|Name value      | Int value |
+|:--------------:|:----------|
+|presence_update |0          |
+|activity        |1          |
 
 ## Commands
 
@@ -226,7 +237,7 @@ The 'Usage: ' line is optional, but if present, it should be formated like that,
 
 #### Returns
 
-When it's called, it returns a [message](#Message) object.
+When it's called, it returns a [message](#message) object.
 
 ### Username
 
@@ -282,4 +293,60 @@ Lists the names of the items in the playlist, starting with the currently playin
 
 ### Set As Track Finished
 
-Sets the callback for when the current tack finished playing for possible file removal.
+Sets the callback for when the current tack finished playing for possible file removal. Allows triggering of [Track finished](#track-finished)
+
+### Subscribe To Event
+
+Subscribes to a specified event. Allows triggering of [Event trigger](#event-trigger).
+
+## Callbacks
+
+Here will be some callbacks listed that will be sent out when subscribed to them
+
+### Update
+
+Sent when an update is requested from the bot. Contains no usefull data. :exclamation: This is an automatic callback. :exclamation:
+Data ([Message object](#message)): 
+```javascript
+{
+    "sender": "0000000000",
+    "content": "",
+    "channel": "0000000000",
+    "called": "UPDATE",
+    "attachments": [],
+    "interface": None,
+    "random_id": Random Integer
+}
+```
+
+### Track finished
+
+Sent when the client is subscribed to [Set As Track Finished](#set-as-track-finished).
+Data ([Message object](#message)): 
+```javascript
+{
+    "sender": "Bot",
+    "content": String,
+    "channel": None,
+    "called": "TRACK FINISHED",
+    "attachments": [],
+    "interface": Interface.Discord,
+    "random_id": Random Integer
+}
+```
+
+### Event trigger
+
+Sent when the client is subscribed to [Subscribe To Event](#subscribe-to-event).
+Data ([Message object](#message)): 
+```javascript
+{
+    "sender": "Bot",
+    "content": String with the following values and formatting: "{event.value}|{before value}|{after value}",
+    "channel": User DM Channel,
+    "called": "EVENT",
+    "attachments": [],
+    "interface": Interface.Discord,
+    "random_id": Random Integer
+}
+```
