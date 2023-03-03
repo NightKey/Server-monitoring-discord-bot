@@ -587,7 +587,7 @@ Category: SERVER
         embed.add_field(name="Server monitoring Discord bot",
                         value=f"You can invite this bot to your server on [this](https://discord.com/api/oauth2/authorize?client_id={id}&permissions=3615744&scope=bot) link!")
         embed.add_field(
-            name="Warning!", value="This bot only monitors the server it runs on. If you want it to monitor a server you own, wisit [this](https://github.com/NightKey/Server-monitoring-discord-bot) link instead!")
+            name="Warning!", value="This bot only monitors the server it runs on. If you want it to monitor a server you own, visit [this](https://github.com/NightKey/Server-monitoring-discord-bot) link instead!")
         embed.color = 0xFF00F3
         await message.channel.send(embed=embed)
     except Exception as ex:
