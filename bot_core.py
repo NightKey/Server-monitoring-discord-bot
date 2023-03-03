@@ -1333,7 +1333,7 @@ def create_telegramm():
                 str(id), "wake", str(id), [], None, Interface.Telegramm))
 
     @telegramm_bot.callback()
-    def shut_down(id: int, options: Optional[str]) -> None:
+    def shutdown(id: int, options: Optional[str]) -> None:
         command = "shutdown"
         if (options is not None):
             command += f" {options}"
