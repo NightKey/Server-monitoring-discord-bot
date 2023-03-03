@@ -602,3 +602,6 @@ class API:
                 self.track_hook = None
         finally:
             self.communicateLock.release()
+
+    def reply_to_message(self, reply: str, message: Message) -> bool:
+        return self.send_message(reply, message.interface, message.sender)
