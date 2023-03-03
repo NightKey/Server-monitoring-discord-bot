@@ -1,3 +1,6 @@
 ✔ API setup.py @done(21-03-19 04:23)
 ☐ Add way to set preferrences per server
-☐ Add way to play music trough API
+✔ Add way to play music trough API @done(23-02-20 15:48)
+☐ Add unified user to ease of use with API
+☐ Add GPU status
+☐ Add event to user changing status
