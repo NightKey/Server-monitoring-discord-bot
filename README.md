@@ -1,9 +1,10 @@
 # Server-monitoring-discord-bot
 
-This bot monitors the computer that it's running on.
+This application is a chat-bot that is capable of monitoring the status of the computer as well as the running state of watch listed applications. 
+If the watchdog process is in use, a notification message can be sent.
 For it to work, you will need to create one [Discord bot account](https://discordapp.com/developers/applications/).
-If you want to use the Telegramm bot API, you will need to create a [Telegramm bot](https://core.telegram.org/api/obtaining_api_id) as well
-Both the watchdog, and the bot is capable of running without one another.
+If you want to use the Telegramm bot API, you will need to create a [Telegramm bot](https://core.telegram.org/api/obtaining_api_id) as well.
+The watchdog and bot processes are capable of running without one another.
 
 ## The bot
 
@@ -153,7 +154,7 @@ A class that contains the results of a message sending request.
 
 |Property name|Prooperty value                     |Description                |
 |:-----------:|:-----------------------------------|--------------------------:|
-|state        |[Response status](#response-status) |The state of the response  |
+|state        |[Response code](#response-code) |The state of the response  |
 |message      |String/None                         |The optional message/reason|
 
 Json example
@@ -165,15 +166,19 @@ Json example
 }
 ```
 
-### Response status
+### Response code
 
 An enum class to represent the success of a message sending request
 
-|Name value | Int value |Meaning                   |
-|:---------:|:----------|-------------------------:|
-|Success    |0          |Message successfully sent |
-|NotFound   |1          |User/Channel not found    |
-|Failed     |2          |Failed to send message    |
+|Name value    | Int value |Meaning                    |
+|:------------:|:----------|--------------------------:|
+|Success       |0          |Message successfully sent  |
+|BadRequest    |1          |Bad request was retrived   |
+|InternalError |2          |An internal error happaned |
+|Denied        |3          |The request was denied     |
+|Accepted      |4          |The request was accepted   |
+|Failed        |5          |Failed to send message     |
+|NotFound      |6          |User/Channel not found     |
 
 ### Events
 
