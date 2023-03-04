@@ -251,7 +251,7 @@ class Server:
             logger.error(ex)
             return None
 
-    def send(self, msg: str, socket: socket) -> None:
+    def send(self, msg: str, socket: socket) -> bool:
         r"""Sends a message to the socket. Every message is '\n' terminated (terminator does not required)
         """
         try:
@@ -281,8 +281,10 @@ class Server:
                 if msg == '\n':
                     break
                 msg = tmp
+            return True
         except ConnectionError:
             self.client_lost(socket)
+            return False
 
     def get_api_key_for(self, name: str) -> str:
         """Returns the correct API key for a 'name' named program
