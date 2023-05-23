@@ -307,11 +307,11 @@ class Server:
     def event_trigger(self, event: Events, before: str, after: str, channel: int) -> None:
         for recepient in self.subscribers_for_event[event]:
             self.send(Message("Bot", f"{event.value}|{before}|{after}",
-                      channel, [], "EVENT", Interface.Discord), recepient)
+                      str(channel), [], "EVENT", Interface.Discord).to_json(), recepient)
 
     def subscribe_to_event(self, socket: socket, msg: str) -> None:
         self.subscribers_for_event[Events(int(msg))].append(socket)
-        self.send(Response(ResponseCode.Success))
+        self.send(Response(ResponseCode.Success), socket)
 
     def create_function(self, creator: str, name: str, help_text: str, callback: str) -> Response:
         """Creates a function with the given parameters, and stores it in the self.functions dictionary, with the 'name' as key

@@ -110,7 +110,7 @@ if __name__ == '__main__':
     while True:
         params = argv[1:]
         if is_debugger():
-            params.extend(['--nowd', '--api', '--scilent', '--telegramm'])
+            params.extend(['--nowd', '--api', '--scilent', "--dev"])
         main(params)
         logger.warning('Bot killed!')
         ansv = str(input('Do you want to restart the bot? ([Y]/N) ') or 'Y')

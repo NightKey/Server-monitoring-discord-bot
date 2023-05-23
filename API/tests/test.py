@@ -29,7 +29,8 @@ class API_CreationTest(unittest.TestCase):
                          "dummy server status": "Avaleable"})
 
     def test_3_api_sends_message(self):
-        api.send_message("Test", destination="123456789")
+        api.send_message("Test", destination="123456789",
+                         interface=smdb_api.Interface.Discord)
 
     def test_4_api_uses_is_admin(self):
         self.assertTrue(api.is_admin("123"))
@@ -40,7 +41,8 @@ class API_CreationTest(unittest.TestCase):
 
     def test_6_api_uses_callback(self):
         api.create_function("Test", "Test Description", self.dummy_callback)
-        msg = smdb_api.Message("sender", "content", "channel", [], "Test")
+        msg = smdb_api.Message("sender", "content", "channel", [
+        ], "Test", smdb_api.Interface.Discord)
         sleep(1)
         server.Test(server, msg)
 
@@ -59,7 +61,8 @@ class API_CreationTest(unittest.TestCase):
         self.counter = 0
         api.create_function("Test2", "Test", self.reject)
         sleep(1)
-        msg = smdb_api.Message("sender", "content", "channel", [], "Test2")
+        msg = smdb_api.Message("sender", "content", "channel", [
+        ], "Test2", interface=smdb_api.Interface.Discord)
         server.Test2(server, msg)
         server.Test2(server, msg)
         self.assertEqual(self.counter, 1)
@@ -90,16 +93,16 @@ def get_status():
     return {"dummy server status": "Avaleable"}
 
 
-def send_message(msg, user=None):
-    return response.Response(response.ResponseCode.Success)
+def send_message(user=None):
+    return smdb_api.Response(smdb_api.ResponseCode.Success)
 
 
 def get_user(uid):
-    return response.Response(response.ResponseCode.Success, uid)
+    return smdb_api.Response(smdb_api.ResponseCode.Success, uid)
 
 
 def is_admin(uid):
-    return response.Response(response.ResponseCode.Success, uid == "123")
+    return smdb_api.Response(smdb_api.ResponseCode.Success, uid == "123")
 
 
 def voice_connection_managger(request, user_id=None, path=None):
@@ -110,29 +113,29 @@ class Message_function_test(unittest.TestCase):
 
     def test_1_message_contains_user(self):
         msg = smdb_api.Message(
-            "sender", "the message content <@!000000000000000000>", "channel", [], "called")
+            "sender", "the message content <@!000000000000000000>", "channel", [], "called", interface=smdb_api.Interface.Discord)
         self.assertTrue(msg.contains_user())
         msg = smdb_api.Message(
-            "sender", "the message content", "channel", [], "called")
+            "sender", "the message content", "channel", [], "called", interface=smdb_api.Interface.Discord)
         self.assertFalse(msg.contains_user())
 
     def test_2_message_returns_correct_tag(self):
         msg = smdb_api.Message(
-            "sender", "the message content <@!000000000000000000>", "channel", [], "called")
+            "sender", "the message content <@!000000000000000000>", "channel", [], "called", interface=smdb_api.Interface.Discord)
         self.assertEqual("000000000000000000", msg.get_contained_user_id())
         msg = smdb_api.Message(
-            "sender", "the message content", "channel", [], "called")
+            "sender", "the message content", "channel", [], "called", interface=smdb_api.Interface.Discord)
         self.assertEqual("", msg.get_contained_user_id())
         msg = smdb_api.Message(
-            "sender", "the <@!000000000000000000> message content", "channel", [], "called")
+            "sender", "the <@!000000000000000000> message content", "channel", [], "called", interface=smdb_api.Interface.Discord)
         self.assertEqual("000000000000000000", msg.get_contained_user_id())
 
     def test_3_message_has_attachment(self):
         msg = smdb_api.Message(
-            "sender", "the message content", "channel", [], "called")
+            "sender", "the message content", "channel", [], "called", interface=smdb_api.Interface.Discord)
         self.assertFalse(msg.has_attachments())
         msg = smdb_api.Message("sender", "the message content", "channel", [
-                               smdb_api.Attachment("name", "url", 12)], "called")
+                               smdb_api.Attachment("name", "url", 12)], "called", interface=smdb_api.Interface.Discord)
         self.assertTrue(msg.has_attachments())
 
 
@@ -156,6 +159,6 @@ if __name__ == "__main__":
     unittest.main(exit=False)
     print("Stopping dummy server")
     server.stop()
-    print("Finished!")
     th.join()
+    print("Finished!")
     exit(0)
