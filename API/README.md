@@ -113,4 +113,8 @@ Lists the names of the items in the playlist, starting with the currently playin
 
 ### set_as_hook_for_track_finished
 
-Sets the callback for when the current tack finished playing for possible file removal.
+Sets the callback for when the current tack finished playing for possible file removal. Returns the title of the finished track in a message object.
+
+### subscribe_to_event
+
+Subscribes a callback to an event. Returns a string that represents the string value of the previous state, string that represents the string value of the new state, and a message object containing the dm channel for the user with the discord interface.
