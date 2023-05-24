@@ -1273,12 +1273,12 @@ async def _send_message(msg: Message, channel: discord.TextChannel):
                          icon_url="https://avatars.githubusercontent.com/u/8132508?s=400&v=4")
     except:
         pass
-    for attachment in msg.attachments:
+    if 0 < len(msg.attachments) < 10:
         try:
             if embed is not None:
-                await channel.send(embed=embed, file=discord.File(attachment.url, attachment.filename))
+                await channel.send(embed=embed, files=[discord.File(attachment.url, attachment.filename) for attachment in msg.attachments])
             else:
-                await channel.send(msg.content, file=discord.File(attachment.url, attachment.filename))
+                await channel.send(msg.content, files=[discord.File(attachment.url, attachment.filename) for attachment in msg.attachments])
         except discord.errors.HTTPException as ex:
             if ex.status == 413:
                 await channel.send("File too big!")
