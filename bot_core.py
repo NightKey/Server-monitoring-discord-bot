@@ -8,7 +8,7 @@ from platform import node
 from modules.services import Server
 from modules.scanner import scann
 from modules.voice_connection import VCRequest, VoiceConnection
-from threading import Thread, Lock
+from threading import Thread
 from time import sleep, process_time
 import datetime
 import psutil
@@ -43,7 +43,6 @@ telegramm_api_key: str = ""
 loop: asyncio.AbstractEventLoop = None
 watchdog: Watchdog = None
 server: Server = None
-dm_channel_lock = Lock()
 admin_key = None
 me: discord.User = None
 dev_mode: bool = False
