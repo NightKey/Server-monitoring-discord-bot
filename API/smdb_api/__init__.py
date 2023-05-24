@@ -9,7 +9,7 @@ from os import path, devnull, system, remove
 from sys import stdout, __stdout__
 from time import sleep, time
 from datetime import datetime
-from typing import Any, Callable, List, Union, Optional
+from typing import Any, Callable, Dict, List, Union, Optional
 from hashlib import sha256
 from enum import Enum
 
@@ -101,7 +101,7 @@ class Message:
     def create_message(sender: str, content: str, channel: str, attachments: List[Attachment], called: str, interface: Interface) -> "Message":
         return Message(sender, content if content is not None else "", channel, attachments, called, interface)
 
-    def __init__(self, sender: str, content: str, channel: str, attachments: List[Attachment], called: str, interface: Interface) -> None:
+    def __init__(self, sender: str, content: str, channel: str, attachments: List[Attachment], called: str, interface: Interface = None) -> None:
         self.sender = sender
         self.content = content
         self.channel = channel
@@ -136,7 +136,7 @@ class Message:
             "channel": self.channel,
             "called": self.called,
             "attachments": [attachment.to_json() for attachment in self.attachments] if len(self.attachments) > 0 else None,
-            "interface": self.interface.value,
+            "interface": self.interface.value if self.interface is not None else None,
             "random_id": self.random_id
         }
 
@@ -216,6 +216,11 @@ class MessageSendingResponse():
         return MessageSendingResponse(ResponseCode(json["state"]), json["message"])
 
 
+class Events(Enum):
+    presence_update = 0
+    activity = 1
+
+
 def blockPrint() -> None:
     global stdout
     stdout = open(devnull, 'w')
@@ -258,19 +263,23 @@ class API:
         self.key = key
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.valid = False
-        self.call_list = {"update": self.update}
+        self.call_list = {"UPDATE": self.update,
+                          "TRACK FINISHED": self.__track_hoock, "EVENT": self.__event_callback}
         self.buffer = []
         self.sending = False
         self.running = True
         self.connection_alive = True
         self.initial = True
-        self.socket_list = []
-        self.created_function_list = []
-        self.create_function_threads = []
+        self.socket_list: List[socket.socket] = []
+        self.created_function_list: List[List[str]] = []
+        self.create_function_threads: List[threading.Thread] = []
         self.update_function = update_function
         self.communicateLock = threading.Lock()
         self.track_hook: Callable[[Message], None] = None
         self.last_message: Message = None
+        self.subscriber_threads: List[threading.Thread] = []
+        self.subscriber_callbacks: Dict[Events,
+                                        Callable[[str, str, int], None]] = {}
 
     def __send(self, msg: str) -> None:
         """Sends a socket message
@@ -414,6 +423,9 @@ class API:
                 if self.created_function_list != []:
                     self.connection_alive = True
                     self.__re_init_commands()
+                if self.subscriber_callbacks != {}:
+                    self.connection_alive = True
+                    self.__re_subscribe()
                 if self.initial:
                     self.initial = False
                     self.th = threading.Thread(target=self.__listener)
@@ -595,13 +607,54 @@ class API:
         self.communicateLock.acquire()
         try:
             self.sending = True
-            self.track_hook = callable
             self.__send({"Command": "Set As Track Finished", "Value": None})
-            tmp = self.__wait_for_response()
-            if not tmp:
-                self.track_hook = None
+            if self.__wait_for_response():
+                self.track_hook = callable
         finally:
+            self.communicateLock.release()
+
+    def __track_hoock(self, message: Message) -> None:
+        if self.track_hook != None:
+            self.track_hook(message)
+
+    def __re_subscribe(self) -> None:
+        for key, value in self.subscriber_callbacks.items():
+            self.subscribe_to_event(key, value)
+
+    def subscribe_to_event(self, event: Events, callable: Callable[[str, str, Message], None]) -> bool:
+        self.subscriber_threads.append(threading.Thread(
+            target=self.__subscribe_to_event, args=[event, callable, ]))
+        self.subscriber_threads[-1].name = f"Subscribe to {event.name}"
+        self.subscriber_threads[-1].start()
+
+    def __subscribe_to_event(self, event: Events, callable: Callable[[str, str, Message], None]) -> bool:
+        self.communicateLock.acquire()
+        self.sending = True
+        try:
+            if (not self.valid):
+                return
+            self.__send(
+                {"Command": "Subscribe To Event", "Value": event.value})
+            tmp = self.__wait_for_response()
+            self.sending = False
+            if tmp["response"] == ResponseCode.Success:
+                if event not in self.subscriber_callbacks:
+                    self.subscriber_callbacks[event] = callable
+                return True
+            elif tmp["response"] == ResponseCode.InternalError:
+                print(
+                    f"[__subscribe_to_event exception] Internal error: {tmp['Data']}")
+                return False
+            else:
+                raise ActionFailed(tmp["data"])
+        finally:
+            self.sending = False
             self.communicateLock.release()
 
     def reply_to_message(self, reply: str, message: Message) -> bool:
         return self.send_message(reply, message.interface, message.sender)
+
+    def __event_callback(self, message: Message) -> None:
+        event, before, after = message.content.split('|')
+        self.subscriber_callbacks[Events(int(event))](
+            before, after, message)

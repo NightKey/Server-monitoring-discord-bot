@@ -3,7 +3,7 @@ from typing import List, Optional, Union, Dict
 from modules import status, log_level, log_folder
 from modules.watchdog import Watchdog
 from smdb_logger import Logger
-from smdb_api import Message, Attachment, Interface, Response, MessageSendingResponse, ResponseCode
+from smdb_api import Message, Attachment, Interface, Response, MessageSendingResponse, ResponseCode, Events
 from platform import node
 from modules.services import Server
 from modules.scanner import scann
@@ -44,7 +44,8 @@ loop: asyncio.AbstractEventLoop = None
 watchdog: Watchdog = None
 server: Server = None
 admin_key = None
-me = None
+me: discord.User = None
+dev_mode: bool = False
 
 
 class signals:
@@ -56,6 +57,7 @@ intents = discord.Intents.default()
 intents.members = True
 intents.voice_states = True
 intents.message_content = True
+intents.presences = True
 # Creates a client instance using the discord  module
 client = discord.Client(heartbeat_timeout=120, intents=intents)
 voice_connection: VoiceConnection = None
@@ -468,7 +470,7 @@ Category: SERVER
     if '+' in original:
         value[-1] = value[-1].split('+')[0]
         value.append(original.split('+')[-1])
-    num = int(value[0])
+    num = int(value[0]) if value[0] != "" else 1
     sides = int(value[1])
     addition = int(value[2]) if (len(value) > 2) else None
     if num > 1000 or sides > 10000:
@@ -486,7 +488,21 @@ Category: SERVER
         pass
     # Add a preferrence setting option for more costumisable bot
     get_addition = f' + {addition}' if addition is not None else ''
-    await message.channel.send(f"{tag}{message.author.name}`[{num}d{sides}{get_addition}]` rolled [{'+'.join([str(n) for n in res])}]{get_addition}: {sum(res)+addition if addition is not None else 0}")
+    await message.channel.send(f"{tag}{message.author.name}`[{num}d{sides}{get_addition}]` rolled [{'+'.join([str(n) for n in res])}]{get_addition}: {sum(res)+(addition if addition is not None else 0)}")
+
+
+@client.event
+async def on_presence_update(before: discord.Member, after: discord.Member):
+    if (before.activity != after.activity):
+        server.event_trigger(Events.activity,
+                             before.activity.name if before.activity is not None else "None",
+                             after.activity.name if after.activity is not None else "None",
+                             before.id)
+    if (before.status != after.status):
+        server.event_trigger(Events.presence_update,
+                             before.status.name if before.status is not None else "None",
+                             after.status.name if after.status is not None else "None",
+                             before.id)
 
 
 @client.event
@@ -564,7 +580,7 @@ async def echo(message, _):
     """Responds with 'ping' and shows the current latency, and the PID if the user was an admin
 Category: SERVER
     """
-    await message.channel.send(f'ping: {int(client.latency*1000)} ms{ f" PID: {os.getpid()}" if str(message.author.id) in admins["discord"] else ""}')
+    await message.channel.send(f'ping: {int(client.latency*1000)} ms{ f" PID: {os.getpid()}" if str(message.author.id) in admins["discord"] else ""}{" DEV" if dev_mode else ""}')
 
 
 async def send_link(message, _):
@@ -576,7 +592,7 @@ Category: SERVER
         embed.add_field(name="Server monitoring Discord bot",
                         value=f"You can invite this bot to your server on [this](https://discord.com/api/oauth2/authorize?client_id={id}&permissions=3615744&scope=bot) link!")
         embed.add_field(
-            name="Warning!", value="This bot only monitors the server it runs on. If you want it to monitor a server you own, wisit [this](https://github.com/NightKey/Server-monitoring-discord-bot) link instead!")
+            name="Warning!", value="This bot only monitors the server it runs on. If you want it to monitor a server you own, visit [this](https://github.com/NightKey/Server-monitoring-discord-bot) link instead!")
         embed.color = 0xFF00F3
         await message.channel.send(embed=embed)
     except Exception as ex:
@@ -1123,7 +1139,7 @@ async def on_message(message: discord.Message):
                     await message.channel.send("Not a valid command!\nUse '&help' for the avaleable commands")
 
 
-def disconnect_check(loop, channels):
+def disconnect_check(loop: asyncio.BaseEventLoop, channels):
     """Restarts the bot, if the disconnected time is greater than one hour"""
     setup = False
     channel = None
@@ -1151,15 +1167,15 @@ def disconnect_check(loop, channels):
         if len(connections) > 0 and (datetime.datetime.now() - datetime.datetime.fromtimestamp(connections[0])) >= datetime.timedelta(hours=reset_time):
             del connections[0]
         if len(connections) > 50:
-            loop.create_task(channel.send(
-                f"{len(connections)} connections reached within {reset_time} hours!"))
+            send_raw_message(
+                f"{len(connections)} connections reached within {reset_time} hours!", channel)
         if len(connections) > 500:
             enable_debug_logger()
-            loop.create_task(channel.send(
-                f"@everyone {len(connections)} connections reached within {reset_time} hours!\nDebugger enabled!"))
+            send_raw_message(
+                f"@everyone {len(connections)} connections reached within {reset_time} hours!\nDebugger enabled!", channel)
         if len(connections) > 990:
-            loop.create_task(channel.send(
-                f"@everyone {len(connections)} connections reached within {reset_time} hours!\nExiting!"))
+            send_raw_message(
+                f"@everyone {len(connections)} connections reached within {reset_time} hours!\nExiting!", channel, channel)
             loop.create_task(client.logout())
             loop.create_task(client.close())
             while not client.is_closed():
@@ -1169,34 +1185,72 @@ def disconnect_check(loop, channels):
         if was_online and float.is_integer(client.latency) and int(client.latency*1000) > 200:
             high_ping_count += 1
             if high_ping_count == 5:
-                loop.create_task(channel.send(
-                    f"Warning! Latency is {int(client.latency*1000)} ms!\nIt was abowe 200 ms for over 10 seconds."))
+                send_raw_message(
+                    f"Warning! Latency is {int(client.latency*1000)} ms!\nIt was abowe 200 ms for over 10 seconds.", channel)
                 high_ping_count = 0
         elif high_ping_count != 0:
             high_ping_count - 1
         sleep(2)
 
 
-def get_channel(user: str) -> discord.TextChannel:
-    if usr := client.get_user(int(user)):
-        if usr.dm_channel is not None:
-            return usr.dm_channel
-        else:
-            loop.create_task(usr.create_dm())
-            while usr.dm_channel is None:
-                sleep(0.1)
-            return usr.dm_channel
-    for chn in client.get_all_channels():
-        if (str)(chn.id) == user:
-            return chn
-    return None
+def get_channel(id: str) -> discord.TextChannel:
+    task: asyncio.tasks.Task = loop.create_task(
+        __get_channel(id), "Get text channel")
+    while not task.done():
+        sleep(0.1)
+    if task.exception() is not None:
+        raise task.exception()
+    return task.result()
+
+
+async def __get_channel(id: str) -> discord.TextChannel:
+    id = int(id)
+    try:
+        if usr := client.get_user(id):
+            if usr.dm_channel is not None:
+                return usr.dm_channel
+            else:
+                try:
+                    await usr.create_dm()
+                except Exception as ex:
+                    logger.error(
+                        f"Exception in creating dm channel with user {usr.name}!")
+                    raise ex
+                return usr.dm_channel
+        for chn in client.get_all_channels():
+            if chn.id == id:
+                return chn
+        return None
+    except Exception as ex:
+        logger.error(
+            f"Exception getting channel by id '{id}': {ex}")
+        raise ex
+
+
+def send_raw_message(msg: str, channel: discord.TextChannel, timeout: int = -1):
+    task: asyncio.tasks.Task = loop.create_task(_send_message(
+        Message("", msg, "", [], ""), channel), "Send raw message")
+    counter = 0
+    while not task.done():
+        counter += 1
+        if counter > timeout * 10:
+            task.cancel()
+        sleep(0.1)
+    if task.exception() is not None:
+        logger.error(f"Exception in task: {task.exception()}")
+        return MessageSendingResponse(ResponseCode.Failed, task.exception())
+    if task.cancelled():
+        logger.error(f"Sending message timed out in {timeout} seconds")
+        return MessageSendingResponse(ResponseCode.Failed, f"Timed out after {timeout} seconds")
+    return MessageSendingResponse(ResponseCode.Success)
 
 
 def send_discord_message(msg: Message) -> MessageSendingResponse:
     chn = get_channel(msg.channel)
     if chn == None:
         return MessageSendingResponse(ResponseCode.NotFound, "User or channel not found")
-    task = loop.create_task(_send_message(msg, chn))
+    task: asyncio.tasks.Task = loop.create_task(
+        _send_message(msg, chn), "Send discord message")
     while not task.done():
         sleep(0.1)
     if task.exception() is not None:
@@ -1211,7 +1265,7 @@ async def _send_message(msg: Message, channel: discord.TextChannel):
         logger.debug(f"Creating embed with data: {tmp}")
         embed = discord.Embed()
         [embed.add_field(name=key, value=value)
-         for key, value in tmp["fields"].items()]
+            for key, value in tmp["fields"].items()]
         embed.title = tmp["title"]
         embed.description = "Created using SMDB API"
         embed.color = 0xB200FF
@@ -1219,12 +1273,12 @@ async def _send_message(msg: Message, channel: discord.TextChannel):
                          icon_url="https://avatars.githubusercontent.com/u/8132508?s=400&v=4")
     except:
         pass
-    if len(msg.attachments) > 0:
+    if 0 < len(msg.attachments) < 10:
         try:
             if embed is not None:
-                await channel.send(embed=embed, file=discord.File(msg.attachments[0].url, msg.attachments[0].filename))
+                await channel.send(embed=embed, files=[discord.File(attachment.url, attachment.filename) for attachment in msg.attachments])
             else:
-                await channel.send(msg.content, file=discord.File(msg.attachments[0].url, msg.attachments[0].filename))
+                await channel.send(msg.content, files=[discord.File(attachment.url, attachment.filename) for attachment in msg.attachments])
         except discord.errors.HTTPException as ex:
             if ex.status == 413:
                 await channel.send("File too big!")
@@ -1304,6 +1358,7 @@ def create_telegramm():
         if (telegramm_id in admins["telegramm"]):
             return False
         admins["telegramm"].append(telegramm_id)
+        save_cfg()
         return True
 
     @telegramm_bot.callback()
@@ -1377,6 +1432,9 @@ def Main(_loop: asyncio.AbstractEventLoop):
             logger.info("Setting up Telegramm")
             create_telegramm()
             telegramm_bot.start()
+        if "--dev" in os.sys.argv:
+            global dev_mode
+            dev_mode = True
         voice_connection = VoiceConnection(
             loop, server.track_finished if server is not None else None)
         logger.info('Starting all processes')

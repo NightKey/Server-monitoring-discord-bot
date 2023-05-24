@@ -152,7 +152,7 @@ class Logger:
 
     def __log(self, level: LEVEL, data: str, counter: str, end: str) -> None:
         if (counter is None):
-            counter = str(self.get_date().strftime(r"%Y.%m.%d-%I:%M:%S"))
+            counter = str(self.get_date().strftime(r"%Y.%m.%d-%H:%M:%S"))
         log_msg = f"[{counter}] [{level.value}]: {data}"
         if self.header_used and level != LEVEL.HEADER:
             log_msg = f"\t{log_msg}"
