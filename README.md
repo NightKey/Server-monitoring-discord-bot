@@ -154,7 +154,7 @@ A class that contains the results of a message sending request.
 
 |Property name|Prooperty value                     |Description                |
 |:-----------:|:-----------------------------------|--------------------------:|
-|state        |[Response code](#response-code) |The state of the response  |
+|state        |[Response code](#response-code)     |The state of the response  |
 |message      |String/None                         |The optional message/reason|
 
 Json example
