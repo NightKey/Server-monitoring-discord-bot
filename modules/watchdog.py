@@ -147,20 +147,23 @@ class Watchdog():
                                 self.loop.create_task(channel.send(
                                     f"@everyone CPU is running hot @ {temp}°C for more than 5 minutes! The server will be hut down in 5 minutes!"))
                     if n % 5 == 0:
-                        disks = status.get_disk_status()
-                        for key, disk in disks.items():
-                            percentage = round(disk["percent"], 1)
-                            if key in self.disks:
-                                if percentage > 99 and percentage > (self.disks[key] + 3):
-                                    self.send_message(
-                                        channel, f"@everyone The disk '{key}' is full ({percentage}%)!")
-                                elif percentage > 95 and percentage > (self.disks[key] + 3):
-                                    self.send_message(
-                                        channel, f"@everyone The disk '{key}' is nearly filled ({percentage}%)!")
-                                elif percentage > 90 and percentage > (self.disks[key] + 3):
-                                    self.send_message(
-                                        channel, f"@everyone The disk '{key}' is {percentage}% filled!")
-                            self.disks[key] = percentage
+                        try:
+                            disks = status.get_disk_status()
+                            for key, disk in disks.items():
+                                percentage = round(disk["percent"], 1)
+                                if key in self.disks:
+                                    if percentage > 99 and percentage > (self.disks[key] + 3):
+                                        self.send_message(
+                                            channel, f"@everyone The disk '{key}' is full ({percentage}%)!")
+                                    elif percentage > 95 and percentage > (self.disks[key] + 3):
+                                        self.send_message(
+                                            channel, f"@everyone The disk '{key}' is nearly filled ({percentage}%)!")
+                                    elif percentage > 90 and percentage > (self.disks[key] + 3):
+                                        self.send_message(
+                                            channel, f"@everyone The disk '{key}' is {percentage}% filled!")
+                                self.disks[key] = percentage
+                        except psutil.AccessDenied as ad:
+                            logger.error(ad)
                         memory = status.get_memory_status()
                         for key, data in memory.items():
                             percentage = round(data["percent"], 1)
