@@ -194,6 +194,7 @@ class Watchdog():
                         self.send_message(channel, f"@everyone\n{self.error}")
                         self.error = ""
             except Exception as ex:
-                self.send_message(channel, f"Exception in Watchdog! {ex}")
+                self.send_message(
+                    channel, f"Exception in Watchdog with type '{type(ex)}'\n{ex}")
             finally:
                 sleep(1)
