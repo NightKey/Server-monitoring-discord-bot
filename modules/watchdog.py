@@ -162,7 +162,7 @@ class Watchdog():
                                         self.send_message(
                                             channel, f"@everyone The disk '{key}' is {percentage}% filled!")
                                 self.disks[key] = percentage
-                        except psutil.AccessDenied as ad:
+                        except (psutil.AccessDenied, PermissionError) as ad:
                             logger.error(ad)
                         memory = status.get_memory_status()
                         for key, data in memory.items():
