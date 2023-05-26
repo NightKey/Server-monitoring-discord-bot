@@ -1195,7 +1195,7 @@ def disconnect_check(loop: asyncio.BaseEventLoop, channels):
 
 def get_channel(id: str) -> discord.TextChannel:
     task: asyncio.tasks.Task = loop.create_task(
-        __get_channel(id), "Get text channel")
+        __get_channel(id), name="Get text channel")
     while not task.done():
         sleep(0.1)
     if task.exception() is not None:
@@ -1229,7 +1229,7 @@ async def __get_channel(id: str) -> discord.TextChannel:
 
 def send_raw_message(msg: str, channel: discord.TextChannel, timeout: int = -1):
     task: asyncio.tasks.Task = loop.create_task(_send_message(
-        Message("", msg, "", [], ""), channel), "Send raw message")
+        Message("", msg, "", [], ""), channel), name="Send raw message")
     counter = 0
     while not task.done():
         counter += 1
@@ -1250,7 +1250,7 @@ def send_discord_message(msg: Message) -> MessageSendingResponse:
     if chn == None:
         return MessageSendingResponse(ResponseCode.NotFound, "User or channel not found")
     task: asyncio.tasks.Task = loop.create_task(
-        _send_message(msg, chn), "Send discord message")
+        _send_message(msg, chn), name="Send discord message")
     while not task.done():
         sleep(0.1)
     if task.exception() is not None:
