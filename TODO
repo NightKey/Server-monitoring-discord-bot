@@ -2,5 +2,5 @@
 ☐ Add way to set preferrences per server
 ✔ Add way to play music trough API @done(23-02-20 15:48)
 ☐ Add unified user to ease of use with API
-☐ Event subscription
-☐ Add event to user changing status
+✔ Event subscription @done(23-05-26 09:05)
+✔ Add event to user changing status @done(23-05-26 09:05)
