@@ -221,6 +221,33 @@ class Events(Enum):
     activity = 1
 
 
+class User:
+    def __init__(self, discord_id: int, telegram_id: int, id: str = None):
+        self.discord_id = discord_id
+        self.telegram_id = telegram_id
+        self.id = id
+        if id is None:
+            self.id = self.generate_id()
+
+    def __str__(self) -> str:
+        return self.__repr__()
+
+    def __repr__(self) -> str:
+        return f"<smdb user><id:{self.id}, discord:{self.discord_id}, telegram:{self.telegram_id}>"
+
+    def to_json(self) -> Dict[str, int]:
+        return {"discord_id": self.discord_id, "telegram_id": self.telegram_id, "id": self.id}
+
+    def generate_id(self) -> int:
+        import random
+        random.seed(f"discord:{self.discord_id}telegram:{self.telegram_id}")
+        return random.randint(10000, 99999)
+
+    @staticmethod
+    def from_json(json: Dict[str, int]) -> "User":
+        return User(json["discord_id"], json["telegram_id"], json["id"])
+
+
 def blockPrint() -> None:
     global stdout
     stdout = open(devnull, 'w')

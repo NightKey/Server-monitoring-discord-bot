@@ -139,6 +139,19 @@ class Message_function_test(unittest.TestCase):
         self.assertTrue(msg.has_attachments())
 
 
+class User_test(unittest.TestCase):
+    def test_1_user_can_be_created(self):
+        import random
+        random.seed(f"discord:{0}telegram:{0}")
+        generated_id = random.randint(10000, 99999)
+        user = smdb_api.User(0, 0)
+        self.assertEqual(0, user.discord_id)
+        self.assertEqual(0, user.telegram_id)
+        self.assertTrue(generated_id, user.id)
+        self.assertEqual(
+            f"<smdb user><id:{generated_id}, discord:0, telegram:0>", repr(user))
+
+
 if __name__ == "__main__":
     print("Creating dummy server...")
     services.logger = Logger(
