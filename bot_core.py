@@ -395,6 +395,7 @@ Category: SOFTWARE
                     value="\u200B", name=item, inline=True)
 
     pc_name = node()
+    # TODO: Split to different blocks (Disks, RAM/SWAP, TEMP)
     if stype.lower() in ["short", "long", "host", pc_name.lower()]:
         host_status = discord.Embed(
             title=f"{pc_name}'s status", color=0x14f9a2)
