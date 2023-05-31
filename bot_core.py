@@ -353,6 +353,7 @@ async def status_check(message, stype="short"):
 Usage: &status <long if you want to see the API status too or module name for specific module status [bot, watchdog, api, host/pc_name]>
 Category: SOFTWARE
     """
+    color = 0x14f9a2 if not dev_mode else 0x3273e3
     global process_list
     if stype is None:
         stype = "short"
@@ -364,7 +365,7 @@ Category: SOFTWARE
         await echo(message)
         return
     if stype.lower() in ["short", "long", "bot"]:
-        bot_status = discord.Embed(title="Bot status", color=0x14f9a2)
+        bot_status = discord.Embed(title="Bot status", color=color)
         bot_status.add_field(name=f"Reconnectoins in the past {reset_time} hours", value=len(
             connections), inline=False)
         for name, thread in threads.items():
@@ -376,14 +377,14 @@ Category: SOFTWARE
     if stype.lower() in ["short", "long", "watchdog"]:
         process_list = scann(process_list, psutil.process_iter())
         watchdog_status = discord.Embed(
-            title="Watched processes' status", color=0x14f9a2)
+            title="Watched processes' status", color=color)
         for key, value in process_list.items():
             watchdog_status.add_field(name=key, value=(
                 "running" if value[0] else "stopped"), inline=True)
             process_list[key] = [False, False]
 
     if stype.lower() in ["long", "api"]:
-        api_server_status = discord.Embed(title="API Status", color=0x14f9a2)
+        api_server_status = discord.Embed(title="API Status", color=color)
         api_status = server.get_api_status() if server is not None else {
             "API": "Offline"}
         for key, values in api_status.items():
@@ -395,28 +396,38 @@ Category: SOFTWARE
                     value="\u200B", name=item, inline=True)
 
     pc_name = node()
-    # TODO: Split to different blocks (Disks, RAM/SWAP, TEMP)
     if stype.lower() in ["short", "long", "host", pc_name.lower()]:
         host_status = discord.Embed(
-            title=f"{pc_name}'s status", color=0x14f9a2)
+            title=f"{pc_name}'s status", color=color)
         host_status.set_footer(text="Created by Night Key @ https://github.com/NightKey",
                                icon_url="https://avatars.githubusercontent.com/u/8132508?s=400&v=4")
         stts = status.get_graphical(bar_size, True)
-        for key, value in stts.items():
-            val = ("Status" if len(value) > 1 else value[0])
-            host_status.add_field(name=key, value=val, inline=False)
-            if len(value) > 1 and key != "Battery":
-                host_status.add_field(name="Max", value=value[0])
-                host_status.add_field(name="Used" if key in [
-                                      "RAM", "SWAP"] else "Free", value=value[1])
-                host_status.add_field(name="Status", value=value[2])
-            elif len(value) > 1:
-                host_status.add_field(name="Battery life", value=value[0])
-                host_status.add_field(name="Power status", value=value[1])
-                host_status.add_field(name="Status", value=value[2])
+        # Battery
+        battery_values = stts["Battery"]
+        if len(battery_values) > 1:
+            host_status.add_field(name="Battery", value="Status", inline=False)
+            host_status.add_field(name="Battery life", value=battery_values[0])
+            host_status.add_field(name="Power status", value=battery_values[1])
+            host_status.add_field(name="Status", value=battery_values[2])
+        # Memory
+        for key in ["RAM", "SWAP"]:
+            memory_values = stts[key]
+            host_status.add_field(name=key, value="Status", inline=False)
+            host_status.add_field(name="Max", value=memory_values[0])
+            host_status.add_field(name="Used", value=memory_values[1])
+            host_status.add_field(name="Status", value=memory_values[2])
         temp = status.get_temp()
         host_status.add_field(name="Temperature", value=(
             f"{temp}°C" if temp is not None else "Not detected!"))
+        # Disks
+        disk_status = discord.Embed(
+            title=f"{pc_name}'s disk status", color=color)
+        for key, value in stts.items():
+            if len(value) > 1 and key not in ["Battery", "RAM", "SWAP"]:
+                disk_status.add_field(name=key, value="Status", inline=False)
+                disk_status.add_field(name="Max", value=value[0])
+                disk_status.add_field(name="Free", value=value[1])
+                disk_status.add_field(name="Status", value=value[2])
 
     if stype.lower() in ["short", "long", "bot"]:
         await channel.send(embed=bot_status)
@@ -428,6 +439,7 @@ Category: SOFTWARE
         await channel.send(embed=api_server_status)
 
     if stype.lower() in ["short", "long", "host", pc_name.lower()]:
+        await channel.send(embed=disk_status)
         await channel.send(embed=host_status)
 
 
