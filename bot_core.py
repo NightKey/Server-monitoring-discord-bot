@@ -10,6 +10,7 @@ from modules.scanner import scann
 from modules.voice_connection import VCRequest, VoiceConnection
 from threading import Thread
 from time import sleep, process_time
+from discord.enums import Status as DiscordStatus
 import datetime
 import psutil
 import os
@@ -297,7 +298,7 @@ def stop():
     signal(signals.exit)
 
 
-def send_message(msg: Message):
+def send_message(msg: Message) -> Response:
     """Callback function to the services.py.
     """
     if msg.channel is None:
@@ -1039,6 +1040,7 @@ async def connect_to_user(user: discord.Member) -> None:
     if user_vc is not None:
         await voice_connection.connect(user_vc)
 
+
 linking = {
     "add": [add_process, True],
     "admin": [add_admin, False],
@@ -1084,7 +1086,7 @@ categories = {
 }
 
 
-def is_admin(uid: str) -> bool:
+def is_admin(uid: str) -> Response:
     return Response(ResponseCode.Success, uid in admins["discord"])
 
 
@@ -1204,6 +1206,13 @@ def disconnect_check(loop: asyncio.BaseEventLoop, channels):
         elif high_ping_count != 0:
             high_ping_count - 1
         sleep(2)
+
+
+def get_current_status(user: Union[discord.Member, int], status_to_check: Events) -> Response:
+    if isinstance(user, int):
+        user = get_user(user)
+    status = user.activity.name if status_to_check == Events.activity else f"{user.name}'s status is {user.status.name}"
+    Response(ResponseCode.Success, status)
 
 
 def get_channel(id: str) -> discord.TextChannel:
@@ -1440,7 +1449,7 @@ def Main(_loop: asyncio.AbstractEventLoop):
         if "--api" in os.sys.argv:
             logger.info("Setting up the services")
             server = Server(edit_linking, get_status, send_message,
-                            get_user, is_admin, voice_connection_managger)
+                            get_user, is_admin, voice_connection_managger, get_current_status)
         if "--telegramm" in os.sys.argv:
             logger.info("Setting up Telegramm")
             create_telegramm()

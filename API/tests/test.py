@@ -109,9 +109,13 @@ def voice_connection_managger(request, user_id=None, path=None):
     return True
 
 
+def get_current_status(uid, type):
+    return smdb_api.Response(smdb_api.ResponseCode.Success, f"{uid} {smdb_api.Events(type).name}")
+
+
 class Message_function_test(unittest.TestCase):
 
-    def test_1_message_contains_user(self):
+    def test_10_message_contains_user(self):
         msg = smdb_api.Message(
             "sender", "the message content <@!000000000000000000>", "channel", [], "called", interface=smdb_api.Interface.Discord)
         self.assertTrue(msg.contains_user())
@@ -119,7 +123,7 @@ class Message_function_test(unittest.TestCase):
             "sender", "the message content", "channel", [], "called", interface=smdb_api.Interface.Discord)
         self.assertFalse(msg.contains_user())
 
-    def test_2_message_returns_correct_tag(self):
+    def test_11_message_returns_correct_tag(self):
         msg = smdb_api.Message(
             "sender", "the message content <@!000000000000000000>", "channel", [], "called", interface=smdb_api.Interface.Discord)
         self.assertEqual("000000000000000000", msg.get_contained_user_id())
@@ -130,7 +134,7 @@ class Message_function_test(unittest.TestCase):
             "sender", "the <@!000000000000000000> message content", "channel", [], "called", interface=smdb_api.Interface.Discord)
         self.assertEqual("000000000000000000", msg.get_contained_user_id())
 
-    def test_3_message_has_attachment(self):
+    def test_12_message_has_attachment(self):
         msg = smdb_api.Message(
             "sender", "the message content", "channel", [], "called", interface=smdb_api.Interface.Discord)
         self.assertFalse(msg.has_attachments())
@@ -138,13 +142,20 @@ class Message_function_test(unittest.TestCase):
                                smdb_api.Attachment("name", "url", 12)], "called", interface=smdb_api.Interface.Discord)
         self.assertTrue(msg.has_attachments())
 
+    def test_13_can_get_current_status(self):
+        sleep(1)
+        self.assertEqual("0 activity", api.get_user_status(
+            0, smdb_api.Events.activity))
+        self.assertEqual("0 presence_update", api.get_user_status(
+            0, smdb_api.Events.presence_update))
+
 
 if __name__ == "__main__":
     print("Creating dummy server...")
     services.logger = Logger(
         "test", storage_life_extender_mode=True, log_to_console=True)
     server = services.Server(linking_editor, get_status, send_message,
-                             get_user, is_admin, voice_connection_managger)
+                             get_user, is_admin, voice_connection_managger, get_current_status)
     server._start_for_test()
     th = threading.Thread(target=server.loop)
     th.name = "Dummy server"
@@ -156,7 +167,10 @@ if __name__ == "__main__":
     api = smdb_api.API(
         name, key, update_function=lambda: print("Update called"))
     print("Unit test started")
-    unittest.main(exit=False)
+    main = threading.Thread(target=unittest.main)
+    main.name = "Unittest"
+    main.start()
+    main.join()
     print("Stopping dummy server")
     server.stop()
     th.join()

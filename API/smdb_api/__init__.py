@@ -449,6 +449,17 @@ class API:
         else:
             NotValidatedError()
 
+    def get_user_status(self, uid: str, __type: Events = Events.activity) -> str:
+        if self.valid:
+            self.sending = True
+            self.__send({"Command": "Get User Status",
+                        "Value": {"User": uid, "Type": __type.value}})
+            tmp = self.__wait_for_response()
+            if tmp["response"] == ResponseCode.Success:
+                return tmp["data"]
+        else:
+            NotValidatedError()
+
     def update(self, _) -> None:
         """Trys to update the API with PIP, and calls the given update function if there is one avaleable.
         """

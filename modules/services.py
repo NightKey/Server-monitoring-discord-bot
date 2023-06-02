@@ -19,11 +19,12 @@ class Server:
         self,
         linking_editor: Callable[[Any, bool], None],
         get_status: Callable[[], dict],
-        send_message: Callable[[Message], bool],
+        send_message: Callable[[Message], Response],
         get_user: Callable[[str], Response],
-        is_admin: Callable[[str], bool],
+        is_admin: Callable[[str], Response],
         voice_connection_controll: Callable[[
-            VCRequest, Union[str, None], Union[str, None]], Union[Response, bool, List[str]]]
+            VCRequest, Union[str, None], Union[str, None]], Union[Response, bool, List[str]]],
+        get_user_status: Callable[[str, Events], Response]
     ) -> None:
         self.clients = {}
         self.run = True
@@ -45,6 +46,7 @@ class Server:
             Events.presence_update: [],
             Events.activity: []
         }
+        self.__get_user_status = get_user_status
         logger.header("Service initialized")
 
     def change_ip_port(self, ip: str, port: int) -> None:
@@ -131,7 +133,8 @@ class Server:
             'Stop Currently Playing': self.stop_playing,
             'List Queue': self.list_queue,
             'Set As Track Finished': self.set_track_finished_target,
-            'Subscribe To Event': self.subscribe_to_event
+            'Subscribe To Event': self.subscribe_to_event,
+            'Get User Status': self.get_user_status
         }
         self.socket.listen()
         logger.info("API Server started")
@@ -154,7 +157,8 @@ class Server:
             'Resume Paused': self.resume_paused,
             'Skip Currently Playing': self.skip_playing,
             'Stop Currently Playing': self.stop_playing,
-            'List Queue': self.list_queue
+            'List Queue': self.list_queue,
+            'Get User Status': self.get_user_status
         }
         self.socket.listen()
 
@@ -368,6 +372,14 @@ class Server:
             return
         self.send(self.get_user(uid), socket)
 
+    def get_user_status(self, socket: socket, data: Dict[str, Any]) -> None:
+        user: int = int(data["User"]) if "User" in data else None
+        requested: Events = Events(data["Type"]) if "Type" in data else None
+        if user is None or requested is None:
+            self.send(self.bad_request.create_altered(
+                Data="No User or Type were provided."), socket)
+        self.send(self.__get_user_status(user, requested), socket)
+
     def stop(self) -> None:
         self.run = False
 
@@ -377,7 +389,7 @@ class Server:
         while self.run:
             try:
                 read_socket, _, exception_socket = select.select(
-                    self.socket_list, [], self.socket_list, 30)
+                    self.socket_list, [], self.socket_list, 1)
                 for notified_socket in read_socket:
                     if notified_socket == self.socket:
                         self.new_client()
