@@ -998,13 +998,10 @@ def voice_connection_managger(request: VCRequest, user_id: Union[str, None] = No
     task: asyncio.Task = None
     logger.debug(f"Voice connection request type: {request}")
     if user_id is not None:
-        for member in client.get_all_members():
-            if int(user_id) == member.id:
-                user_as_member = member
-                logger.debug(f"Caller: {user_as_member}")
-                break
-        else:
+        user_as_member = __get_user(user_id)
+        if user_as_member is None:
             return Response(ResponseCode.InternalError, "User not found")
+        logger.debug(f"Caller: {user_as_member}")
     if request == VCRequest.connect:
         task = loop.create_task(connect_to_user(user_as_member))
     elif request in [VCRequest.disconnect, VCRequest.forceDisconnect]:
@@ -1090,12 +1087,18 @@ def is_admin(uid: str) -> Response:
     return Response(ResponseCode.Success, uid in admins["discord"])
 
 
-def get_user(key: int) -> Response:
-    for usr in client.users:
-        if (str)(usr.id) == key:
-            return Response(ResponseCode.Success, usr.name)
-    else:
-        return Response(ResponseCode.BadRequest, "User not found")
+def get_user(uid: int) -> Response:
+    user = __get_user(uid)
+    return Response(ResponseCode.Success, user.name) if user is not None else Response(ResponseCode.BadRequest, "User not found")
+
+
+def __get_user(uid: int) -> Union[discord.Member, None]:
+    if isinstance(uid, str):
+        uid = int(uid)
+    for usr in client.get_all_members():
+        if usr.id == uid:
+            return usr
+    return None
 
 
 @client.event
@@ -1210,9 +1213,12 @@ def disconnect_check(loop: asyncio.BaseEventLoop, channels):
 
 def get_current_status(user: Union[discord.Member, int], status_to_check: Events) -> Response:
     if isinstance(user, int):
-        user = get_user(user)
-    status = user.activity.name if status_to_check == Events.activity else f"{user.name}'s status is {user.status.name}"
-    Response(ResponseCode.Success, status)
+        user = __get_user(user)
+    if user is None:
+        Response(ResponseCode.Failed, "User not found")
+    status = (
+        user.activity.name if user.activity is not None else None) if status_to_check == Events.activity else f"{user.name}'s status is {user.status.name}"
+    return Response(ResponseCode.Success, status)
 
 
 def get_channel(id: str) -> discord.TextChannel:

@@ -242,15 +242,14 @@ class Server:
                 try:
                     size = int(size)
                 except:
+                    logger.debug(f"Retrived NoN Int data for size: {size}")
                     self.client_lost(socket)
                     return None
                 data = socket.recv(size).decode(encoding="utf-8")
                 if data == '\n':
                     break
-                if data == None:
-                    return None
                 ret += data
-            return json.loads(ret)
+            return json.loads(ret) if ret is not None else None
         except Exception as ex:
             logger.error(ex)
             return None
@@ -275,10 +274,10 @@ class Server:
                     tmp = msg[9:]
                     msg = msg[:9]
                 length = str(len(msg)).encode(encoding='utf-8')
-                logger.debug(f"Sending legth: {length}")
+                # logger.debug(f"Sending legth: {length}")
                 socket.send(length)
                 chunk = msg.encode(encoding="utf-8")
-                logger.debug(f"Sending chunk: {chunk}")
+                # logger.debug(f"Sending chunk: {chunk}")
                 socket.send(chunk)
                 if tmp == '':
                     tmp = '\n'
@@ -398,6 +397,7 @@ class Server:
                             f"Incoming message from {self.clients[notified_socket]}")
                         msg = self.retrive(notified_socket)
                         if msg is None:
+                            logger.debug("None message retrived")
                             self.client_lost(notified_socket)
                             continue
                         else:
@@ -428,7 +428,7 @@ class Server:
                 f"{self.clients[socket]} disconnected with no reason given.")
         self.client_lost(socket, called=True)
 
-    def client_lost(self, socket: socket, called: str = False) -> None:
+    def client_lost(self, socket: socket, called: bool = False) -> None:
         """Handles loosing connections
         """
         if socket not in self.clients:
