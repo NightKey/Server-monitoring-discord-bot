@@ -2,6 +2,7 @@ from typing import Dict, Union
 from modules import bar
 from datetime import timedelta
 import psutil
+from os.path import sep
 valid_fstypes = ["ntfs", "ext4", "ext3"]
 
 
@@ -19,7 +20,7 @@ def get_disk_status() -> Dict[str, str]:
     disks = dict()
     partitions = psutil.disk_partitions()
     for partition in partitions:
-        if partition.fstype.lower() in valid_fstypes:
+        if partition.fstype.lower() in valid_fstypes and len(partition._asdict()["mountpoint"].split(sep)) < 3:
             disks[partition._asdict()["mountpoint"]] = psutil.disk_usage(
                 "{}".format(partition._asdict()["mountpoint"]))._asdict()
     return disks
