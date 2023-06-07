@@ -1,5 +1,6 @@
 from hashlib import sha256
 from io import TextIOWrapper
+from smdb_api import Events
 from random import Random
 from typing import Any, Dict, Iterable, List, Optional, Union, overload
 
@@ -25,6 +26,13 @@ class User:
         self.__discord: int = discord
         self.__telegramm: int = telegramm
         self.__code = create_code(sha256(id.to_bytes(4, "little")).digest())
+        self.__status = {Events.activity: None, Events.presence_update: None}
+
+    def get_status(self, type: Events) -> Union[str, None]:
+        return self.__status[type]
+
+    def set_status(self, type: Events, value: Union[str, None]) -> None:
+        self.__status[type] = value
 
     def add_discord(self, discord: int, validation_code: str) -> None:
         if self.__discord is not None:
@@ -95,9 +103,14 @@ class UserContainer:
 
     @overload
     def append(self, __object: User) -> None:
+        if __object in self.__users:
+            raise UserException(f"{__object} is already in the user list.")
         self.__users.append(__object)
 
     def append(self, __object: int) -> None:
+        if __object in self.__users:
+            raise UserException(
+                f"A User with the ID {__object} is already in the user list.")
         self.__users.append(User(__object))
 
     def __delitem__(self, __i: int) -> None:
@@ -128,6 +141,9 @@ if __name__ == "__main__":
     uc.append(0)
     print(uc[1])
     uc[0].add_discord(1123456, uc[0].get_code())
+    print(uc[0].get_status(Events.activity))
+    uc[0].set_status(Events.activity, "Activity")
+    print(uc[0].get_status(Events.activity))
     print(uc[1123456])
     del uc[0]
     print(uc)
