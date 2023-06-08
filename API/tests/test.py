@@ -94,7 +94,7 @@ def get_status():
 
 
 def send_message(user=None):
-    return smdb_api.Response(smdb_api.ResponseCode.Success)
+    return smdb_api.MessageSendingResponse(smdb_api.ResponseCode.Success)
 
 
 def get_user(uid):

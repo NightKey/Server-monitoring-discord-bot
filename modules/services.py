@@ -230,7 +230,7 @@ class Server:
                 Data="Empty message"), socket)
             return
         message = Message.from_json(msg)
-        self.send(self.send_message(message), socket)
+        self.send(self.send_message(message).to_json(), socket)
 
     def retrive(self, socket: socket) -> dict:
         r"""Retrives a message from the socket. Every message is '\n' terminated (terminator not included)
