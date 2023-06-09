@@ -100,7 +100,7 @@ class Logger:
     def __check_logfile(self) -> None:
         if self.max_logfile_size != -1 and path.exists(path.join(self.log_folder, self.log_file)) and (path.getsize(path.join(self.log_folder, self.log_file)) / (1024 ^ 2)) > self.max_logfile_size:
             tmp = self.log_file.split(".")
-            tmp[0] += str(self.get_date().strftime(format_string=r"%y.%m.%d-%I"))
+            tmp[0] += str(self.get_date().strftime(r"%y.%m.%d-%I"))
             new_name = ".".join(tmp)
             rename(path.join(self.log_folder, self.log_file),
                    path.join(self.log_folder, new_name))
