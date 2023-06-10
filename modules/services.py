@@ -266,7 +266,7 @@ class Server:
                     if value == socket:
                         socket = key
                         break
-            if isinstance(msg, [Response, MessageSendingResponse]):
+            if isinstance(msg, (Response, MessageSendingResponse)):
                 msg = json.dumps(msg.__repr__())
             else:
                 msg = json.dumps(msg)
