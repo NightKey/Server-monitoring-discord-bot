@@ -205,14 +205,13 @@ class MessageSendingResponse():
             return False
         return self.state == other
 
-    def to_json(self):
-        return {"state": self.state.value, "message": self.message}
-
     def __str__(self):
         return str(self.__dict__)
 
     def __repr__(self):
-        return self.__dict__
+        tmp = self.__dict__
+        tmp["state"] = self.state.__repr__()
+        return tmp
 
     @staticmethod
     def from_message(json: dict) -> "MessageSendingResponse":
