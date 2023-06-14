@@ -2,6 +2,8 @@ from os import path
 from typing import Any, Callable, Dict, List, Union
 from smdb_logger import Logger
 from smdb_api import Message, Response, ResponseCode, Events, Interface
+
+from API.smdb_api import MessageSendingResponse
 from . import log_level, log_folder
 from .voice_connection import VCRequest
 from hashlib import sha256
@@ -19,11 +21,12 @@ class Server:
         self,
         linking_editor: Callable[[Any, bool], None],
         get_status: Callable[[], dict],
-        send_message: Callable[[Message], bool],
+        send_message: Callable[[Message], Response],
         get_user: Callable[[str], Response],
-        is_admin: Callable[[str], bool],
+        is_admin: Callable[[str], Response],
         voice_connection_controll: Callable[[
-            VCRequest, Union[str, None], Union[str, None]], Union[Response, bool, List[str]]]
+            VCRequest, Union[str, None], Union[str, None]], Union[Response, bool, List[str]]],
+        get_user_status: Callable[[str, Events], Response]
     ) -> None:
         self.clients = {}
         self.run = True
@@ -45,6 +48,7 @@ class Server:
             Events.presence_update: [],
             Events.activity: []
         }
+        self.__get_user_status = get_user_status
         logger.header("Service initialized")
 
     def change_ip_port(self, ip: str, port: int) -> None:
@@ -131,7 +135,8 @@ class Server:
             'Stop Currently Playing': self.stop_playing,
             'List Queue': self.list_queue,
             'Set As Track Finished': self.set_track_finished_target,
-            'Subscribe To Event': self.subscribe_to_event
+            'Subscribe To Event': self.subscribe_to_event,
+            'Get User Status': self.get_user_status
         }
         self.socket.listen()
         logger.info("API Server started")
@@ -154,7 +159,8 @@ class Server:
             'Resume Paused': self.resume_paused,
             'Skip Currently Playing': self.skip_playing,
             'Stop Currently Playing': self.stop_playing,
-            'List Queue': self.list_queue
+            'List Queue': self.list_queue,
+            'Get User Status': self.get_user_status
         }
         self.socket.listen()
 
@@ -238,15 +244,14 @@ class Server:
                 try:
                     size = int(size)
                 except:
+                    logger.debug(f"Retrived NoN Int data for size: {size}")
                     self.client_lost(socket)
                     return None
                 data = socket.recv(size).decode(encoding="utf-8")
                 if data == '\n':
                     break
-                if data == None:
-                    return None
                 ret += data
-            return json.loads(ret)
+            return json.loads(ret) if ret is not None else None
         except Exception as ex:
             logger.error(ex)
             return None
@@ -261,7 +266,7 @@ class Server:
                     if value == socket:
                         socket = key
                         break
-            if isinstance(msg, Response):
+            if isinstance(msg, (Response, MessageSendingResponse)):
                 msg = json.dumps(msg.__repr__())
             else:
                 msg = json.dumps(msg)
@@ -271,10 +276,10 @@ class Server:
                     tmp = msg[9:]
                     msg = msg[:9]
                 length = str(len(msg)).encode(encoding='utf-8')
-                logger.debug(f"Sending legth: {length}")
+                # logger.debug(f"Sending legth: {length}")
                 socket.send(length)
                 chunk = msg.encode(encoding="utf-8")
-                logger.debug(f"Sending chunk: {chunk}")
+                # logger.debug(f"Sending chunk: {chunk}")
                 socket.send(chunk)
                 if tmp == '':
                     tmp = '\n'
@@ -368,6 +373,14 @@ class Server:
             return
         self.send(self.get_user(uid), socket)
 
+    def get_user_status(self, socket: socket, data: Dict[str, Any]) -> None:
+        user: int = int(data["User"]) if "User" in data else None
+        requested: Events = Events(data["Type"]) if "Type" in data else None
+        if user is None or requested is None:
+            self.send(self.bad_request.create_altered(
+                Data="No User or Type were provided."), socket)
+        self.send(self.__get_user_status(user, requested), socket)
+
     def stop(self) -> None:
         self.run = False
 
@@ -377,7 +390,7 @@ class Server:
         while self.run:
             try:
                 read_socket, _, exception_socket = select.select(
-                    self.socket_list, [], self.socket_list, 30)
+                    self.socket_list, [], self.socket_list, 1)
                 for notified_socket in read_socket:
                     if notified_socket == self.socket:
                         self.new_client()
@@ -386,6 +399,7 @@ class Server:
                             f"Incoming message from {self.clients[notified_socket]}")
                         msg = self.retrive(notified_socket)
                         if msg is None:
+                            logger.debug("None message retrived")
                             self.client_lost(notified_socket)
                             continue
                         else:
@@ -416,7 +430,7 @@ class Server:
                 f"{self.clients[socket]} disconnected with no reason given.")
         self.client_lost(socket, called=True)
 
-    def client_lost(self, socket: socket, called: str = False) -> None:
+    def client_lost(self, socket: socket, called: bool = False) -> None:
         """Handles loosing connections
         """
         if socket not in self.clients:

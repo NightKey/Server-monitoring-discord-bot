@@ -10,6 +10,7 @@ from modules.scanner import scann
 from modules.voice_connection import VCRequest, VoiceConnection
 from threading import Thread
 from time import sleep, process_time
+from discord.enums import Status as DiscordStatus
 import datetime
 import psutil
 import os
@@ -297,7 +298,7 @@ def stop():
     signal(signals.exit)
 
 
-def send_message(msg: Message):
+def send_message(msg: Message) -> Response:
     """Callback function to the services.py.
     """
     if msg.channel is None:
@@ -353,6 +354,7 @@ async def status_check(message, stype="short"):
 Usage: &status <long if you want to see the API status too or module name for specific module status [bot, watchdog, api, host/pc_name]>
 Category: SOFTWARE
     """
+    color = 0x14f9a2 if not dev_mode else 0x3273e3
     global process_list
     if stype is None:
         stype = "short"
@@ -364,7 +366,7 @@ Category: SOFTWARE
         await echo(message)
         return
     if stype.lower() in ["short", "long", "bot"]:
-        bot_status = discord.Embed(title="Bot status", color=0x14f9a2)
+        bot_status = discord.Embed(title="Bot status", color=color)
         bot_status.add_field(name=f"Reconnectoins in the past {reset_time} hours", value=len(
             connections), inline=False)
         for name, thread in threads.items():
@@ -376,14 +378,14 @@ Category: SOFTWARE
     if stype.lower() in ["short", "long", "watchdog"]:
         process_list = scann(process_list, psutil.process_iter())
         watchdog_status = discord.Embed(
-            title="Watched processes' status", color=0x14f9a2)
+            title="Watched processes' status", color=color)
         for key, value in process_list.items():
             watchdog_status.add_field(name=key, value=(
                 "running" if value[0] else "stopped"), inline=True)
             process_list[key] = [False, False]
 
     if stype.lower() in ["long", "api"]:
-        api_server_status = discord.Embed(title="API Status", color=0x14f9a2)
+        api_server_status = discord.Embed(title="API Status", color=color)
         api_status = server.get_api_status() if server is not None else {
             "API": "Offline"}
         for key, values in api_status.items():
@@ -397,25 +399,36 @@ Category: SOFTWARE
     pc_name = node()
     if stype.lower() in ["short", "long", "host", pc_name.lower()]:
         host_status = discord.Embed(
-            title=f"{pc_name}'s status", color=0x14f9a2)
+            title=f"{pc_name}'s status", color=color)
         host_status.set_footer(text="Created by Night Key @ https://github.com/NightKey",
                                icon_url="https://avatars.githubusercontent.com/u/8132508?s=400&v=4")
         stts = status.get_graphical(bar_size, True)
-        for key, value in stts.items():
-            val = ("Status" if len(value) > 1 else value[0])
-            host_status.add_field(name=key, value=val, inline=False)
-            if len(value) > 1 and key != "Battery":
-                host_status.add_field(name="Max", value=value[0])
-                host_status.add_field(name="Used" if key in [
-                                      "RAM", "SWAP"] else "Free", value=value[1])
-                host_status.add_field(name="Status", value=value[2])
-            elif len(value) > 1:
-                host_status.add_field(name="Battery life", value=value[0])
-                host_status.add_field(name="Power status", value=value[1])
-                host_status.add_field(name="Status", value=value[2])
+        # Battery
+        battery_values = stts["Battery"]
+        if len(battery_values) > 1:
+            host_status.add_field(name="Battery", value="Status", inline=False)
+            host_status.add_field(name="Battery life", value=battery_values[0])
+            host_status.add_field(name="Power status", value=battery_values[1])
+            host_status.add_field(name="Status", value=battery_values[2])
+        # Memory
+        for key in ["RAM", "SWAP"]:
+            memory_values = stts[key]
+            host_status.add_field(name=key, value="Status", inline=False)
+            host_status.add_field(name="Max", value=memory_values[0])
+            host_status.add_field(name="Used", value=memory_values[1])
+            host_status.add_field(name="Status", value=memory_values[2])
         temp = status.get_temp()
         host_status.add_field(name="Temperature", value=(
             f"{temp}°C" if temp is not None else "Not detected!"))
+        # Disks
+        disk_status = discord.Embed(
+            title=f"{pc_name}'s disk status", color=color)
+        for key, value in stts.items():
+            if len(value) > 1 and key not in ["Battery", "RAM", "SWAP"]:
+                disk_status.add_field(name=key, value="Status", inline=False)
+                disk_status.add_field(name="Max", value=value[0])
+                disk_status.add_field(name="Free", value=value[1])
+                disk_status.add_field(name="Status", value=value[2])
 
     if stype.lower() in ["short", "long", "bot"]:
         await channel.send(embed=bot_status)
@@ -427,6 +440,7 @@ Category: SOFTWARE
         await channel.send(embed=api_server_status)
 
     if stype.lower() in ["short", "long", "host", pc_name.lower()]:
+        await channel.send(embed=disk_status)
         await channel.send(embed=host_status)
 
 
@@ -984,13 +998,10 @@ def voice_connection_managger(request: VCRequest, user_id: Union[str, None] = No
     task: asyncio.Task = None
     logger.debug(f"Voice connection request type: {request}")
     if user_id is not None:
-        for member in client.get_all_members():
-            if int(user_id) == member.id:
-                user_as_member = member
-                logger.debug(f"Caller: {user_as_member}")
-                break
-        else:
+        user_as_member = __get_user(user_id)
+        if user_as_member is None:
             return Response(ResponseCode.InternalError, "User not found")
+        logger.debug(f"Caller: {user_as_member}")
     if request == VCRequest.connect:
         task = loop.create_task(connect_to_user(user_as_member))
     elif request in [VCRequest.disconnect, VCRequest.forceDisconnect]:
@@ -1025,6 +1036,7 @@ async def connect_to_user(user: discord.Member) -> None:
     logger.debug(f"User voice channel: {user_vc.name}")
     if user_vc is not None:
         await voice_connection.connect(user_vc)
+
 
 linking = {
     "add": [add_process, True],
@@ -1071,16 +1083,22 @@ categories = {
 }
 
 
-def is_admin(uid: str) -> bool:
+def is_admin(uid: str) -> Response:
     return Response(ResponseCode.Success, uid in admins["discord"])
 
 
-def get_user(key: int) -> Response:
-    for usr in client.users:
-        if (str)(usr.id) == key:
-            return Response(ResponseCode.Success, usr.name)
-    else:
-        return Response(ResponseCode.BadRequest, "User not found")
+def get_user(uid: int) -> Response:
+    user = __get_user(uid)
+    return Response(ResponseCode.Success, user.name) if user is not None else Response(ResponseCode.BadRequest, "User not found")
+
+
+def __get_user(uid: int) -> Union[discord.Member, None]:
+    if isinstance(uid, str):
+        uid = int(uid)
+    for usr in client.get_all_members():
+        if usr.id == uid:
+            return usr
+    return None
 
 
 @client.event
@@ -1191,6 +1209,16 @@ def disconnect_check(loop: asyncio.BaseEventLoop, channels):
         elif high_ping_count != 0:
             high_ping_count - 1
         sleep(2)
+
+
+def get_current_status(user: Union[discord.Member, int], status_to_check: Events) -> Response:
+    if isinstance(user, int):
+        user = __get_user(user)
+    if user is None:
+        Response(ResponseCode.Failed, "User not found")
+    status = (
+        user.activity.name if user.activity is not None else None) if status_to_check == Events.activity else f"{user.name}'s status is {user.status.name}"
+    return Response(ResponseCode.Success, status)
 
 
 def get_channel(id: str) -> discord.TextChannel:
@@ -1427,7 +1455,7 @@ def Main(_loop: asyncio.AbstractEventLoop):
         if "--api" in os.sys.argv:
             logger.info("Setting up the services")
             server = Server(edit_linking, get_status, send_message,
-                            get_user, is_admin, voice_connection_managger)
+                            get_user, is_admin, voice_connection_managger, get_current_status)
         if "--telegramm" in os.sys.argv:
             logger.info("Setting up Telegramm")
             create_telegramm()

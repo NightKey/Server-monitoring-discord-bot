@@ -1,6 +1,6 @@
 # Server-monitoring-discord-bot
 
-This application is a chat-bot that is capable of monitoring the status of the computer as well as the running state of watch listed applications. 
+This application is a chat-bot that is capable of monitoring the status of the computer as well as the running state of watch listed applications.
 If the watchdog process is in use, a notification message can be sent.
 For it to work, you will need to create one [Discord bot account](https://discordapp.com/developers/applications/).
 If you want to use the Telegramm bot API, you will need to create a [Telegramm bot](https://core.telegram.org/api/obtaining_api_id) as well.
@@ -12,37 +12,39 @@ This application is a chat-bot that is capable of telling the status of the comp
 
 This bot, needs the following permissions to function properly:
 
-* Read Text Channels & See Voice Channels
-* Send Messages
-* Read Messages
-* Read Message History
-* Use External Emojis
-* Mention @everyone, @here, and All Roles
-* Manage Messages - Optional for the '&clear' command
-* Connect, Speake - Optional if a musicbot is connected to it's API
+- Read Text Channels & See Voice Channels
+- Send Messages
+- Read Messages
+- Read Message History
+- Use External Emojis
+- Mention @everyone, @here, and All Roles
+- Manage Messages - Optional for the '&clear' command
+- Connect, Speake - Optional if a musicbot is connected to it's API
 
 ## Arguments
 
- - --nowd - Disables the watchdog
- - --nodcc - Disables the disconnect checker
- - --api - Enables the API server
- - --telegramm - Enables Telegramm bot API
- <!-- - --remote - Sets the bot to remote modefor multiple computers (Disables watchdog and disconnect checker) 
-    - --ip - Sets the remote discord bot's IP adress
-    - --auth - Sets the authentication code for the bot                                                     This function needs to be developed first!
-    - --name - Sets the name to use with the remote discord bot -->
- - --scilent - Disables startup messages on the discord server
+- --nowd - Disables the watchdog
+- --nodcc - Disables the disconnect checker
+- --api - Enables the API server
+- --telegramm - Enables Telegramm bot API
+<!-- - --remote - Sets the bot to remote modefor multiple computers (Disables watchdog and disconnect checker)
+   - --ip - Sets the remote discord bot's IP adress
+   - --auth - Sets the authentication code for the bot                                                     This function needs to be developed first!
+   - --name - Sets the name to use with the remote discord bot -->
+- --scilent - Disables startup messages on the discord server
 
 # API
 
 The bot uses a tcp server as it's API, where plaintext messages will yield results. The API can be turned on with the `-api` switch.
- -  default port: `9600`
- -  default IP: `127.0.0.1`
+
+- default port: `9600`
+- default IP: `127.0.0.1`
 
 The messages should be sent as a json. The keys are `Command` and `Value`. The `Command` should contain the request, and `Value` should contain the request's data or `None` These parameters must be in the given order to work. A message should be sent in two parts:
- -  first a one byte long value for the length of the message
- -  the message itself. 
-The responses will be sent the same way.
+
+- first a one byte long value for the length of the message
+- the message itself.
+  The responses will be sent the same way.
 
 ### Example request
 
@@ -54,47 +56,49 @@ The responses will be sent the same way.
 ```
 
 Upon validation, the response can be two:
- -  "Accepted" - When the connection was accepted, and the client was added to the client list.
- -  "Denied" - The second message will contain the reason: "Bad API Key" or "Already connected".
+
+- "Accepted" - When the connection was accepted, and the client was added to the client list.
+- "Denied" - The second message will contain the reason: "Bad API Key" or "Already connected".
 
 ### Available commands
 
-|Request                                                                     |Return Value                                             |Content                                                     |
-|:---------------------------------------------------------------------------|:--------------------------------------------------------|:----------------------------------------------------------:|
-|[Status](#status)                                                           |Json                                                     |The PC's status as it gets sent to the servers              |
-|[Send](#send)<sup><sub>1</sub></sup>                                        |Boolean                                                  |If the message was sent successfully                        |
-|[Create](#create)<sup><sub>2</sub></sup>                                    |[Response](#resopnse-object)                             |If the function was added successfully                      |
-|[Username](#username)<sup><sub>3</sub></sup>                                |[MessageSendignResponse](#message-sendign-response)      |Returns the username connected to the ID                    |
-|[Remove](#remove)<sup><sub>4</sub></sup>                                    |[Response](#response-object)                             |Rempves the selected command from the list                  |
-|[Disconnect](#disconnect)<sup><sub>5</sub></sup>                            |Nothing                                                  |Safely disconnect, with an optional reason                  |
-|[Is Admin](#is-admin)<sup><sub>3</sub></sup>                                |Boolean                                                  |Returns if user is an admin of the discord bot              |
-|[Connect To User](#connect-to-user)<sup><sub>3</sub></sup>                  |[Response](#response-object)                             |Response from the action                                    |
-|[Disconnect From Voice](#disconnect-from-user)                              |[Response](#response-object)                             |Response from the action                                    |
-|[Play Audio File](#play-audio-file)<sup><sub>7</sub></sup>                  |Boolean                                                  |If the audio file was started                               |
-|[Add Audio File](#add-audio-file)<sup><sub>6</sub></sup>                    |Boolean                                                  |If the audio file was added                                 |
-|[Pause Currently Playing](#pause-currently-playing)<sup><sub>3</sub></sup>  |Boolean                                                  |If the audio file was paused                                |
-|[Resume Paused](#resume-paused)<sup><sub>3</sub></sup>                      |Boolean                                                  |If the audio file was resumed                               |
-|[Skip Currently Playing](#skip-currently-playing)<sup><sub>3</sub></sup>    |Boolean                                                  |If a skip could be made                                     |
-|[Stop Currently Playing](#stop-currently-playing)<sup><sub>3</sub></sup>    |Boolean                                                  |If the audio file was stopped                               |
-|[List Queue](#list-queue)                                                   |List                                                     |Returns a list of filenames currently queued                |
-|[Set As Track Finished](#set-as-track-finished)                             |[Response](#response-object)                             |Sets the client as a callback when a track finishes playing |
-|[Subscribe To Event](#subscribe-to-event)<sup><sub>8</sub></sup>            |[Response](#response-object)                             |Subscribes to a specified event                             |
+| Request                                                                    | Return Value                                        |                           Content                           |
+| :------------------------------------------------------------------------- | :-------------------------------------------------- | :---------------------------------------------------------: |
+| [Status](#status)                                                          | Json                                                |       The PC's status as it gets sent to the servers        |
+| [Send](#send)<sup><sub>1</sub></sup>                                       | [MessageSendignResponse](#message-sendign-response) |            If the message was sent successfully             |
+| [Create](#create)<sup><sub>2</sub></sup>                                   | [Response](#resopnse-object)                        |           If the function was added successfully            |
+| [Username](#username)<sup><sub>3</sub></sup>                               | [MessageSendignResponse](#message-sendign-response) |          Returns the username connected to the ID           |
+| [Remove](#remove)<sup><sub>4</sub></sup>                                   | [Response](#response-object)                        |         Rempves the selected command from the list          |
+| [Disconnect](#disconnect)<sup><sub>5</sub></sup>                           | Nothing                                             |         Safely disconnect, with an optional reason          |
+| [Is Admin](#is-admin)<sup><sub>3</sub></sup>                               | Boolean                                             |       Returns if user is an admin of the discord bot        |
+| [Connect To User](#connect-to-user)<sup><sub>3</sub></sup>                 | [Response](#response-object)                        |                  Response from the action                   |
+| [Disconnect From Voice](#disconnect-from-user)                             | [Response](#response-object)                        |                  Response from the action                   |
+| [Play Audio File](#play-audio-file)<sup><sub>7</sub></sup>                 | Boolean                                             |                If the audio file was started                |
+| [Add Audio File](#add-audio-file)<sup><sub>6</sub></sup>                   | Boolean                                             |                 If the audio file was added                 |
+| [Pause Currently Playing](#pause-currently-playing)<sup><sub>3</sub></sup> | Boolean                                             |                If the audio file was paused                 |
+| [Resume Paused](#resume-paused)<sup><sub>3</sub></sup>                     | Boolean                                             |                If the audio file was resumed                |
+| [Skip Currently Playing](#skip-currently-playing)<sup><sub>3</sub></sup>   | Boolean                                             |                   If a skip could be made                   |
+| [Stop Currently Playing](#stop-currently-playing)<sup><sub>3</sub></sup>   | Boolean                                             |                If the audio file was stopped                |
+| [List Queue](#list-queue)                                                  | List                                                |        Returns a list of filenames currently queued         |
+| [Set As Track Finished](#set-as-track-finished)                            | [Response](#response-object)                        | Sets the client as a callback when a track finishes playing |
+| [Subscribe To Event](#subscribe-to-event)<sup><sub>8</sub></sup>           | [Response](#response-object)                        |               Subscribes to a specified event               |
 
 The messages are case sensitive, and 'Bad request' message will be sent, when a message is not applicable.
 
 #### Keys:
- -  <sub>1</sub>: {text_to_send [string], user_id* [string]}
- -  <sub>2</sub>: {name [string], help_text [string], callback [string], return_key** [integer]}
- -  <sub>3</sub>: {user_id [string]}
- -  <sub>4</sub>: {command_name** [string]}
- -  <sub>5</sub>: {reason***}
- -  <sub>6</sub>: {path [string]}
- -  <sub>7</sub>: {user_id [string], path [string]}
- -  <sub>8</sub>: [Events](#events)
 
-<sub>* Optional, format: username#1234</sub>
+- <sub>1</sub>: {text_to_send [string], user_id\* [string]}
+- <sub>2</sub>: {name [string], help_text [string], callback [string], return_key\*\* [integer]}
+- <sub>3</sub>: {user_id [string]}
+- <sub>4</sub>: {command_name\*\* [string]}
+- <sub>5</sub>: {reason\*\*\*}
+- <sub>6</sub>: {path [string]}
+- <sub>7</sub>: {user_id [string], path [string]}
+- <sub>8</sub>: [Events](#events)
+
+<sub>\* Optional, format: username#1234</sub>
 <sub>** Optional, default value: [NOTHING]</sub>
-<sub>*** Optional, default value: None</sub>
+<sub>\*** Optional, default value: None</sub>
 
 ## Objects
 
@@ -115,14 +119,14 @@ Responses are in json format and they have the following structure:
 
 This class is used to send complex messages between the bot and the connected API-s.
 
-|Property name|Types                          |Description                            |
-|:-----------:|:------------------------------|--------------------------------------:|
-|sender       |String                         |The name of the sender                 |
-|content      |String                         |The message the user provided          |
-|channel      |String                         |The channel name where it was used     |
-|attachment   |[attachment](#attachment)/None |The attachment sent with the message   |
-|called       |String                         |The metthod called by the user         |
-|interface    |[interface](#interface)/None   |The interface used to send this message|
+| Property name | Types                          |                             Description |
+| :-----------: | :----------------------------- | --------------------------------------: |
+|    sender     | String                         |                  The name of the sender |
+|    content    | String                         |           The message the user provided |
+|    channel    | String                         |      The channel name where it was used |
+|  attachment   | [attachment](#attachment)/None |    The attachment sent with the message |
+|    called     | String                         |          The metthod called by the user |
+|   interface   | [interface](#interface)/None   | The interface used to send this message |
 
 The class is sent as a Json object.
 
@@ -130,32 +134,31 @@ The class is sent as a Json object.
 
 A class used to represent attachments sent by the user.
 
-|Property or method name|Type or return type|Description                                            |
-|:---------------------:|:------------------|------------------------------------------------------:|
-|filename               |String             |The sent file's name with extention                    |
-|url                    |String             |The url from where the file can be downloaded          |
-|size/size()            |Int                |The size of the file                                   |
-|download()             |bite like          |Returns the file's bite like representation            |
-|save(valid_path)       |String             |Returns the full path to where the file was downloaded |
-
+| Property or method name | Type or return type |                                            Description |
+| :---------------------: | :------------------ | -----------------------------------------------------: |
+|        filename         | String              |                    The sent file's name with extention |
+|           url           | String              |          The url from where the file can be downloaded |
+|       size/size()       | Int                 |                                   The size of the file |
+|       download()        | bite like           |            Returns the file's bite like representation |
+|    save(valid_path)     | String              | Returns the full path to where the file was downloaded |
 
 ### Interface
 
 An enum class used to tell what interface was used for triggering the message sending.
 
-|Name value | Int value |
-|:---------:|:----------|
-|Discord    |0          |
-|Telegramm  |1          |
+| Name value | Int value |
+| :--------: | :-------- |
+|  Discord   | 0         |
+| Telegramm  | 1         |
 
 ### Message sending response
 
 A class that contains the results of a message sending request.
 
-|Property name|Prooperty value                     |Description                |
-|:-----------:|:-----------------------------------|--------------------------:|
-|state        |[Response code](#response-code)     |The state of the response  |
-|message      |String/None                         |The optional message/reason|
+| Property name | Prooperty value                 |                 Description |
+| :-----------: | :------------------------------ | --------------------------: |
+|     state     | [Response code](#response-code) |   The state of the response |
+|    message    | String/None                     | The optional message/reason |
 
 Json example
 
@@ -170,24 +173,24 @@ Json example
 
 An enum class to represent the success of a message sending request
 
-|Name value    | Int value |Meaning                    |
-|:------------:|:----------|--------------------------:|
-|Success       |0          |Message successfully sent  |
-|BadRequest    |1          |Bad request was retrived   |
-|InternalError |2          |An internal error happaned |
-|Denied        |3          |The request was denied     |
-|Accepted      |4          |The request was accepted   |
-|Failed        |5          |Failed to send message     |
-|NotFound      |6          |User/Channel not found     |
+|  Name value   | Int value |                    Meaning |
+| :-----------: | :-------- | -------------------------: |
+|    Success    | 0         |  Message successfully sent |
+|  BadRequest   | 1         |   Bad request was retrived |
+| InternalError | 2         | An internal error happaned |
+|    Denied     | 3         |     The request was denied |
+|   Accepted    | 4         |   The request was accepted |
+|    Failed     | 5         |     Failed to send message |
+|   NotFound    | 6         |     User/Channel not found |
 
 ### Events
 
 An enum class to represent possible events to subscribe to
 
-|Name value      | Int value |
-|:--------------:|:----------|
-|presence_update |0          |
-|activity        |1          |
+|   Name value    | Int value |
+| :-------------: | :-------- |
+| presence_update | 0         |
+|    activity     | 1         |
 
 ## Commands
 
@@ -213,10 +216,11 @@ To send message to a specific user, the user's ID must be provided in the 'user_
 ### Create
 
 When using the `Create` command, the parameters will describe the following:
- -  name - The name to call on Discord
- -  help_text - The text to show in the help command
- -  callback - The value to send to the program (alongside with the value from the user, if it's required)
- -  return_value - What to send back with the command. It excepts a list of values (if nothing, then a list containing 0) of what needs to be returned.
+
+- name - The name to call on Discord
+- help_text - The text to show in the help command
+- callback - The value to send to the program (alongside with the value from the user, if it's required)
+- return_value - What to send back with the command. It excepts a list of values (if nothing, then a list containing 0) of what needs to be returned.
 
 The `help_text` value can be a long text, but if you want to use any specifications on the input it should look the following:
 
@@ -230,15 +234,15 @@ The 'Usage: ' line is optional, but if present, it should be formated like that,
 
 #### Categories
 
-|Category name     |What comes here                                                        |
-|:----------------:|:----------------------------------------------------------------------|
-|HARDWARE          |Anything that interacts with the host machine.                         |
-|SERVER            |Anything that interacts with the discord server.                       |
-|NETWORK           |Anything that interacts with the host's network.                       |
-|SOFTWARE          |Anything that interacts with the programs running on the host machine. |
-|BOT               |Anything that interacts with the bot's workings.                       |
-|USER              |Anything that interacts with the users.                                |
-|AUDIO             |Anything that plays audio trough the bot.                              |
+| Category name | What comes here                                                        |
+| :-----------: | :--------------------------------------------------------------------- |
+|   HARDWARE    | Anything that interacts with the host machine.                         |
+|    SERVER     | Anything that interacts with the discord server.                       |
+|    NETWORK    | Anything that interacts with the host's network.                       |
+|   SOFTWARE    | Anything that interacts with the programs running on the host machine. |
+|      BOT      | Anything that interacts with the bot's workings.                       |
+|     USER      | Anything that interacts with the users.                                |
+|     AUDIO     | Anything that plays audio trough the bot.                              |
 
 #### Returns
 
@@ -312,7 +316,8 @@ Here will be some callbacks listed that will be sent out when subscribed to them
 
 Sent when an update is requested from the bot. Contains no usefull data. :exclamation: This is an automatic callback. :exclamation:
 
-Data ([Message object](#message)): 
+Data ([Message object](#message)):
+
 ```javascript
 {
     "sender": "0000000000",
@@ -328,7 +333,8 @@ Data ([Message object](#message)):
 ### Track finished
 
 Sent when the client is subscribed to [Set As Track Finished](#set-as-track-finished).
-Data ([Message object](#message)): 
+Data ([Message object](#message)):
+
 ```javascript
 {
     "sender": "Bot",
@@ -344,7 +350,8 @@ Data ([Message object](#message)):
 ### Event trigger
 
 Sent when the client is subscribed to [Subscribe To Event](#subscribe-to-event).
-Data ([Message object](#message)): 
+Data ([Message object](#message)):
+
 ```javascript
 {
     "sender": "Bot",

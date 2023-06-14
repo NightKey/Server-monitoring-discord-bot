@@ -2,6 +2,7 @@ import inspect
 import threading
 from typing import Any, Callable, List, Optional, Union
 import telebot
+from telebot.apihelper import ApiException, ApiHTTPException
 from telebot.types import ReplyKeyboardMarkup, ReplyKeyboardRemove, Message, KeyboardButton
 from smdb_logger import Logger, LEVEL
 from time import time
@@ -25,7 +26,8 @@ class Telegramm():
         self.commands = {'wake': CommandPrivilege.OnlyAdmin, 'shutdown': CommandPrivilege.OnlyAdmin, "ping": CommandPrivilege.Anyone,
                          'status': CommandPrivilege.Anyone, 'id': CommandPrivilege.Anyone, 'register': CommandPrivilege.OnlyUnknown}
         self.Telegramm_thread = None
-        self.Telegramm_bot = telebot.TeleBot(token)
+        self.Telegramm_bot = telebot.TeleBot(
+            token, exception_handler=self.exception_handler)
         self.Telegramm_bot.register_message_handler(self.incoming_message)
         self.logger = Logger(
             "telegramm.log", log_folder=logger_folder, level=logger_level, log_to_console=True)
@@ -42,6 +44,18 @@ class Telegramm():
         self.Telegramm_thread.start()
         self.logger.debug(f"Bot thread started")
         self.Telegramm_bot.get_me()
+
+    def exception_handler(self, ex: Exception) -> bool:
+        if isinstance(ex, ApiHTTPException):
+            self.logger.error(f"Api HTTP exception: {ex}")
+            return True
+        if isinstance(ex, ApiException):
+            self.logger.error(f"Api exception: {ex}")
+            return True
+        if isinstance(ex, KeyboardInterrupt):
+            self.logger.warning(f"Keyboard Interrupt!")
+            return True
+        return False
 
     def stop(self):
         if (self.Telegramm_thread == None):
