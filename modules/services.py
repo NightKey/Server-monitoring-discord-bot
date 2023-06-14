@@ -2,6 +2,8 @@ from os import path
 from typing import Any, Callable, Dict, List, Union
 from smdb_logger import Logger
 from smdb_api import Message, Response, ResponseCode, Events, Interface
+
+from API.smdb_api import MessageSendingResponse
 from . import log_level, log_folder
 from .voice_connection import VCRequest
 from hashlib import sha256
@@ -264,7 +266,7 @@ class Server:
                     if value == socket:
                         socket = key
                         break
-            if isinstance(msg, Response):
+            if isinstance(msg, (Response, MessageSendingResponse)):
                 msg = json.dumps(msg.__repr__())
             else:
                 msg = json.dumps(msg)

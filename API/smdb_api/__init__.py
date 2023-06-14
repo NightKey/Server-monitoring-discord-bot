@@ -209,7 +209,9 @@ class MessageSendingResponse():
         return str(self.__dict__)
 
     def __repr__(self):
-        return self.__dict__
+        tmp = self.__dict__
+        tmp["state"] = self.state.__repr__()
+        return tmp
 
     @staticmethod
     def from_message(json: dict) -> "MessageSendingResponse":
@@ -521,9 +523,9 @@ class API:
             self.sending = True
             self.__send({"Command": "Send", 'Value': msg.to_json()})
             tmp = self.__wait_for_response()
-            if tmp["response"] == ResponseCode.BadRequest:
+            if tmp["state"] == ResponseCode.BadRequest:
                 raise ActionFailed(tmp["data"])
-            elif tmp["response"] == ResponseCode.InternalError:
+            elif tmp["state"] == ResponseCode.InternalError:
                 print(
                     f"[Message sending exception] Internal error: {tmp['Data']}")
                 return False

@@ -5,17 +5,19 @@ This API can be used to interface with the server monitoring Discord bot only if
 ## Usage
 
 To create an api, import the package, and use the required arguments.
+
 ```
 import smdb_api
 API = smdb_api.API("Test", "80716cbfd9f90428cd308acc193b4b58519a4f10a7440b97aaffecf75e63ecec")
 ```
 
 Avaleable arguments:
- - name:            string              | Used to identify the application to the api server.
- - key:             string              | Used to verify identity with the api server.
- - ip:              string (optional)   | Used to set the api server's IP address.
- - port:            integer (optional)  | Used to set the api server's listening port.
- - update_function: function (optional) | Sets a callback function to call, when the api server updates.
+
+- name: string | Used to identify the application to the api server.
+- key: string | Used to verify identity with the api server.
+- ip: string (optional) | Used to set the api server's IP address.
+- port: integer (optional) | Used to set the api server's listening port.
+- update_function: function (optional) | Sets a callback function to call, when the api server updates.
 
 To initiate the connection, use the validate command. The validate function can get a timeout limit, so it won't hault the program, if the api server won't ansvear within a set time.
 
@@ -33,6 +35,7 @@ def my_callback(message):
 
 API.create_function("MyScript", "Some text to help\nUsage: &MyScript <User input>\nCategory: SERVER", my_callback)
 ```
+
 To send a message to someone, use the 'send_message' command:
 
 ```
