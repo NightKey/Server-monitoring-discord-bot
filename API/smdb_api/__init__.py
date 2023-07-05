@@ -93,7 +93,7 @@ class Message:
 
     def from_json(json) -> "Message":
         msg = Message(json["sender"], json["content"], json["channel"], [Attachment.from_json(attachment)
-                      for attachment in json["attachments"]] if json["attachments"] is not None else [], json["called"], Interface(json["interface"]))
+                      for attachment in json["attachments"]] if json["attachments"] is not None else [], json["called"], Interface(json["interface"]) if json["interface"] is not None else Interface.Discord)
         if "random_id" in json:
             msg.random_id = json["random_id"]
         return msg
