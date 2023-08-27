@@ -23,7 +23,7 @@ from fuzzywuzzy import fuzz
 from connectors.telegramm import Telegramm
 
 trys = 0
-token = ""
+discord_token = ""
 reset_time = 2  # hours
 process_list = {}
 ptime = 0
@@ -40,7 +40,7 @@ errors = {}
 threads = {}
 admins: Dict[str, list] = {}
 telegramm_bot: Telegramm = None
-telegramm_api_key: str = ""
+telegramm_token: str = ""
 loop: asyncio.AbstractEventLoop = None
 watchdog: Watchdog = None
 server: Server = None
@@ -154,8 +154,8 @@ def get_passcode():
 
 
 def save_cfg():
-    tmp = {"token": token, "id": id, 'connections': connections,
-           "admins": admins, "admin key": admin_key, "telegramm": telegramm_bot}
+    tmp = {"tokens": {"discord": discord_token, "telegramm": telegramm_token}, "id": id, 'connections': connections,
+           "admins": admins, "admin key": admin_key}
     with open(os.path.join("data", "bot.cfg"), 'w') as f:
         json.dump(tmp, f)
 
@@ -168,19 +168,32 @@ def load():
     """
     if not os.path.exists("data"):
         os.mkdir("data")
-    global token  # The discord bot's login tocken
+    global discord_token  # The discord bot's login tocken
     global id  # The discord bots' ID
     global connections
     global admins
     global admin_key
-    global telegramm_api_key
+    global telegramm_token
     logger.debug("Loading data...")
     if os.path.exists(os.path.join("data", "bot.cfg")):
         try:
             should_save = False
             with open(os.path.join("data", "bot.cfg"), "r") as f:
                 tmp = json.load(f)
-            token = tmp["token"]
+            if ("tokens" not in tmp):
+                should_save = True
+                discord_token = tmp["token"]
+                try:
+                    telegramm_token = tmp['telegramm']
+                except:
+                    telegramm_token = ""
+                    logger.warning(
+                        "No Telegramm token found, please add a Telegramm token, if you wish to use Telegramm as well.")
+                    should_save = True
+            else:
+                tokens = tmp["tokens"]
+                discord_token = tokens["discord"]
+                telegramm_token = tokens["telegramm"]
             id = tmp["id"]
             try:
                 connections = tmp['connections']
@@ -194,13 +207,6 @@ def load():
                 admin_key = tmp['admin key']
             except:
                 admin_key = get_passcode()
-                should_save = True
-            try:
-                telegramm_api_key = tmp['telegramm']
-            except:
-                telegramm_api_key = ""
-                logger.warning(
-                    "No Telegramm token found, please add a Telegramm token, if you wish to use Telegramm as well.")
                 should_save = True
             logger.info("Data loading finished!")
             if (should_save):
@@ -218,7 +224,7 @@ def load():
             exit(0)
     else:
         logger.warning("Data not found!")
-        token = input("Type in the token: ")
+        discord_token = input("Type in the token: ")
         me = int(input("Type in this bot's user id: "))
         admins = {
             "discord":
@@ -1339,7 +1345,7 @@ def halth(counter: int) -> bool:
 async def start_discord_client(counter: int) -> None:
     while True:
         try:
-            await client.start(token)
+            await client.start(discord_token)
             break
         except TypeError as te:
             logger.error("Type error occured while starting client")
@@ -1371,7 +1377,7 @@ async def start_discord_client(counter: int) -> None:
 # region TELEGRAMM
 def create_telegramm():
     global telegramm_bot
-    telegramm_bot = Telegramm(telegramm_api_key, log_level, log_folder)
+    telegramm_bot = Telegramm(telegramm_token, log_level, log_folder)
 
     @telegramm_bot.callback("is_admin")
     def is_telegram_admin(telegramm_id: int) -> bool:

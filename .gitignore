@@ -10,3 +10,4 @@ data/*.cfg
 *folder
 *level
 *update.lg
+*.log
