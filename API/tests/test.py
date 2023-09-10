@@ -1,6 +1,6 @@
 try:
     from time import sleep
-    from smdb_logger import Logger
+    from smdb_logger import Logger, LEVEL
     import unittest
     import os
     import sys
@@ -25,8 +25,7 @@ class API_CreationTest(unittest.TestCase):
         self.assertTrue(api.valid)
 
     def test_2_api_gets_status(self):
-        self.assertEqual(api.get_status(), {
-                         "dummy server status": "Avaleable"})
+        self.assertEqual(api.get_status(), "Avaleable")
 
     def test_3_api_sends_message(self):
         api.send_message("Test", destination="123456789",
@@ -55,7 +54,7 @@ class API_CreationTest(unittest.TestCase):
         self.assertTrue(api.resume_paused("123456789"))
         self.assertTrue(api.skip_currently_playing("123456789"))
         self.assertTrue(api.stop_currently_playing("123456789"))
-        self.assertTrue(api.get_queue())
+        self.assertListEqual(["TestData"], api.get_queue())
 
     def test_8_rejects_same_message(self):
         self.counter = 0
@@ -83,34 +82,6 @@ class API_CreationTest(unittest.TestCase):
 
     def dummy_callback(self, _input):
         self.assertEqual(_input.sender, "sender")
-
-
-def linking_editor(data, remove=False):
-    pass
-
-
-def get_status():
-    return {"dummy server status": "Avaleable"}
-
-
-def send_message(user=None):
-    return smdb_api.MessageSendingResponse(smdb_api.ResponseCode.Success)
-
-
-def get_user(uid):
-    return smdb_api.Response(smdb_api.ResponseCode.Success, uid)
-
-
-def is_admin(uid):
-    return smdb_api.Response(smdb_api.ResponseCode.Success, uid == "123")
-
-
-def voice_connection_managger(request, user_id=None, path=None):
-    return True
-
-
-def get_current_status(uid, type):
-    return smdb_api.Response(smdb_api.ResponseCode.Success, f"{uid} {smdb_api.Events(type).name}")
 
 
 class Message_function_test(unittest.TestCase):
@@ -148,18 +119,45 @@ class Message_function_test(unittest.TestCase):
             0, smdb_api.Events.activity))
         self.assertEqual("0 presence_update", api.get_user_status(
             0, smdb_api.Events.presence_update))
+    
+    def test_14_cleanup(self):
+        sleep(1)
+        api.close("Ended")
 
 
 if __name__ == "__main__":
     print("Creating dummy server...")
     services.logger = Logger(
-        "test", storage_life_extender_mode=True, log_to_console=True)
-    server = services.Server(linking_editor, get_status, send_message,
-                             get_user, is_admin, voice_connection_managger, get_current_status)
+        "test.log", storage_life_extender_mode=False, log_to_console=True, use_caller_name=True, level=LEVEL.DEBUG)
+    server = services.Server()
     server._start_for_test()
+
     th = threading.Thread(target=server.loop)
     th.name = "Dummy server"
     th.start()
+
+    @server.callback()
+    def linking_editor(data, remove=False):
+        pass
+    @server.callback()
+    def get_status():
+        return smdb_api.Response(smdb_api.ResponseCode.Success, "Avaleable")
+    @server.callback()
+    def send_message(user=None):
+        return smdb_api.Response(smdb_api.ResponseCode.Success)
+    @server.callback()
+    def get_user(uid):
+        return smdb_api.Response(smdb_api.ResponseCode.Success, uid)
+    @server.callback()
+    def is_admin(uid):
+        return smdb_api.Response(smdb_api.ResponseCode.Success, uid == "123")
+    @server.callback()
+    def voice_connection_controll(request, user_id=None, path=None):
+        return smdb_api.Response(smdb_api.ResponseCode.Success, ["TestData"])
+    @server.callback()
+    def get_user_status(uid, type):
+        return smdb_api.Response(smdb_api.ResponseCode.Success, f"{uid} {smdb_api.Events(type).name}")
+    
     print("Dummy server started")
     print("Setting up unit test data")
     name = "Test"

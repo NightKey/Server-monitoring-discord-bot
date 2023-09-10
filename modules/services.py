@@ -1,9 +1,11 @@
+from dataclasses import dataclass, field
+from enum import Enum
 from os import path
-from typing import Any, Callable, Dict, List, Union
+import sys
+from typing import Any, Callable, Dict, List, Optional, Union, overload
 from smdb_logger import Logger
-from smdb_api import Message, Response, ResponseCode, Events, Interface
+from smdb_api import Message, Response, ResponseCode, Events, Interface, UserEventRequest
 
-from API.smdb_api import MessageSendingResponse
 from . import log_level, log_folder
 from .voice_connection import VCRequest
 from hashlib import sha256
@@ -15,40 +17,37 @@ import json
 logger = Logger("api_server.log", log_folder=log_folder, level=log_level,
                 log_to_console=True, use_caller_name=True, use_file_names=True)
 
+class Privilege(Enum):
+    Anyone = 0
+    OnlyAdmin = 1
+    OnlyUnknown = 2
+
+@dataclass()
+class LinkingEditorData:
+    name: str
+    callback: Callable[..., Any] = field(default_factory=None)
+    add_to_telegramm: bool = False
+    add_button: bool = False
+    privilage: Privilege = field(default=Privilege.OnlyAdmin)
+    needs_input: bool = False
+
 
 class Server:
-    def __init__(
-        self,
-        linking_editor: Callable[[Any, bool], None],
-        get_status: Callable[[], dict],
-        send_message: Callable[[Message], Response],
-        get_user: Callable[[str], Response],
-        is_admin: Callable[[str], Response],
-        voice_connection_controll: Callable[[
-            VCRequest, Union[str, None], Union[str, None]], Union[Response, bool, List[str]]],
-        get_user_status: Callable[[str, Events], Response]
-    ) -> None:
+    def __init__(self) -> None:
         self.clients = {}
         self.run = True
-        self.linking_editor = linking_editor
-        self.get_status = get_status
-        self.send_message = send_message
         self.functions = {}
-        self.get_user = get_user
-        self.is_admin = is_admin
         self._load_settings()
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.bind((self.ip, self.port))
         self.socket_list = [self.socket]
-        self.bad_request = Response(ResponseCode.BadRequest, None)
-        self.voice_connection_controll = voice_connection_controll
         self.track_finished_socket = None
         self.subscribers_for_event: Dict[Events, List[socket.socket]] = {
             Events.presence_update: [],
             Events.activity: []
         }
-        self.__get_user_status = get_user_status
+        self.callbacks: Dict[str, Callable[..., Any]] = {}
         logger.header("Service initialized")
 
     def change_ip_port(self, ip: str, port: int) -> None:
@@ -112,7 +111,7 @@ class Server:
         """Requests an update from the target. This update should request the application used to update itself and the API
         """
         self.send(Message("0000000000", "", "0000000000",
-                  [], "UPDATE").to_json(), target)
+                  [], "UPDATE"), target)
 
     def start(self) -> None:
         """Starts the API server
@@ -162,43 +161,39 @@ class Server:
             'List Queue': self.list_queue,
             'Get User Status': self.get_user_status
         }
+        logger.log_to_console = False
         self.socket.listen()
 
     # region MUSIC
     def connect_to_user(self, socket: socket, user: str) -> None:
-        self.send(self.voice_connection_controll(
+        self.send(self.use_callback("voice_connection_controll", 
             VCRequest.connect, user_id=user), socket)
 
     def disconnect_from_voice(self, socket: socket, _) -> None:
-        self.send(self.voice_connection_controll(VCRequest.disconnect), socket)
+        self.send(self.use_callback("voice_connection_controll", VCRequest.disconnect), socket)
 
-    def play_file(self, socket: socket, data: Dict[str, str]) -> None:
-        self.send(self.voice_connection_controll(VCRequest.play,
-                  user_id=data["User"], path=data["Path"]), socket)
+    def play_file(self, socket: socket, data: str) -> None:
+        data = json.loads(data)
+        self.send(self.use_callback("voice_connection_controll", VCRequest.play, user_id=data["User"], path=data["Path"]), socket)
 
     def add_file(self, socket: socket, path: str) -> None:
-        self.send(self.voice_connection_controll(
-            VCRequest.add, path=path), socket)
+        self.send(self.use_callback("voice_connection_controll", VCRequest.add, path=path), socket)
 
     def pause_playing(self, socket: socket, user: str) -> None:
-        self.send(self.voice_connection_controll(
-            VCRequest.pause, user_id=user), socket)
+        self.send(self.use_callback("voice_connection_controll", VCRequest.pause, user_id=user), socket)
 
     def resume_paused(self, socket: socket, user: str) -> None:
-        self.send(self.voice_connection_controll(
-            VCRequest.resume, user_id=user), socket)
+        self.send(self.use_callback("voice_connection_controll", VCRequest.resume, user_id=user), socket)
 
     def stop_playing(self, socket: socket, user: str) -> None:
-        self.send(self.voice_connection_controll(
-            VCRequest.stop, user_id=user), socket)
+        self.send(self.use_callback("voice_connection_controll", VCRequest.stop, user_id=user), socket)
 
     def skip_playing(self, socket: socket, user: str) -> None:
         logger.debug("Skip requested")
-        self.send(self.voice_connection_controll(
-            VCRequest.skip, user_id=user), socket)
+        self.send(self.use_callback("voice_connection_controll", VCRequest.skip, user_id=user), socket)
 
     def list_queue(self, socket: socket, _) -> None:
-        self.send(self.voice_connection_controll(VCRequest.queue), socket)
+        self.send(self.use_callback("voice_connection_controll", VCRequest.queue), socket)
 
     def set_track_finished_target(self, socket: socket, _) -> None:
         self.track_finished_socket = socket
@@ -207,35 +202,34 @@ class Server:
     def track_finished(self, track: str) -> None:
         if self.track_finished_socket is not None:
             self.send(Message("Bot", track, None, [],
-                      "TRACK FINISHED", Interface.Discord).to_json(), self.track_finished_socket)
+                      "TRACK FINISHED", Interface.Discord), self.track_finished_socket)
     # endregion
 
     def create_command(self, socket: socket, data: dict) -> None:
         """Creates a command in the discord bot
         """
         if data is None:
-            self.send(self.bad_request.create_altered(
-                Data="No data given"), socket)
+            self.send(Response(ResponseCode.BadRequest, "No data given"), socket)
             return
-        self.send(self.create_function(self.clients[socket], *data), socket)
+        data = json.loads(data)
+        self.send(self.create_function(self.clients[socket], **data), socket)
 
     def get_status_command(self, socket: socket, _) -> None:
         """Returns the status to the socket
         """
-        self.send(self.get_status(), socket)
+        self.send(self.use_callback("get_status", ), socket)
 
     def send_command(self, socket: socket, msg: str) -> None:
         """Sends the message retrived from the socket to the bot.
         """
         if msg is None:
-            self.send(self.bad_request.create_altered(
-                Data="Empty message"), socket)
+            self.send(Response(ResponseCode.BadRequest, "Empty message"), socket)
             return
         message = Message.from_json(msg)
-        self.send(self.send_message(message), socket)
+        self.send(self.use_callback("send_message", message), socket)
 
-    def retrive(self, socket: socket) -> dict:
-        r"""Retrives a message from the socket. Every message is '\n' terminated (terminator not included)
+    def retrive(self, socket: socket) -> str:
+        r"""Retrives a message from the socket. Every message is '\x00' terminated (terminator not included)
         """
         ret = ""
         try:
@@ -248,16 +242,17 @@ class Server:
                     self.client_lost(socket)
                     return None
                 data = socket.recv(size).decode(encoding="utf-8")
-                if data == '\n':
+                if data == '\x00':
                     break
                 ret += data
-            return json.loads(ret) if ret is not None else None
+            return ret
         except Exception as ex:
-            logger.error(ex)
+            _, _, exc_tb = sys.exc_info()
+            logger.error(f"{ex} on line {exc_tb.tb_lineno}")
             return None
 
-    def send(self, msg: str, socket: socket) -> bool:
-        r"""Sends a message to the socket. Every message is '\n' terminated (terminator does not required)
+    def send(self, msg: Union[Message, Response], socket: Union[socket.socket, str]) -> bool:
+        r"""Sends a message to the socket. Every message is '\x00' terminated (terminator does not required)
         """
         try:
             logger.debug(f"Sending total message: {msg}")
@@ -266,26 +261,23 @@ class Server:
                     if value == socket:
                         socket = key
                         break
-            if isinstance(msg, (Response, MessageSendingResponse)):
-                msg = json.dumps(msg.__repr__())
-            else:
-                msg = json.dumps(msg)
+            msg_json = msg.to_json()
             while True:
                 tmp = ''
-                if len(msg) > 9:
-                    tmp = msg[9:]
-                    msg = msg[:9]
-                length = str(len(msg)).encode(encoding='utf-8')
+                if len(msg_json) > 9:
+                    tmp = msg_json[9:]
+                    msg_json = msg_json[:9]
+                length = str(len(msg_json)).encode(encoding='utf-8')
                 # logger.debug(f"Sending legth: {length}")
                 socket.send(length)
-                chunk = msg.encode(encoding="utf-8")
+                chunk = msg_json.encode(encoding="utf-8")
                 # logger.debug(f"Sending chunk: {chunk}")
                 socket.send(chunk)
                 if tmp == '':
-                    tmp = '\n'
-                if msg == '\n':
+                    tmp = '\x00'
+                if msg_json == "\x00":
                     break
-                msg = tmp
+                msg_json = tmp
             return True
         except ConnectionError:
             self.client_lost(socket)
@@ -298,10 +290,9 @@ class Server:
 
     def admin_check(self, socket: socket, uid: str) -> None:
         if uid is None:
-            self.send(self.bad_request.create_altered(
-                Data="No UID was given"), socket)
+            self.send(Response(ResponseCode.BadRequest, "No UID was given"), socket)
             return
-        self.send(self.is_admin(uid), socket)
+        self.send(self.use_callback("is_admin", uid), socket)
 
     def __read_template__(self, name: str, creator: str, help_text: str) -> str:
         with open(path.join("templates", "service_command_template.template"), 'r') as f:
@@ -312,19 +303,19 @@ class Server:
     def event_trigger(self, event: Events, before: str, after: str, channel: int) -> None:
         for recepient in self.subscribers_for_event[event]:
             self.send(Message("Bot", f"{event.value}|{before}|{after}",
-                      str(channel), [], "EVENT", Interface.Discord).to_json(), recepient)
+                      str(channel), [], "EVENT", Interface.Discord), recepient)
 
     def subscribe_to_event(self, socket: socket, msg: str) -> None:
         self.subscribers_for_event[Events(int(msg))].append(socket)
         self.send(Response(ResponseCode.Success), socket)
 
-    def create_function(self, creator: str, name: str, help_text: str, callback: str) -> Response:
+    def create_function(self, creator: str, name: str, help: str, privilege: Privilege, show_button: bool, needs_arguments: bool) -> Response:
         """Creates a function with the given parameters, and stores it in the self.functions dictionary, with the 'name' as key
         """
         logger.debug(f'Creating function with the name {name}')
-        logger.debug(f'Creating function with the call back {callback}')
         logger.debug(f'Creating function with the creator as {creator}')
-        body = self.__read_template__(name, creator, help_text)
+        logger.debug(f'Telegram options: {privilege}, {show_button}, {needs_arguments}')
+        body = self.__read_template__(name, creator, help)
         try:
             exec(body)
         except Exception as ex:
@@ -332,7 +323,7 @@ class Server:
             logger.error(ex)
             return Response(ResponseCode.InternalError, ex)
         setattr(self, name, locals()[name])
-        self.linking_editor([name, getattr(self, name)])
+        self.use_callback("linking_editor", LinkingEditorData(name, getattr(self, name)))
         if creator not in self.functions:
             self.functions[creator] = []
         self.functions[creator].append(name)
@@ -354,11 +345,11 @@ class Server:
                 return Response(ResponseCode.InternalError, "Function not found")
             if name is None:
                 for name in self.functions[creator]:
-                    self.linking_editor(name, True)
+                    self.use_callback("linking_editor", name, True)
                     delattr(self, name)
                 del self.functions[creator]
             else:
-                self.linking_editor(name, True)
+                self.use_callback("linking_editor", LinkingEditorData(name), True)
                 delattr(self, name)
                 self.functions[creator].remove(name)
             return Response(ResponseCode.Success)
@@ -368,18 +359,15 @@ class Server:
 
     def return_usrname(self, socket: socket, uid: str) -> None:
         if uid is None:
-            self.send(self.bad_request.create_altered(
-                Data="No UID was given"), socket)
+            self.send(Response(ResponseCode.BadRequest, "No UID was given"), socket)
             return
-        self.send(self.get_user(uid), socket)
+        self.send(self.use_callback("get_user", uid), socket)
 
     def get_user_status(self, socket: socket, data: Dict[str, Any]) -> None:
-        user: int = int(data["User"]) if "User" in data else None
-        requested: Events = Events(data["Type"]) if "Type" in data else None
-        if user is None or requested is None:
-            self.send(self.bad_request.create_altered(
-                Data="No User or Type were provided."), socket)
-        self.send(self.__get_user_status(user, requested), socket)
+        user_event = UserEventRequest.from_json(data)
+        if user_event.uid is None or user_event.event is None:
+            self.send(Response(ResponseCode.BadRequest, "No User or Type were provided."), socket)
+        self.send(self.use_callback("get_user_status", user_event.uid, user_event.event), socket)
 
     def stop(self) -> None:
         self.run = False
@@ -403,23 +391,23 @@ class Server:
                             self.client_lost(notified_socket)
                             continue
                         else:
-                            self.command_retrieved(msg, notified_socket)
+                            self.command_retrieved(Message.from_json(msg), notified_socket)
                 for notified_socket in exception_socket:
                     self.client_lost(notified_socket)
             except socket.error as er:
                 logger.error(f"{er}")
             except Exception as ex:
-                logger.error(f"{ex}")
+                _, _, exc_tb = sys.exc_info()
+                logger.error(f"{ex} on line {exc_tb.tb_lineno}")
         self.socket.close()
 
-    def command_retrieved(self, msg: Dict[str, str], socket: socket) -> None:
+    def command_retrieved(self, msg: Message, socket: socket) -> None:
         """Retrives commands
         """
-        if msg["Command"] not in self.commands or "Value" not in msg.keys():
-            self.send(self.bad_request.create_altered(
-                Data="Command is not a valid command" if msg["Command"] not in self.commands else "Value is not present!"), socket)
+        if msg.called not in self.commands:
+            self.send(Response(ResponseCode.BadRequest, Data="Command is not a valid command"), socket)
             return
-        self.commands[msg["Command"]](socket, msg["Value"])
+        self.commands[msg.called](socket, msg.content)
 
     def disconnect(self, socket: socket, reason: str) -> None:
         if reason is not None:
@@ -453,26 +441,64 @@ class Server:
         client_socket.settimeout(30)
         logger.info(
             f"Incoming connection from {client_address[0]}:{client_address[1]}")
-        retrived = self.retrive(client_socket)
+        retrived = Message.from_json(self.retrive(client_socket))
         try:
-            name, key = retrived['Command'], retrived['Value']
+            name, key = retrived.called, retrived.content
         except:
-            self.send(self.bad_request.create_altered(
-                response=ResponseCode.Denied, Data="Bad API protocoll was used!"), client_socket)
+            self.send(Response(ResponseCode.Denied, "Bad API protocoll was used!"), client_socket)
             client_socket.close()
             return
         if key != sha256(f"{self.key}{name}".encode('utf-8')).hexdigest():
-            self.send(self.bad_request.create_altered(
-                response=ResponseCode.Denied, Data="Bad API Key"), client_socket)
+            self.send(Response(ResponseCode.Denied, "Bad API Key"), client_socket)
             client_socket.close()
             return
         if name in self.clients:
-            self.send(self.bad_request.create_altered(
-                response=ResponseCode.Denied, Data="Already connected"), client_socket)
+            self.send(Response(ResponseCode.Success, "Already connected"), client_socket)
             client_socket.close()
             return
-        self.send(self.bad_request.create_altered(
-            response=ResponseCode.Success), client_socket)
+        self.send(Response(ResponseCode.Success), client_socket)
         logger.debug(f"Adding {name} to the connections")
         self.socket_list.append(client_socket)
         self.clients[client_socket] = name
+
+    def register_callback(self, callback: Callable[..., Any], name: Optional[str] = None):
+        """Registers a callback to the service.
+        The following callbacks needed:
+        - linking_editor: Callable[[Any, bool], None],
+        - get_status: Callable[[], dict],
+        - send_message: Callable[[Message], Response],
+        - get_user: Callable[[str], Response],
+        - is_admin: Callable[[str], Response],
+        - voice_connection_controll: Callable[[
+            VCRequest, Union[str, None], Union[str, None]], Union[Response, bool, List[str]]],
+        - get_user_status: Callable[[str, Events], Response]
+        """
+        final_name = name if name is not None else callback.__name__
+        self.callbacks[final_name] = callback
+        logger.debug(
+            f"Callback registered with the name \"{final_name}\"")
+    
+    def callback(self, name: Optional[str] = None):
+        """Registers a callback to the service.
+        The following callbacks needed:
+        - linking_editor: Callable[[Any, bool], None],
+        - get_status: Callable[[], dict],
+        - send_message: Callable[[Message], Response],
+        - get_user: Callable[[str], Response],
+        - is_admin: Callable[[str], Response],
+        - voice_connection_controll: Callable[[
+            VCRequest, Union[str, None], Union[str, None]], Union[Response, bool, List[str]]],
+        - get_user_status: Callable[[str, Events], Response]
+        """
+        def decorator(callback: Callable[..., Any]) -> None:
+            self.register_callback(callback, name)
+        
+        return decorator
+
+    def use_callback(self, name: str, *args, **kwargs) -> Any:
+        if (name not in self.callbacks):
+            message = f"The following callback was not registered '{name}'"
+            logger.error(message)
+            raise SyntaxError(message)
+        return self.callbacks[name](*args, **kwargs)
+    

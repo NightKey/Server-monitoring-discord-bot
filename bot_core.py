@@ -1,11 +1,12 @@
 from argparse import ArgumentError
+import sys
 from typing import List, Optional, Union, Dict
 from modules import status, log_level, log_folder
 from modules.watchdog import Watchdog
 from smdb_logger import Logger
 from smdb_api import Message, Attachment, Interface, Response, MessageSendingResponse, ResponseCode, Events
 from platform import node
-from modules.services import Server
+from modules.services import LinkingEditorData, Server
 from modules.scanner import scann
 from modules.voice_connection import VCRequest, VoiceConnection
 from threading import Thread
@@ -20,7 +21,7 @@ import asyncio
 import logging
 import discord
 from fuzzywuzzy import fuzz
-from connectors.telegramm import Telegramm
+from connectors.telegramm import CommandPrivilege, Telegramm
 
 trys = 0
 discord_token = ""
@@ -995,7 +996,7 @@ Category: BOT
         save_cfg()
 
 
-def voice_connection_managger(request: VCRequest, user_id: Union[str, None] = None, path: Union[str, None] = None) -> Union[Response, bool, List[str]]:
+def voice_connection_managger(request: VCRequest, user_id: Union[str, None] = None, path: Union[str, None] = None) -> Response:
     if VCRequest.need_user(request) and user_id is None:
         return Response(ResponseCode.BadRequest, "User needed for this action!")
     if VCRequest.need_path(request) and path is None:
@@ -1014,19 +1015,26 @@ def voice_connection_managger(request: VCRequest, user_id: Union[str, None] = No
         task = loop.create_task(voice_connection.disconnect(
             request == VCRequest.forceDisconnect))
     elif request == VCRequest.play:
-        return voice_connection.play(path, user=user_as_member)
+        isSuccess = voice_connection.play(path, user=user_as_member)
+        return Response(ResponseCode.Success if isSuccess else ResponseCode.Failed)
     elif request == VCRequest.stop:
-        return voice_connection.stop(user_as_member)
+        isSuccess = voice_connection.stop(user_as_member)
+        return Response(ResponseCode.Success if isSuccess else ResponseCode.Failed)
     elif request == VCRequest.skip:
-        return voice_connection.skip(user_as_member)
+        isSuccess = voice_connection.skip(user_as_member)
+        return Response(ResponseCode.Success if isSuccess else ResponseCode.Failed)
     elif request == VCRequest.add:
-        return voice_connection.add_mp3_file_to_playlist(path)
+        isSuccess = voice_connection.add_mp3_file_to_playlist(path)
+        return Response(ResponseCode.Success if isSuccess else ResponseCode.Failed)
     elif request == VCRequest.pause:
-        return voice_connection.pause(user_as_member)
+        isSuccess = voice_connection.pause(user_as_member)
+        return Response(ResponseCode.Success if isSuccess else ResponseCode.Failed)
     elif request == VCRequest.resume:
-        return voice_connection.resume(user_as_member)
+        isSuccess = voice_connection.resume(user_as_member)
+        return Response(ResponseCode.Success if isSuccess else ResponseCode.Failed)
     elif request == VCRequest.queue:
-        return voice_connection.list_queue()
+        isSuccess = voice_connection.list_queue()
+        return Response(ResponseCode.Success if isSuccess else ResponseCode.Failed)
     else:
         return Response(ResponseCode.BadRequest, "Voice connection request was not from the available list!")
     logger.debug("Waiting on task to finish")
@@ -1069,13 +1077,21 @@ linking = {
 
 outside_options = {}
 
-
-def edit_linking(data, remove=False):
+def edit_linking(data: LinkingEditorData, remove=False):
     """Removes an item from linking. Callback function to the services.py."""
     if remove and data in outside_options:
-        del outside_options[data]
-    elif not remove:
-        outside_options[data[0]] = data[1]
+        del outside_options[data.name]
+        telegramm_bot.remove_command(data.name)
+        return
+    outside_options[data.name] = data.callback
+    if (data.add_to_telegramm):
+        telegramm_bot.register_callback(
+            data.callback, 
+            data.name, 
+            data.needs_input, 
+            data.add_button, 
+            CommandPrivilege(data.privilage.value)
+        )
 
 
 categories = {
@@ -1221,7 +1237,7 @@ def get_current_status(user: Union[discord.Member, int], status_to_check: Events
     if isinstance(user, int):
         user = __get_user(user)
     if user is None:
-        Response(ResponseCode.Failed, "User not found")
+        return Response(ResponseCode.Failed, "User not found")
     status = (
         user.activity.name if user.activity is not None else None) if status_to_check == Events.activity else f"{user.name}'s status is {user.status.name}"
     return Response(ResponseCode.Success, status)
@@ -1279,17 +1295,17 @@ def send_raw_message(msg: str, channel: discord.TextChannel, timeout: int = -1):
     return MessageSendingResponse(ResponseCode.Success)
 
 
-def send_discord_message(msg: Message) -> MessageSendingResponse:
+def send_discord_message(msg: Message) -> Response:
     chn = get_channel(msg.channel)
     if chn == None:
-        return MessageSendingResponse(ResponseCode.NotFound, "User or channel not found")
+        return Response(ResponseCode.NotFound, "User or channel not found")
     task: asyncio.tasks.Task = loop.create_task(
         _send_message(msg, chn), name="Send discord message")
     while not task.done():
         sleep(0.1)
     if task.exception() is not None:
-        return MessageSendingResponse(ResponseCode.Failed, task.exception())
-    return MessageSendingResponse(ResponseCode.Success)
+        return Response(ResponseCode.Failed, task.exception())
+    return Response(ResponseCode.Success)
 
 
 async def _send_message(msg: Message, channel: discord.TextChannel):
@@ -1379,15 +1395,15 @@ def create_telegramm():
     global telegramm_bot
     telegramm_bot = Telegramm(telegramm_token, log_level, log_folder)
 
-    @telegramm_bot.callback("is_admin")
+    @telegramm_bot.callback("is_admin", accessable_to_user=False)
     def is_telegram_admin(telegramm_id: int) -> bool:
         return telegramm_id in admins["telegramm"]
 
-    @telegramm_bot.callback()
+    @telegramm_bot.callback(accessable_to_user=False)
     def check_admin_password(key: str) -> bool:
         return key == admin_key
 
-    @telegramm_bot.callback("add_admin")
+    @telegramm_bot.callback("add_admin", accessable_to_user=False)
     def add_telegramm_admin(telegramm_id: int) -> bool:
         if (telegramm_id in admins["telegramm"]):
             return False
@@ -1395,7 +1411,7 @@ def create_telegramm():
         save_cfg()
         return True
 
-    @telegramm_bot.callback()
+    @telegramm_bot.callback(accessable_to_user=False)
     def send_status() -> str:
         host_status = ""
         stts = status.get_graphical(int(bar_size/2), True)
@@ -1415,13 +1431,13 @@ def create_telegramm():
         host_status += f'Temperature: {(f"{temp}°C" if temp is not None else "Not detected!")}'
         return host_status
 
-    @telegramm_bot.callback()
-    def wake(id: int) -> None:
+    @telegramm_bot.callback(show_button=True, privilege=CommandPrivilege.OnlyAdmin)
+    def wake(id: int, _) -> None:
         if ("wake" in outside_options):
             outside_options["wake"](server, Message.create_message(
                 str(id), "wake", str(id), [], None, Interface.Telegramm))
 
-    @telegramm_bot.callback()
+    @telegramm_bot.callback(show_button=True, privilege=CommandPrivilege.OnlyAdmin)
     def shutdown(id: int, options: Optional[str]) -> None:
         command = "shutdown"
         if (options is not None):
@@ -1433,13 +1449,23 @@ def create_telegramm():
     telegramm_bot.start()
 
 
-def send_telegramm_message(msg: Message) -> MessageSendingResponse:
+def send_telegramm_message(msg: Message) -> Response:
     if (telegramm_bot is None):
-        return MessageSendingResponse(ResponseCode.Failed, "Telegramm API is not initialized!")
+        return Response(ResponseCode.Failed, "Telegramm API is not initialized!")
     telegramm_bot.send_message(msg.channel, msg.content)
-    return MessageSendingResponse(ResponseCode.Success)
-    # endregion
+    return Response(ResponseCode.Success)
+# endregion
 
+def create_server():
+    global server
+    server = Server()
+    server.register_callback(edit_linking, "linking_editor")
+    server.register_callback(get_status)
+    server.register_callback(send_message)
+    server.register_callback(get_user)
+    server.register_callback(is_admin)
+    server.register_callback(voice_connection_managger, "voice_connection_controll")
+    server.register_callback(get_current_status, "get_user_status")
 
 def Main(_loop: asyncio.AbstractEventLoop):
     try:
@@ -1460,8 +1486,7 @@ def Main(_loop: asyncio.AbstractEventLoop):
         watchdog = Watchdog(loop, client, process_list)
         if "--api" in os.sys.argv:
             logger.info("Setting up the services")
-            server = Server(edit_linking, get_status, send_message,
-                            get_user, is_admin, voice_connection_managger, get_current_status)
+            create_server()
         if "--telegramm" in os.sys.argv:
             logger.info("Setting up Telegramm")
             create_telegramm()
@@ -1474,7 +1499,8 @@ def Main(_loop: asyncio.AbstractEventLoop):
         logger.info('Starting all processes')
         runner(loop)
     except Exception as ex:
-        logger.error(str(ex))
+        _, _, exc_tb = sys.exc_info()
+        logger.error(f"{ex} on line {exc_tb.tb_lineno}")
         stop()
         logger.info("Restarting...")
         signal(signals.restart)

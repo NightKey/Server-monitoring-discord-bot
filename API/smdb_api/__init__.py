@@ -12,8 +12,18 @@ from datetime import datetime
 from typing import Any, Callable, Dict, List, Union, Optional
 from hashlib import sha256
 from enum import Enum
+from abc import ABC, abstractclassmethod
 
 from requests.models import Response
+
+class JsonSerializable(ABC):
+    @staticmethod
+    def from_json(json_string: str) -> "JsonSerializable":
+        pass
+
+    @abstractclassmethod
+    def to_json(self) -> str:
+        pass
 
 
 class ValidationError(Exception):
@@ -37,12 +47,14 @@ class ActionFailed(Exception):
         self.message = f"'{action}' failed!'"
 
 
-class Attachment:
+class Attachment(JsonSerializable):
     """Message attachment"""
-    def from_json(json: dict):
-        if json is None:
+    @staticmethod
+    def from_json(json_string: str):
+        data = json.loads(json_string)
+        if data is None:
             return None
-        return Attachment(json["filename"], json["url"], json["size"])
+        return Attachment(data["filename"], data["url"], data["size"])
 
     def from_discord_attachment(atch: discord.Attachment):
         if atch is None:
@@ -78,8 +90,8 @@ class Attachment:
             f.write(file.content)
         return path.join(save_path, self.filename)
 
-    def to_json(self) -> dict:
-        return {"filename": self.filename, "size": self.size, "url": self.url}
+    def to_json(self) -> Dict:
+        return json.dumps({"filename": self.filename, "size": self.size, "url": self.url})
 
 
 class Interface(Enum):
@@ -87,15 +99,17 @@ class Interface(Enum):
     Telegramm = 1
 
 
-class Message:
+class Message(JsonSerializable):
     """Message object used by the api"""
     USER_REGX = r"(<@![0-9]+>){1}"
 
-    def from_json(json) -> "Message":
-        msg = Message(json["sender"], json["content"], json["channel"], [Attachment.from_json(attachment)
-                      for attachment in json["attachments"]] if json["attachments"] is not None else [], json["called"], Interface(json["interface"]) if json["interface"] is not None else Interface.Discord)
-        if "random_id" in json:
-            msg.random_id = json["random_id"]
+    @staticmethod
+    def from_json(json_string: str) -> "Message":
+        data = json.loads(json_string)
+        msg = Message(data["sender"], data["content"], data["channel"], [Attachment.from_json(attachment)
+                      for attachment in data["attachments"]] if data["attachments"] is not None else [], data["called"], Interface(data["interface"]) if data["interface"] is not None else Interface.Discord)
+        if "random_id" in data:
+            msg.random_id = data["random_id"]
         return msg
 
     def create_message(sender: str, content: str, channel: str, attachments: List[Attachment], called: str, interface: Interface) -> "Message":
@@ -129,8 +143,8 @@ class Message:
     def has_attachments(self) -> bool:
         return len(self.attachments) > 0
 
-    def to_json(self) -> dict:
-        return {
+    def to_json(self) -> str:
+        return json.dumps({
             "sender": self.sender,
             "content": self.content,
             "channel": self.channel,
@@ -138,12 +152,12 @@ class Message:
             "attachments": [attachment.to_json() for attachment in self.attachments] if len(self.attachments) > 0 else None,
             "interface": self.interface.value if self.interface is not None else None,
             "random_id": self.random_id
-        }
+        })
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Message):
             return False
-        return self.sender == other.sender and self.content == other.content and self.channel
+        return self.sender == other.sender and self.content == other.content and self.channel == other.channel
 
 
 class ResponseCode(Enum):
@@ -151,8 +165,8 @@ class ResponseCode(Enum):
     BadRequest = 1
     InternalError = 2
     Denied = 3
-    Accepted = 4,
-    Failed = 5,
+    Accepted = 4
+    Failed = 5
     NotFound = 6
 
     def __str__(self) -> str:
@@ -165,18 +179,18 @@ class ResponseCode(Enum):
         return str(__o) == str(self.value)
 
 
-class Response:
+class Response(JsonSerializable):
 
     def __init__(self, response: ResponseCode, Data=None, __bool: bool = None):
         """Possible Responses: Bad request, Success, Internal error
         """
-        self.response = response
+        self.response_code = response
         self.data = Data
-        self.bool = __bool if __bool is not None else self.response in [
+        self.bool = __bool if __bool is not None else response in [
             ResponseCode.Success, ResponseCode.Accepted]
 
     def create_altered(self, response=None, Data=None):
-        return Response(response or self.response, Data or self.data)
+        return Response(response or self.response_code, Data or self.data)
 
     def __bool__(self):
         return self.bool
@@ -184,44 +198,42 @@ class Response:
     def __str__(self):
         return str(self.__dict__)
 
-    def __repr__(self):
+    def to_json(self) -> Dict:
         tmp = self.__dict__
-        tmp["response"] = self.response.__repr__()
-        return tmp
+        tmp["response_code"] = self.response_code.__repr__()
+        return json.dumps(tmp)
 
     @staticmethod
-    def from_message(json: dict) -> "Response":
-        return Response(ResponseCode(json["response"]), json["data"], json["__bool"] if "__bool" in json.keys() else None)
-
-
-class MessageSendingResponse():
-
-    def __init__(self, state: ResponseCode, message: Optional[str] = None) -> None:
-        self.state = state
-        self.message = message
-
-    def __eq__(self, other: Any) -> bool:
-        if (not isinstance(other, ResponseCode)):
-            return False
-        return self.state == other
-
-    def __str__(self):
-        return str(self.__dict__)
-
-    def __repr__(self):
-        tmp = self.__dict__
-        tmp["state"] = self.state.__repr__()
-        return tmp
-
-    @staticmethod
-    def from_message(json: dict) -> "MessageSendingResponse":
-        return MessageSendingResponse(ResponseCode(json["state"]), json["message"])
-
+    def from_json(json_string: str) -> "Response":
+        data = json.loads(json_string)
+        return Response(ResponseCode(int(data["response_code"])), data["data"], data["__bool"] if "__bool" in data else None)
 
 class Events(Enum):
     presence_update = 0
     activity = 1
 
+class UserEventRequest(JsonSerializable):
+    uid: str
+    event: Events
+
+    @staticmethod
+    def from_json(json_string: Dict) -> "UserEventRequest":
+        data = json.loads(json_string)
+        return UserEventRequest(data["uid"], Events(data["event"]))
+
+    def __init__(self, uid: str, event: Events) -> None:
+        self.uid = uid
+        self.event = event
+    
+    def to_json(self) -> str:
+        tmp = self.__dict__
+        tmp["event"] = self.event.value
+        return json.dumps(tmp)
+        
+class Privilege(Enum):
+    Anyone = 0
+    OnlyAdmin = 1
+    OnlyUnknown = 2
 
 def blockPrint() -> None:
     global stdout
@@ -283,24 +295,24 @@ class API:
         self.subscriber_callbacks: Dict[Events,
                                         Callable[[str, str, int], None]] = {}
 
-    def __send(self, msg: str) -> None:
+    def __send(self, msg: JsonSerializable) -> None:
         """Sends a socket message
         """
-        msg = json.dumps(msg)
+        msg_json = msg.to_json()
         while True:
             tmp = ''
-            if len(msg) > 9:
-                tmp = msg[9:]
-                msg = msg[:9]
-            self.socket.send(str(len(msg)).encode(encoding='utf-8'))
-            self.socket.send(msg.encode(encoding="utf-8"))
+            if len(msg_json) > 9:
+                tmp = msg_json[9:]
+                msg_json = msg_json[:9]
+            self.socket.send(str(len(msg_json)).encode(encoding='utf-8'))
+            self.socket.send(msg_json.encode(encoding="utf-8"))
             if tmp == '':
-                tmp = '\n'
-            if msg == '\n':
+                tmp = '\x00'
+            if msg_json == "\x00":
                 break
-            msg = tmp
+            msg_json = tmp
 
-    def __retrive(self) -> dict:
+    def __retrive(self) -> str:
         """Retrives a socket message
         """
         ret = ""
@@ -310,10 +322,10 @@ class API:
                 size = int(self.socket.recv(1).decode('utf-8'))
                 data = self.socket.recv(size).decode('utf-8')
                 enablePrint()
-                if data == '\n':
+                if data == '\x00':
                     break
                 ret += data
-            return json.loads(ret)
+            return ret
         except Exception as ex:
             enablePrint()
             print(f"[_retrive exception]: {ex}")
@@ -413,12 +425,11 @@ class API:
                     pass
                 if (timeout is not None and timeout > 0 and time() - start > timeout) or not self.running:
                     return False
-            self.__send({"Command": self.name, "Value": self.key})
+            self.__send(Message(self.name, self.key, None, [], self.name))
             ansvear = self.__retrive()
-            if not isinstance(ansvear, dict):
-                raise ValueError("Bad value retrieved from socket.")
-            elif ansvear["response"] == ResponseCode.Denied:
-                raise ValidationError(ansvear["data"])
+            response = Response.from_json(ansvear)
+            if not response.bool:
+                raise ValidationError(response.data)
             else:
                 self.valid = True
                 self.socket_list.append(self.socket)
@@ -444,21 +455,24 @@ class API:
     def is_admin(self, uid: str) -> bool:
         if self.valid:
             self.sending = True
-            self.__send({"Command": "Is Admin", "Value": uid})
+            self.__send(Message(self.name, uid, None, [], "Is Admin"))
             tmp = self.__wait_for_response()
-            if tmp["response"] == ResponseCode.Success:
-                return tmp["data"]
+            if tmp.response_code == ResponseCode.Success:
+                return tmp.data
+            print(f"{tmp.response_code.name}: {tmp.data}")
+            return False
         else:
             NotValidatedError()
 
     def get_user_status(self, uid: str, __type: Events = Events.activity) -> str:
         if self.valid:
             self.sending = True
-            self.__send({"Command": "Get User Status",
-                        "Value": {"User": uid, "Type": __type.value}})
+            self.__send(Message(self.name, UserEventRequest(uid, __type).to_json(), None, [], "Get User Status"))
             tmp = self.__wait_for_response()
-            if tmp["response"] == ResponseCode.Success:
-                return tmp["data"]
+            if tmp.response_code == ResponseCode.Success:
+                return tmp.data
+            print(f"{tmp.response_code.name}: {tmp.data}")
+            return ""
         else:
             NotValidatedError()
 
@@ -475,17 +489,17 @@ class API:
         """
         if self.valid:
             self.sending = True
-            self.__send({"Command": "Status", "Value": None})
+            self.__send(Message(self.name, None, None, [], "Status"))
             tmp = self.__wait_for_response()
-            return tmp
+            return tmp.data
         else:
             raise NotValidatedError()
 
     def get_username(self, key: str) -> str:
         self.sending = True
-        self.__send({"Command": 'Username', "Value": key})
+        self.__send(Message(self.name, key, None, [], "Username"))
         tmp = self.__wait_for_response()
-        return tmp["data"] if tmp["response"] == ResponseCode.Success else "unknown"
+        return tmp.data if tmp.response_code == ResponseCode.Success else "unknown"
 
     def send_message(self, message: str, interface: Interface, destination: str = None, file_path: str = None) -> bool:
         """Sends a message trough the discord bot.
@@ -494,13 +508,13 @@ class API:
             "/")[-1], file_path, path.getsize(file_path))] if file_path is not None else [], "API", interface)
         if self.valid:
             self.sending = True
-            self.__send({"Command": "Send", 'Value': msg.to_json()})
+            self.__send(Message(self.name, msg.to_json(), None, [], "Send"))
             tmp = self.__wait_for_response()
-            if tmp["state"] == ResponseCode.BadRequest:
-                raise ActionFailed(tmp["data"])
-            elif tmp["state"] == ResponseCode.InternalError:
+            if tmp.response_code == ResponseCode.BadRequest:
+                raise ActionFailed(tmp.data)
+            elif tmp.response_code == ResponseCode.InternalError:
                 print(
-                    f"[Message sending exception] Internal error: {tmp['Data']}")
+                    f"[Message sending exception] Internal error: {tmp.data}")
                 return False
             return True
         else:
@@ -510,41 +524,40 @@ class API:
         """Closes the socket, and stops the listener loop.
         """
         if self.valid and self.connection_alive:
-            self.__send({"Command": "Disconnect", "Value": reason})
+            self.__send(Message(self.name, reason, None, [], "Disconnect"))
         self.running = False
         self.valid = False
         self.connection_alive = False
         self.sending = False
         self.socket.close()
 
-    def create_function(self, name: str, help_text: str, callback: Callable[[Message], None]) -> None:
+    def create_function(self, name: str, help_text: str, callback: Callable[[Message], None], privilege: Privilege = None, show_button: bool = False, needs_arguments: bool = False) -> None:
         """Creates a function in the connected bot. This function creates a thread so it won't block while it waits for validation from the bot.
         Returns a Message object. The returned value depends on the return value, but the order is the same.
         """
         self.create_function_threads.append(threading.Thread(
-            target=self.__create_function, args=[name, help_text, callback, ]))
+            target=self.__create_function, args=[name, help_text, callback, privilege, show_button, needs_arguments, ]))
         self.create_function_threads[-1].name = f"Create thread for {name}"
         self.create_function_threads[-1].start()
 
-    def __create_function(self, name: str, help_text: str, callback: Callable[[Message], None]) -> None:
+    def __create_function(self, name: str, help_text: str, callback: Callable[[Message], None], privilege: Privilege = None, show_button: bool = False, needs_arguments: bool = False) -> None:
         """Creates a function in the connected bot when validated.
         """
         self.communicateLock.acquire()
         self.sending = True
         try:
-            if [name, help_text, callback] not in self.created_function_list:
-                self.created_function_list.append([name, help_text, callback])
+            if [name, help_text, callback, privilege, show_button, needs_arguments] not in self.created_function_list:
+                self.created_function_list.append([name, help_text, callback, privilege, show_button, needs_arguments])
             if not self.valid:
                 return
-            self.__send(
-                {"Command": "Create", "Value": [name, help_text, name]})
+            self.__send(Message(self.name, json.dumps({"name": name, "help":help_text, "privilege":privilege, "show_button": show_button, "needs_arguments":needs_arguments}), None, [], "Create"))
             tmp = self.__wait_for_response()
             self.sending = False
-            if tmp["response"] == ResponseCode.Success:
+            if tmp.response_code == ResponseCode.Success:
                 self.call_list[name] = callback
-            elif tmp["response"] == ResponseCode.InternalError:
+            elif tmp.response_code == ResponseCode.InternalError:
                 print(
-                    f"[_create_function exception] Internal error: {tmp['Data']}")
+                    f"[_create_function exception] Internal error: {tmp.data}")
             else:
                 raise ActionFailed(tmp["data"])
         except Exception as ex:
@@ -553,62 +566,61 @@ class API:
             self.sending = False
             self.communicateLock.release()
 
-    def __wait_for_response(self) -> Any:
+    def __wait_for_response(self) -> Response:
         while self.buffer == []:
             sleep(0.1)
         self.sending = False
-        tmp = self.buffer[0]
+        tmp = Response.from_json(self.buffer[0])
         self.buffer = []
         return tmp
 
     def connect_to_voice(self, user_id: str) -> bool:
         self.sending = True
-        self.__send({"Command": "Connect To User", "Value": user_id})
+        self.__send(Message(self.name, user_id, None, [], "Connect To User"))
 
-        return self.__wait_for_response()
+        return self.__wait_for_response().bool
 
     def disconnect_from_voice(self) -> bool:
         self.sending = True
-        self.__send({"Command": "Disconnect From Voice", "Value": None})
+        self.__send(Message(self.name, None, None, [], "Disconnect From Voice"))
 
-        return self.__wait_for_response()
+        return self.__wait_for_response().bool
 
     def play_file(self, path: str, user_id: str) -> bool:
         self.sending = True
-        self.__send({"Command": "Play Audio File", "Value": {
-                    "Path": path, "User": user_id}})
+        self.__send(Message(self.name, json.dumps({"Path": path, "User": user_id}), None, [], "Play Audio File"))
 
-        return self.__wait_for_response()
+        return self.__wait_for_response().bool
 
     def add_file(self, path: str) -> bool:
         self.sending = True
-        self.__send({"Command": "Add Audio File", "Value": path})
-        return self.__wait_for_response()
+        self.__send(Message(self.name, path, None, [], "Add Audio File"))
+        return self.__wait_for_response().bool
 
     def pause_currently_playing(self, user_id: str) -> bool:
         self.sending = True
-        self.__send({"Command": "Pause Currently Playing", "Value": user_id})
-        return self.__wait_for_response()
+        self.__send(Message(self.name, user_id, None, [], "Pause Currently Playing"))
+        return self.__wait_for_response().bool
 
     def resume_paused(self, user_id: str) -> bool:
         self.sending = True
-        self.__send({"Command": "Resume Paused", "Value": user_id})
-        return self.__wait_for_response()
+        self.__send(Message(self.name, user_id, None, [], "Resume Paused"))
+        return self.__wait_for_response().bool
 
     def skip_currently_playing(self, user_id: str) -> bool:
         self.sending = True
-        self.__send({"Command": "Skip Currently Playing", "Value": user_id})
-        return self.__wait_for_response()
+        self.__send(Message(self.name, user_id, None, [], "Skip Currently Playing"))
+        return self.__wait_for_response().bool
 
     def stop_currently_playing(self, user_id: str) -> bool:
         self.sending = True
-        self.__send({"Command": "Stop Currently Playing", "Value": user_id})
-        return self.__wait_for_response()
+        self.__send(Message(self.name, user_id, None, [], "Stop Currently Playing"))
+        return self.__wait_for_response().bool
 
     def get_queue(self) -> Union[List[str], None]:
         self.sending = True
-        self.__send({"Command": "List Queue", "Value": None})
-        return self.__wait_for_response()
+        self.__send(Message(self.name, None, None, [], "List Queue"))
+        return self.__wait_for_response().data
 
     def set_as_hook_for_track_finished(self, callable: Callable[[Message], None]) -> None:
         thread = threading.Thread(
@@ -620,8 +632,8 @@ class API:
         self.communicateLock.acquire()
         try:
             self.sending = True
-            self.__send({"Command": "Set As Track Finished", "Value": None})
-            if self.__wait_for_response():
+            self.__send(Message(self.name, None, None, [], "Set As Track Finished"))
+            if self.__wait_for_response().bool:
                 self.track_hook = callable
         finally:
             self.communicateLock.release()
@@ -650,11 +662,11 @@ class API:
                 {"Command": "Subscribe To Event", "Value": event.value})
             tmp = self.__wait_for_response()
             self.sending = False
-            if tmp["response"] == ResponseCode.Success:
+            if tmp.response_code == ResponseCode.Success:
                 if event not in self.subscriber_callbacks:
                     self.subscriber_callbacks[event] = callable
                 return True
-            elif tmp["response"] == ResponseCode.InternalError:
+            elif tmp.response_code == ResponseCode.InternalError:
                 print(
                     f"[__subscribe_to_event exception] Internal error: {tmp['Data']}")
                 return False
