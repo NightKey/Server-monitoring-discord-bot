@@ -463,7 +463,7 @@ Category: BOT
         await message.channel.send('Process added')
 
 
-async def remove(message, name):
+async def remove(message: discord.Message, name):
     """Removes the given program from the watchlist
 Usage: &remove <watched process name>
 Category: BOT
@@ -477,6 +477,21 @@ Category: BOT
         with open(os.path.join("data", "process_list.json"), "w") as f:
             json.dump(process_list, f)
 
+async def decide(message: discord.Message, original: str):
+    """Decides between options separated by a coma (,)
+Usage: &decide option1,option2,[...]
+Category: SERVER
+"""
+    import random
+    options = original.split(',')
+    selected = random.choice(options)
+    selected.strip(" ")
+    tag = "@"
+    try:
+        await message.delete()
+    except discord.Forbidden:
+        pass
+    await message.channel.send(f"{tag}{message.author.name} choose `{selected.strip(' ')}` from the following: `[{', '.join((option.strip(' ') for option in options))}]`")
 
 async def roll(message, original):
     """Rolls the dice specifyed.
@@ -1064,7 +1079,8 @@ linking = {
     "restart": [restart, True],
     "roll": [roll, False],
     "terminate": [terminate_process, True],
-    "update": [updater, True]
+    "update": [updater, True],
+    "decide": [decide, False]
 }
 
 outside_options = {}
