@@ -78,7 +78,7 @@ class Server:
     def _save_settings(self, key: str = "current") -> None:
         from os import path, mkdir
         settings_path = path.join("data", "server.cfg")
-        if not path.exists(settings_path):
+        if not path.exists("data"):
             mkdir("data")
         settings = {}
         if key == "current":
