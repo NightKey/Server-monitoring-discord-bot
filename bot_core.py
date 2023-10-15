@@ -4,7 +4,7 @@ from typing import List, Optional, Union, Dict
 from modules import status, log_level, log_folder
 from modules.watchdog import Watchdog
 from smdb_logger import Logger
-from smdb_api import Message, Attachment, Interface, Response, MessageSendingResponse, ResponseCode, Events
+from smdb_api import Message, Attachment, Interface, Response, ResponseCode, Events
 from platform import node
 from modules.services import LinkingEditorData, Server
 from modules.scanner import scann
