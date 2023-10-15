@@ -1288,11 +1288,11 @@ def send_raw_message(msg: str, channel: discord.TextChannel, timeout: int = -1):
         sleep(0.1)
     if task.exception() is not None:
         logger.error(f"Exception in task: {task.exception()}")
-        return MessageSendingResponse(ResponseCode.Failed, task.exception())
+        return Response(ResponseCode.Failed, task.exception())
     if task.cancelled():
         logger.error(f"Sending message timed out in {timeout} seconds")
-        return MessageSendingResponse(ResponseCode.Failed, f"Timed out after {timeout} seconds")
-    return MessageSendingResponse(ResponseCode.Success)
+        return Response(ResponseCode.Failed, f"Timed out after {timeout} seconds")
+    return Response(ResponseCode.Success)
 
 
 def send_discord_message(msg: Message) -> Response:
