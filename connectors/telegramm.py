@@ -107,8 +107,7 @@ class Telegramm():
             del self.previous_messages[chat_id]
         if (message.text.lower() in ['start', 'help', '/start', '/help']):
             self.send_message(
-                chat_id, f"Welcome!\nI will send you your possible commands in a second.")
-            self.send_action_buttons(chat_id, True)
+                chat_id, f"Welcome!\nI will send you your possible commands in a second.", answer_with_buttons=True)
             return
         lowerMessage = split_message[0].lower()
         if (lowerMessage not in [name for name in self.commands.keys()] and previous_message_from_user is None):
@@ -138,7 +137,6 @@ class Telegramm():
                 return
             argument = message.text
         self.__call_command__(chat_id, command, argument)
-        self.send_action_buttons(chat_id, True)
 
     # Internal logic functions
     def __register__(self, chat_id: int, split_message: List[str], previous_message: Union[str, None]) -> Union[str, None]:
@@ -162,25 +160,34 @@ class Telegramm():
             return split_message[0].lower()
 
     # Message sending functions
-    def send_message(self, recepient: int, text: str, remove_markup: Optional[bool] = False) -> None:
+    def send_message(self, recepient: int, text: str, remove_markup: Optional[bool] = False, answer_with_buttons: Optional[bool] = False) -> None:
         if (remove_markup):
             self.logger.debug("Disabling reply markup!")
+        reply_markup = ReplyKeyboardMarkup(False) if remove_markup else None
+        if (remove_markup and answer_with_buttons):
+            self.logger.error("Send message called with both remove_markup and answer_withButtons! Removing markup as default!")
+        elif (answer_with_buttons):
+            reply_markup = self.create_buttons(recepient)
         self.Telegramm_bot.send_message(
-            recepient, text, reply_markup=ReplyKeyboardRemove(False) if remove_markup else None)
+            recepient, text, reply_markup=reply_markup)
         if (len(text) > 30):
             text = f"{text[:25]}[...]"
         self.logger.debug(f"Sending message: {text}")
 
     def send_action_buttons(self, recepient: int, show_all: bool = False) -> None:
         self.logger.debug(f"Reply Markup called")
+        markup = self.create_buttons(recepient, show_all)
+        self.logger.debug(f"Reply Markup created")
+        self.Telegramm_bot.send_message(
+            recepient, "Your possible options", reply_markup=markup)
+
+    def create_buttons(self, recepient: int, show_all: Optional[bool] = True) -> ReplyKeyboardMarkup:
         caller_is_admin = self.__is_admin__(recepient)
         markup = ReplyKeyboardMarkup()
         items = [KeyboardButton(command.name)
                  for command in self.commands.values() if ((command.is_default or show_all) and CommandPrivilege.should_show(command.privilege, caller_is_admin))]
         markup.add(*items)
-        self.logger.debug(f"Reply Markup created")
-        self.Telegramm_bot.send_message(
-            recepient, "Your possible options", reply_markup=markup)
+        return markup
 
     # Callback registers
     def register_callback(
@@ -197,7 +204,7 @@ class Telegramm():
             - is_admin(int) -> bool
             - add_admin(int) -> bool
             - check_admin_password(str) -> bool
-            - send_status() -> str
+            - status() -> str
         Optional, predefined:
             - wake(int) -> None
             - shutdown(int, str|None) -> None
@@ -223,7 +230,7 @@ class Telegramm():
             - is_admin(int) -> bool
             - add_admin(int) -> bool
             - check_admin_password(str) -> bool
-            - send_status() -> str
+            - status() -> str
         Optional, predefined:
             - wake(int) -> None
             - shutdown(int, str|None) -> None
@@ -280,7 +287,8 @@ class Telegramm():
     def __call_command__(self, chat_id: int, command: Command, argument: str = None) -> None:
         if (command.name not in self.callbacks):
             self.logger.warning(f"Command '{command.name}' not in callbacks!")
-            self.send_message("Command not available at the moment!")
+            self.send_message(chat_id, "Command not available at the moment!", answer_with_buttons=True)
+            return
         self.callbacks[command.name](chat_id, argument)
 
     def __wake__(self, chat_id: int) -> None:

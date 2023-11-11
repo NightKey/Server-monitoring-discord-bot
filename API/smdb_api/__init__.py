@@ -197,6 +197,13 @@ class Response(JsonSerializable):
 
     def __str__(self):
         return str(self.__dict__)
+    
+    def __eq__(self, __value: object) -> bool:
+        if (isinstance(__value, Response)):
+            return self.response_code == __value.response_code
+        if (isinstance(__value, ResponseCode)):
+            return self.response_code == __value
+        return False
 
     def to_json(self) -> Dict:
         tmp = self.__dict__
