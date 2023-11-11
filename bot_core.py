@@ -1411,7 +1411,7 @@ def create_telegramm():
         save_cfg()
         return True
 
-    @telegramm_bot.callback("status", accessable_to_user=False)
+    @telegramm_bot.callback(accessable_to_user=False)
     def send_status() -> str:
         host_status = ""
         stts = status.get_graphical(int(bar_size/2), True)

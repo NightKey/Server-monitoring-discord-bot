@@ -58,6 +58,7 @@ class Telegramm():
             "telegramm.log", log_folder=logger_folder, level=logger_level, log_to_console=True, use_caller_name=True)
         self.callbacks = {}
         self.previous_messages = {}
+        self.register_callback(self.__status__, "status", accessable_to_user=False)
 
     # Basic controll
     def start(self):
@@ -204,7 +205,7 @@ class Telegramm():
             - is_admin(int) -> bool
             - add_admin(int) -> bool
             - check_admin_password(str) -> bool
-            - status() -> str
+            - send_status() -> str
         Optional, predefined:
             - wake(int) -> None
             - shutdown(int, str|None) -> None
@@ -230,7 +231,7 @@ class Telegramm():
             - is_admin(int) -> bool
             - add_admin(int) -> bool
             - check_admin_password(str) -> bool
-            - status() -> str
+            - send_status() -> str
         Optional, predefined:
             - wake(int) -> None
             - shutdown(int, str|None) -> None
@@ -274,8 +275,8 @@ class Telegramm():
                 chat_id, "The admin validation is not possible at this moment!")
             return False
 
-    def __status__(self, chat_id: int) -> None:
-        function_name = inspect.stack()[0][3].strip('__')
+    def __status__(self, chat_id: int, _) -> None:
+        function_name = "send_status"
         if (function_name in self.callbacks):
             status = self.callbacks[function_name]()
             self.send_message(chat_id, status)
