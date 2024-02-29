@@ -2,6 +2,9 @@
 SET main_dir=%~dp0
 echo %main_dir%
 cd %main_dir%
+
+call git remote update
+
 for /f %%i in ('git rev-parse @') do SET current=%%i
 for /f %%i in ('git rev-parse @{u}') do SET remote=%%i
 
