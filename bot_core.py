@@ -100,8 +100,8 @@ Category: BOT
     """
     if message is None or str(message.channel) in channels or str(message.author.id) in admins["discord"]:
         from modules import updater
-        os.system("pip3 install --user --upgrade smdb_api > update.lg")
-        os.system("pip3 install --user --upgrade smdb_logger > update.lg")
+        os.system("pip3 install --upgrade smdb_api > update.lg")
+        os.system("pip3 install --upgrade smdb_logger > update.lg")
         with open("update.lg", "r") as f:
             tmp = f.read(-1).split("\n")
         os.remove("update.lg")
