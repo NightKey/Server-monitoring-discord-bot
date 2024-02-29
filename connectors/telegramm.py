@@ -7,6 +7,7 @@ from telebot.types import ReplyKeyboardMarkup, ReplyKeyboardRemove, Message, Key
 from smdb_logger import Logger, LEVEL
 from time import time
 from .data_structures import CommandPrivilege, Command
+from logging import INFO, DEBUG
 
 class Telegramm():
     def __init__(self, token: str, logger_level: LEVEL, logger_folder: str) -> None:
@@ -16,6 +17,7 @@ class Telegramm():
             "id": Command("id", CommandPrivilege.Anyone, True, True),
             "ping": Command("ping", CommandPrivilege.Anyone, True, True)
         }
+        self.telebot_log_level = INFO if logger_level == LEVEL.INFO else DEBUG
         self.Telegramm_thread = None
         self.Telegramm_bot = telebot.TeleBot(
             token, exception_handler=self.exception_handler)
@@ -31,7 +33,9 @@ class Telegramm():
         if (self.Telegramm_thread != None):
             return
         self.Telegramm_thread = threading.Thread(
-            target=self.Telegramm_bot.infinity_polling)
+            target=self.Telegramm_bot.infinity_polling,
+            kwargs={"timeout":20,"log_level":self.telebot_log_level}
+        )
         self.Telegramm_thread.name = "Telegram thread"
         self.Telegramm_thread.start()
         self.logger.debug(f"Bot thread started")

@@ -4,4 +4,4 @@ fuzzywuzzy
 python-Levenshtein
 PyNaCl
 smdb_logger
-pyTelegramBotAPI==3.6.7
+pyTelegramBotAPI
