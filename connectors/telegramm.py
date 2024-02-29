@@ -19,9 +19,8 @@ class Telegramm():
         }
         self.telebot_log_level = INFO if logger_level == LEVEL.INFO else DEBUG
         self.Telegramm_thread = None
-        self.Telegramm_bot = telebot.TeleBot(
-            token, exception_handler=self.exception_handler)
-        self.Telegramm_bot.register_message_handler(self.incoming_message)
+        self.Telegramm_bot = telebot.TeleBot(token)
+        self.Telegramm_bot.add_message_handler({"function":self.incoming_message, 'filters':{}})
         self.logger = Logger(
             "telegramm.log", log_folder=logger_folder, level=logger_level, log_to_console=True, use_caller_name=True)
         self.callbacks = {}
@@ -34,7 +33,7 @@ class Telegramm():
             return
         self.Telegramm_thread = threading.Thread(
             target=self.Telegramm_bot.infinity_polling,
-            kwargs={"timeout":20,"log_level":self.telebot_log_level}
+            kwargs={"timeout":20}
         )
         self.Telegramm_thread.name = "Telegram thread"
         self.Telegramm_thread.start()
