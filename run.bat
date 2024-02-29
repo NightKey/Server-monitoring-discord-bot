@@ -14,7 +14,7 @@ ECHO Remote: %remote%
 if NOT %current%==%remote% (
     ECHO Updating from remote
     start /wait git pull
-    start run.bat
+    start run.bat %*
     exit /b 0
 )
 
@@ -25,7 +25,7 @@ IF NOT EXIST venv\ (
 
 IF NOT EXIST venv\ (
     ECHO venv couldn't be prepared!
-    start install.bat
+    start install.bat %*
     exit /b 0
 )
 

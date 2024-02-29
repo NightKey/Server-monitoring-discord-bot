@@ -5,4 +5,4 @@ cd %main_dir%
 
 ECHO Installing virtualenv
 start /wait python -m pip install virtualenv
-call run.bat
+call run.bat %*
