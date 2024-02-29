@@ -13,7 +13,7 @@ IF "%VIRTUAL_ENV%"=="" (
     call venv/Scripts/activate.bat
 )
 
-start /wait pip install --upgrade -r dependencies.txt
+start /wait python -m pip install --upgrade -r dependencies.txt
 ECHO Starting bot
 call python bot.py %*
 ECHO Disabling venv
