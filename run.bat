@@ -20,7 +20,7 @@ if NOT %current%==%remote% (
 
 IF NOT EXIST venv\ (
     ECHO Creating new venv
-    call virtualenv venv
+    call python -m virtualenv venv
 )
 
 IF NOT EXIST venv\ (
