@@ -6,6 +6,10 @@ cd %main_dir%
 IF NOT EXIST venv\ (
     ECHO Creating new venv
     call virtualenv venv
+    if NOT errorlevel 0 (
+        call install.bat
+        exit /b 0
+    )
 )
 
 IF "%VIRTUAL_ENV%"=="" (
