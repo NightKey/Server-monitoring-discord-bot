@@ -5,14 +5,8 @@ from os import system as run
 from os import path, remove, rename
 from sys import argv, gettrace
 from time import sleep
-try:
-    from modules import log_level, log_folder
-    from smdb_logger import Logger
-except:
-    run("pip install -r dependencies.txt > remove")
-    remove("remove")
-    from modules import log_level, log_folder
-    from smdb_logger import Logger
+from modules import log_level, log_folder
+from smdb_logger import Logger
 
 
 def is_debugger():
@@ -110,6 +104,7 @@ if __name__ == '__main__':
     while True:
         params = argv[1:]
         if is_debugger():
+            logger.info("Debugger mode")
             params.extend(['--nowd', '--api', '--scilent', "--dev", "--telegramm"])
         main(params)
         logger.warning('Bot killed!')

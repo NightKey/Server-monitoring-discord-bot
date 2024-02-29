@@ -11,7 +11,6 @@ from modules.scanner import scann
 from modules.voice_connection import VCRequest, VoiceConnection
 from threading import Thread
 from time import sleep, process_time
-from discord.enums import Status as DiscordStatus
 import datetime
 import psutil
 import os
@@ -21,7 +20,7 @@ import asyncio
 import logging
 import discord
 from fuzzywuzzy import fuzz
-from connectors.telegramm import CommandPrivilege, Telegramm
+from connectors import CommandPrivilege, Telegramm
 
 trys = 0
 discord_token = ""
@@ -311,17 +310,16 @@ def send_message(msg: Message) -> Response:
     if msg.channel is None:
         loop.create_task(watchdog.send_msg(msg.content))
         return Response(ResponseCode.Success)
-    else:
-        if (msg.interface == Interface.Discord):
-            response = send_discord_message(msg)
-        elif (msg.interface == Interface.Telegramm and telegramm_bot is not None):
-            response = send_telegramm_message(msg)
-        if (response == ResponseCode.Success):
-            return Response(ResponseCode.Success)
-        elif (response == ResponseCode.NotFound):
-            return Response(ResponseCode.BadRequest, response.message)
-        elif (response == ResponseCode.Failed):
-            return Response(ResponseCode.InternalError, f"{response.message}")
+    if (msg.interface == Interface.Discord):
+        response = send_discord_message(msg)
+    elif (msg.interface == Interface.Telegramm and telegramm_bot is not None):
+        response = send_telegramm_message(msg)
+    if (response == ResponseCode.Success):
+        return Response(ResponseCode.Success)
+    elif (response == ResponseCode.NotFound):
+        return Response(ResponseCode.BadRequest, response.message)
+    elif (response == ResponseCode.Failed):
+        return Response(ResponseCode.InternalError, f"{response.message}")
 
 
 # region DISCORD
@@ -356,9 +354,9 @@ def get_status():
     return status
 
 
-async def status_check(message, stype="short"):
+async def status_check(message: discord.Message, stype="short"):
     """Scanns the system for the running applications, and creates a message depending on the resoults.
-Usage: &status <long if you want to see the API status too or module name for specific module status [bot, watchdog, api, host/pc_name]>
+Usage: &status <full if you want to see the API status too or module name for specific module status [bot, watchdog, api, host/pc_name]>
 Category: SOFTWARE
     """
     color = 0x14f9a2 if not dev_mode else 0x3273e3
@@ -372,7 +370,7 @@ Category: SOFTWARE
     if str(channel) not in channels and isinstance(message, discord.Message) and str(message.author.id) not in admins["discord"]:
         await echo(message)
         return
-    if stype.lower() in ["short", "long", "bot"]:
+    if stype.lower() in ["short", "full", "bot"]:
         bot_status = discord.Embed(title="Bot status", color=color)
         bot_status.add_field(name=f"Reconnectoins in the past {reset_time} hours", value=len(
             connections), inline=False)
@@ -382,7 +380,7 @@ Category: SOFTWARE
         bot_status.set_author(name="Night Key", url="https://github.com/NightKey",
                               icon_url="https://avatars.githubusercontent.com/u/8132508?s=400&v=4")
 
-    if stype.lower() in ["short", "long", "watchdog"]:
+    if stype.lower() in ["short", "full", "watchdog"]:
         process_list = scann(process_list, psutil.process_iter())
         watchdog_status = discord.Embed(
             title="Watched processes' status", color=color)
@@ -391,7 +389,7 @@ Category: SOFTWARE
                 "running" if value[0] else "stopped"), inline=True)
             process_list[key] = [False, False]
 
-    if stype.lower() in ["long", "api"]:
+    if stype.lower() in ["full", "api"]:
         api_server_status = discord.Embed(title="API Status", color=color)
         api_status = server.get_api_status() if server is not None else {
             "API": "Offline"}
@@ -404,7 +402,7 @@ Category: SOFTWARE
                     value="\u200B", name=item, inline=True)
 
     pc_name = node()
-    if stype.lower() in ["short", "long", "host", pc_name.lower()]:
+    if stype.lower() in ["short", "full", "host", pc_name.lower()]:
         host_status = discord.Embed(
             title=f"{pc_name}'s status", color=color)
         host_status.set_footer(text="Created by Night Key @ https://github.com/NightKey",
@@ -437,16 +435,16 @@ Category: SOFTWARE
                 disk_status.add_field(name="Free", value=value[1])
                 disk_status.add_field(name="Status", value=value[2])
 
-    if stype.lower() in ["short", "long", "bot"]:
+    if stype.lower() in ["short", "full", "bot"]:
         await channel.send(embed=bot_status)
 
-    if stype.lower() in ["short", "long", "watchdog"]:
+    if stype.lower() in ["short", "full", "watchdog"]:
         await channel.send(embed=watchdog_status)
 
-    if stype.lower() in ["long", "api"] and api_server_status.fields != []:
+    if stype.lower() in ["full", "api"] and api_server_status.fields != []:
         await channel.send(embed=api_server_status)
 
-    if stype.lower() in ["short", "long", "host", pc_name.lower()]:
+    if stype.lower() in ["short", "full", "host", pc_name.lower()]:
         await channel.send(embed=disk_status)
         await channel.send(embed=host_status)
 
@@ -562,31 +560,31 @@ It does a system scann for the running programs.
     me = client.get_user(id)
     # Sets the channel to the first valid channel, and runs a scann.
     for channel in client.get_all_channels():
-        if str(channel) in channels:
-            if os.path.exists("Offline"):
-                with open("Offline", 'r') as f:
-                    td = f.read(-1)
-                os.remove("Offline")
+        if str(channel) not in channels: break
+        if os.path.exists("Offline"):
+            with open("Offline", 'r') as f:
+                td = f.read(-1)
+            os.remove("Offline")
+            check_process_list()
+            watchdog.was_restarted()
+            if '--scilent' not in os.sys.argv:
+                difference = datetime.datetime.now() - datetime.datetime.fromtimestamp(float(td))
+                await channel.send(f"Bot restarted after being offline for {str(difference).split('.')[0]}")
+            was_online = True
+        elif not was_online:
+            if '--scilent' not in os.sys.argv:
+                await channel.send("Bot started")
                 check_process_list()
-                watchdog.was_restarted()
-                if '--scilent' not in os.sys.argv:
-                    difference = datetime.datetime.now() - datetime.datetime.fromtimestamp(float(td))
-                    await channel.send(f"Bot restarted after being offline for {str(difference).split('.')[0]}")
-                was_online = True
-            elif not was_online:
-                if '--scilent' not in os.sys.argv:
-                    await channel.send("Bot started")
-                    check_process_list()
-                    await status_check(channel)
-                was_online = True
-            else:
-                now = datetime.datetime.now()
-                if dc_time is None:
-                    break
-                if (now - dc_time) > datetime.timedelta(seconds=2) and '--scilent' not in os.sys.argv:
-                    await channel.send("Back online!")
-                    await channel.send(f"Was offline for {now - dc_time}")
-            break
+                await status_check(channel)
+            was_online = True
+        else:
+            now = datetime.datetime.now()
+            if dc_time is None:
+                break
+            if (now - dc_time) > datetime.timedelta(seconds=2) and '--scilent' not in os.sys.argv:
+                await channel.send("Back online!")
+                await channel.send(f"Was offline for {now - dc_time}")
+        break
     finish = process_time()
     logger.info('Startup check finished')
     logger.debug(f"Startup check took {finish-start} s")
@@ -750,63 +748,62 @@ async def restart(message, _):
 To use this command, you need to be an admin, or need to call it from a selected channel!
 Category: HARDWARE
     """
-    if str(message.channel) in channels or str(message.author.id) in admins["discord"]:
-        await message.channel.send("Attempting to restart the pc...")
-        try:
-            if os.name == 'nt':
-                command = "shutdown /r /t 15"
-            else:
-                command = "shutdown -r -t 15"
-            if os.system(command) != 0:
-                await message.channel.send("Permission denied!")
-            else:
-                await message.channel.send("Exiting")
-                stop()
-        except Exception as ex:
-            await message.channel.send(f"Restart failed with the following exception:\n``` {str(ex)}```")
+    if str(message.channel) not in channels and str(message.author.id) not in admins["discord"]: return
+    await message.channel.send("Attempting to restart the pc...")
+    try:
+        if os.name == 'nt':
+            command = "shutdown /r /t 20"
+        else:
+            command = "shutdown -r -t 20"
+        if os.system(command) != 0:
+            await message.channel.send("Permission denied!")
+        else:
+            await message.channel.send("Exiting")
+            stop()
+    except Exception as ex:
+        await message.channel.send(f"Restart failed with the following exception:\n``` {str(ex)}```")
 
 
 async def send_errors(message, _=None):
     """Sends all stored errors to the channel the command was sent to.
 Category: BOT
     """
-    if str(message.channel) in channels or str(message.author.id) in admins["discord"]:
-        global errors
-        msg = ""
-        for date, item in errors.items():
-            msg += f"{date}: {item}"
-        if msg != "":
-            await message.channel.send(msg)
-        else:
-            await message.channel.send("No errors saved")
-        errors = {}
+    if str(message.channel) not in channels and str(message.author.id) not in admins["discord"]: return
+    global errors
+    msg = ""
+    for date, item in errors.items():
+        msg += f"{date}: {item}"
+    if msg != "":
+        await message.channel.send(msg)
+    else:
+        await message.channel.send("No errors saved")
+    errors = {}
 
 
-async def terminate_process(message, target):
+async def terminate_process(message: discord.Message, target):
     """Terminates the specified process. (Admin permission may be needed for this)
 Usage: &terminate <existing process' name>
 Category: SOFTWARE
     """
-    if str(message.channel) in channels or str(message.author.id) in admins["discord"]:
-        if target not in process_list:
-            for p in process_list:
-                if target in p:
-                    target = p
-                    break
-            else:
-                await message.channel.send("Target not found, process can't be safely killed!")
-                return
-        for process in psutil.process_iter():
-            try:
-                name = os.path.basename(process.cmdline()[-1])
-                if name.lower() == target:
-                    process.kill()
+    if str(message.channel) not in channels and str(message.author.id) not in admins["discord"]: return
+    if target not in process_list:
+        for p in process_list:
+            if target in p:
+                target = p
                 break
-            except Exception as ex:
-                errors[datetime.datetime.now(
-                )] = f"Exception occured during terminating process '{target}' {ex}"
         else:
-            await message.channel.send(f"Error while stopping {target}!\nManual help needed!")
+            await message.channel.send("Target not found, process can't be safely killed!")
+            return
+    for process in psutil.process_iter():
+        try:
+            name = os.path.basename(process.cmdline()[-1])
+            if name.lower() == target:
+                process.kill()
+            break
+        except Exception as ex:
+            errors[datetime.datetime.now()] = f"Exception occured during terminating process '{target}' {ex}"
+    else:
+        await message.channel.send(f"Error while stopping {target}!\nManual help needed!")
 
 
 async def open_browser(message, link):
@@ -1128,55 +1125,57 @@ async def on_message(message: discord.Message):
     """This get's called when a message was sent to the server. It checks for all the usable commands, and executes them, if they were sent to the correct channel.
     """
     global server
-    if message.author != me:
-        if message.content.startswith('&') or message.channel.type == discord.ChannelType.private:
-            splt = message.content.replace('&', '').split(' ')
-            cmd = splt[0]
-            etc = " ".join(splt[1:]) if len(splt) > 1 else None
-            if cmd in linking.keys() or cmd in outside_options.keys():
-                await message.add_reaction("dot:577128688433496073")
-                try:
-                    if cmd in linking.keys():
-                        await linking[cmd][0](message, etc)
-                    if cmd in outside_options.keys():
-                        outside_options[cmd](server, Message.create_message(str(message.author.id), etc, str(message.channel.id), [
-                                             Attachment.from_discord_attachment(attachment) for attachment in message.attachments], None, Interface.Discord))
-                except Exception as ex:
-                    await message.channel.send(f"Error runnig the '{cmd}' command: {ex}")
-            else:
-                mx = {}
-                for key in linking.keys():
-                    tmp = fuzz.ratio(cmd.lower(), key.lower())
-                    if 'value' not in mx or mx["value"] < tmp:
-                        mx["key"] = key
-                        mx["value"] = tmp
-                if mx['value'] == 100:
-                    try:
-                        await linking[mx["key"]][0](message, etc)
-                        await message.add_reaction("dot:577128688433496073")
-                    except Exception as ex:
-                        await message.channel.send(f"Error runnig the '{cmd}' command: {ex}\nInterpreted command: {mx['key']}")
-                elif mx['value'] > 70:
-                    await message.add_reaction("👎")
-                    await message.channel.send(f"Did you mean `{mx['key']}`? Probability: {mx['value']}%")
-                for key in outside_options.keys():
-                    tmp = fuzz.ratio(cmd.lower(), key.lower())
-                    if 'value' not in mx or mx["value"] < tmp:
-                        mx["key"] = key
-                        mx["value"] = tmp
-                if 'value' in mx and mx['value'] == 100:
-                    try:
-                        outside_options[mx["key"]](server, Message.create_message(str(message.author.id), etc, str(message.channel.id), [
-                            Attachment.from_discord_attachment(attachment) for attachment in message.attachments], None, Interface.Discord))
-                        await message.add_reaction("dot:577128688433496073")
-                    except Exception as ex:
-                        await message.channel.send(f"Error runnig the '{cmd}' command: {ex}\nInterpreted command: {mx['key']}")
-                elif 'value' in mx and mx['value'] > 70:
-                    await message.add_reaction("👎")
-                    await message.channel.send(f"Did you mean `{mx['key']}`? Probability: {mx['value']}%")
-                else:
-                    await message.add_reaction("👎")
-                    await message.channel.send("Not a valid command!\nUse '&help' for the avaleable commands")
+    if message.author == me: return
+    if not message.content.startswith('&') and message.channel.type != discord.ChannelType.private: return
+    splt = message.content.replace('&', '').split(' ')
+    cmd = splt[0]
+    etc = " ".join(splt[1:]) if len(splt) > 1 else None
+    if cmd in linking.keys() or cmd in outside_options.keys():
+        await message.add_reaction("dot:577128688433496073")
+        try:
+            if cmd in linking.keys():
+                await linking[cmd][0](message, etc)
+            if cmd in outside_options.keys():
+                outside_options[cmd](server, Message.create_message(str(message.author.id), etc, str(message.channel.id), [
+                                        Attachment.from_discord_attachment(attachment) for attachment in message.attachments], None, Interface.Discord))
+        except Exception as ex:
+            await message.channel.send(f"Error runnig the '{cmd}' command: {ex}")
+        finally:
+            return
+    mx = {}
+    for key in linking.keys():
+        tmp = fuzz.ratio(cmd.lower(), key.lower())
+        if 'value' not in mx or mx["value"] < tmp:
+            mx["key"] = key
+            mx["value"] = tmp
+    if mx['value'] == 100:
+        try:
+            await linking[mx["key"]][0](message, etc)
+            await message.add_reaction("dot:577128688433496073")
+        except Exception as ex:
+            await message.channel.send(f"Error runnig the '{cmd}' command: {ex}\nInterpreted command: {mx['key']}")
+        finally:
+            return
+    for key in outside_options.keys():
+        tmp = fuzz.ratio(cmd.lower(), key.lower())
+        if 'value' not in mx or mx["value"] < tmp:
+            mx["key"] = key
+            mx["value"] = tmp
+    if 'value' in mx and mx['value'] == 100:
+        try:
+            outside_options[mx["key"]](server, Message.create_message(str(message.author.id), etc, str(message.channel.id), [
+                Attachment.from_discord_attachment(attachment) for attachment in message.attachments], None, Interface.Discord))
+            await message.add_reaction("dot:577128688433496073")
+        except Exception as ex:
+            await message.channel.send(f"Error runnig the '{cmd}' command: {ex}\nInterpreted command: {mx['key']}")
+        finally:
+            return
+    if 'value' in mx and mx['value'] > 70:
+        await message.add_reaction("👎")
+        await message.channel.send(f"Did you mean `{mx['key']}`? Probability: {mx['value']}%")
+    else:
+        await message.add_reaction("👎")
+        await message.channel.send("Not a valid command!\nUse '&help' for the avaleable commands")
 
 
 def disconnect_check(loop: asyncio.BaseEventLoop, channels):
@@ -1361,6 +1360,7 @@ def halth(counter: int) -> bool:
 async def start_discord_client(counter: int) -> None:
     while True:
         try:
+            logger.info("Starting Discord client")
             await client.start(discord_token)
             break
         except TypeError as te:

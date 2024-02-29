@@ -157,7 +157,7 @@ class Message(JsonSerializable):
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Message):
             return False
-        return self.sender == other.sender and self.content == other.content and self.channel == other.channel
+        return self.sender == other.sender and self.content == other.content and self.channel == other.channel and self.random_id == other.random_id
 
 
 class ResponseCode(Enum):
@@ -365,6 +365,11 @@ class API:
                             self.buffer.append(msg)
                             self.last_message = msg
                         elif not self.sending:
+                            if "response_code" in msg:
+                                response = Response.from_json(msg)
+                                if not response:
+                                    print(response.data)
+                                continue
                             message = Message.from_json(msg)
                             if self.last_message is not None and self.last_message == message:
                                 continue
@@ -375,7 +380,7 @@ class API:
                                 call.name = message.called
                                 call.start()
                 except Exception as ex:
-                    print(f"[Listener thread Inner exception]: {ex}")
+                    print(f"[Listener thread Inner exception] <{ex.__qualname__}>: {ex}")
                 sleep(0.2)
 
             try:
@@ -383,7 +388,7 @@ class API:
                     self.__validate()
                     self.connection_alive = True
             except Exception as ex:
-                print(f"[Listener thread Outer exception]: {ex}")
+                print(f"[Listener thread Outer exception] <{ex.__qualname__}>: {ex}")
 
     def __close_connection(self):
         self.connection_alive = False
