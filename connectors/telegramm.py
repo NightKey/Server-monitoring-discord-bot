@@ -2,8 +2,8 @@ import inspect
 import threading
 from typing import Any, Callable, List, Optional, Union
 import telebot
-from telebot.apihelper import ApiException, ApiHTTPException
-from telebot.types import ReplyKeyboardMarkup, ReplyKeyboardRemove, Message, KeyboardButton
+from telebot.apihelper import ApiException
+from telebot.types import ReplyKeyboardMarkup, Message, KeyboardButton
 from smdb_logger import Logger, LEVEL
 from time import time
 from .data_structures import CommandPrivilege, Command
@@ -48,9 +48,6 @@ class Telegramm():
             del self.callbacks[name]
 
     def exception_handler(self, ex: Exception) -> bool:
-        if isinstance(ex, ApiHTTPException):
-            self.logger.error(f"Api HTTP exception: {ex}")
-            return True
         if isinstance(ex, ApiException):
             self.logger.error(f"Api exception: {ex}")
             return True
