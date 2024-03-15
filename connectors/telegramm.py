@@ -170,14 +170,17 @@ class Telegramm():
             accessable_to_user = True
         ) -> None:
         """Registers a callback to an internal function that will be called later.
+
         The needed functions are the following:
             - is_admin(int) -> bool
             - add_admin(int) -> bool
             - check_admin_password(str) -> bool
             - send_status() -> str
+
         Optional, predefined:
             - wake(int) -> None
             - shutdown(int, str|None) -> None
+            
         If no name is provided, the callback function's name will be used instead. The names should be the exact names specified above.
         """
         final_name = name if name is not None else callback.__name__
@@ -196,14 +199,17 @@ class Telegramm():
             accessable_to_user = True
         ):
         """Registers a callback to an internal function that will be called later.
+        
         The needed functions are the following:
             - is_admin(int) -> bool
             - add_admin(int) -> bool
             - check_admin_password(str) -> bool
             - send_status() -> str
+        
         Optional, predefined:
             - wake(int) -> None
             - shutdown(int, str|None) -> None
+        
         If no name is provided, the callback function's name will be used instead. The names should be the exact names specified above.
         """
         def decorator(callback: Callable[..., Any]):

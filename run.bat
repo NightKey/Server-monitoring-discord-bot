@@ -12,30 +12,27 @@ ECHO Current: %current%
 ECHO Remote: %remote%
 
 if NOT %current%==%remote% (
-    ECHO Updating from remote
     start /wait git pull
     start run.bat %*
     exit /b 0
 )
 
 IF NOT EXIST venv\ (
-    ECHO Creating new venv
+    ECHO Venv doesn't exist, creating venv.
     call python -m virtualenv venv
 )
 
 IF NOT EXIST venv\ (
-    ECHO venv couldn't be prepared!
+    ECHO Installing python virtualenv
     start install.bat %*
     exit /b 0
 )
 
 IF "%VIRTUAL_ENV%"=="" (
-    ECHO Activating venv
     call venv/Scripts/activate.bat
 )
 
 start /wait python -m pip install --upgrade -r dependencies.txt
 ECHO Starting bot
 call python bot.py %*
-ECHO Disabling venv
 call venv/Scripts/deactivate.bat

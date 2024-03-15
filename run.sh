@@ -34,7 +34,9 @@ fi
 if [[ "$VIRTUAL_ENV" == "" ]]
 then
     source venv/bin/activate
-    pip install --upgrade -r dependencies.txt
 fi
 
+pip install --upgrade -r dependencies.txt
+echo "Starting bot"
 python bot.py
+deactivate
