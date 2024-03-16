@@ -187,8 +187,7 @@ class Telegramm():
         self.callbacks[final_name] = callback
         if (final_name not in self.commands and accessable_to_user):
             self.commands[final_name] = Command(final_name, privilege, False, show_button, needs_argument)
-        self.logger.debug(
-            f"Callback registered with the name \"{final_name}\"")
+        self.logger.debug(f"Callback registered with the name \"{final_name}\"")
 
     def callback(
             self, 

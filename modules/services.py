@@ -501,4 +501,3 @@ class Server:
             logger.error(message)
             raise SyntaxError(message)
         return self.callbacks[name](*args, **kwargs)
-    

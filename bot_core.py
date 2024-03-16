@@ -560,7 +560,7 @@ It does a system scann for the running programs.
     me = client.get_user(id)
     # Sets the channel to the first valid channel, and runs a scann.
     for channel in client.get_all_channels():
-        if str(channel) not in channels: break
+        if str(channel) not in channels: continue
         if os.path.exists("Offline"):
             with open("Offline", 'r') as f:
                 td = f.read(-1)
