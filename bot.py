@@ -5,14 +5,8 @@ from os import system as run
 from os import path, remove, rename
 from sys import argv, gettrace
 from time import sleep
-try:
-    from modules import log_level, log_folder
-    from smdb_logger import Logger
-except:
-    run("pip install -r dependencies.txt > remove")
-    remove("remove")
-    from modules import log_level, log_folder
-    from smdb_logger import Logger
+from modules import log_level, log_folder
+from smdb_logger import Logger
 
 
 def is_debugger():
@@ -34,25 +28,6 @@ restart_counter = 0
 
 logger = Logger("bot_runner.log", log_folder=log_folder, level=log_level,
                 log_to_console=True, use_caller_name=True, use_file_names=True)
-
-
-def install_dependencies(sudo: bool):
-    post = " --user" if system() == 'Windows' and sudo else ""
-    logger.debug(f"System: {system()}")
-    if sudo:
-        logger.info("Upgrading pip...")
-        run(f"{interpreter} -m pip install{post} --upgrade pip > remove")
-    logger.info("Upgrading dependencies...")
-    resp = run(
-        f"{interpreter} -m pip install{post} --upgrade -r dependencies.txt > remove")
-    remove("remove")
-    if resp == 0:
-        logger.info("Dependencies installed!")
-    else:
-        logger.error(
-            f"Error in installing dependecies, please install them manually!\nUse the following command: {interpreter} -m pip install{post} --upgrade -r dependencies.txt")
-    return resp
-
 
 def main(param):
     """
@@ -86,9 +61,6 @@ def main(param):
                 server.kill()
                 while server.poll() is None:
                     pass
-            if path.exists('Update'):
-                remove('Update')
-                install_dependencies(False)
             sleep(1)
         except KeyboardInterrupt:
             logger.info("Interrupted by user")
@@ -98,10 +70,7 @@ def main(param):
         except Exception as ex:
             logger.error(f"{ex}")
     if server.returncode == errno.EPERM:
-        logger.warning(
-            "Permission error! If this occures more than once, please try to run the program in administrator/root mode")
-        logger.info("Installing dependencies...")
-        install_dependencies(True)
+        logger.warning("Permission error! Please use the run.bat/run.sh file")
 
 
 if __name__ == '__main__':
@@ -110,7 +79,8 @@ if __name__ == '__main__':
     while True:
         params = argv[1:]
         if is_debugger():
-            params.extend(['--nowd', '--api', '--scilent', "--dev"])
+            logger.info("Debugger mode")
+            params.extend(['--nowd', '--api', '--scilent', "--dev", "--telegramm"])
         main(params)
         logger.warning('Bot killed!')
         ansv = str(input('Do you want to restart the bot? ([Y]/N) ') or 'Y')

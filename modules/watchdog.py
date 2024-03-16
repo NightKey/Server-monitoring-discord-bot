@@ -27,6 +27,8 @@ class Watchdog():
         self.memory = {}
         self.telegramm = telegramm
         self.admins = admins
+        self.battery_warning_number = 0
+        self.temp_warning_number = 0
         logger.header("Watchdog initialized")
 
     def was_restarted(self):
@@ -93,6 +95,40 @@ class Watchdog():
             for admin in self.admins['telegramm']:
                 self.telegramm.send_message(admin, message)
 
+    def get_battery_state(self, channel):
+        battery = status.get_battery_status()
+        if battery == None: return
+        if not battery["power_plugged"] and self.battery_warning_number >= 300:
+            if not self.battery_warning:
+                if self._ready:
+                    logger.debug('Power Disconnected!')
+                    self.send_message(channel, f"@everyone The Battery is not plugged in!")
+                    self.battery_warning = True
+        elif not battery["power_plugged"]:
+            self.battery_warning_number += 1
+        elif self.battery_warning:
+            self.battery_warning = False
+        elif self.battery_warning_number != 0:
+            self.battery_warning_number = 0
+
+    def get_temp_state(self, channel):
+        temp = status.get_temp()
+        if temp == None: return
+        if not self.temp_warning:
+            if temp > self.high_temp:
+                logger.warning(f'{temp}°C CPU temp detected!')
+                self.send_message(channel, f"@everyone CPU is running hot @ {temp}°C!")
+                self.temp_warning = True
+        else:
+            if temp > self.high_temp:
+                self.temp_warning_number += 1
+            else:
+                self.temp_warning_number = 0
+                self.temp_warning = False
+            if self.temp_warning_number % 150 == 0:
+                logger.warning('CPU temp constantly high!')
+                self.send_message(channel, f"@everyone CPU is running hot @ {temp}°C for more than 5 minutes! The server will be hut down in 5 minutes!")
+
     def run_watchdog(self, channels):
         """This method scanns the system for runing processes, and if no process found, sends a mention message to all of the valid channels.
         This scan runs every 10 secound. And every 50 Secound, the program scanns for updates in the process list.
@@ -105,76 +141,43 @@ class Watchdog():
                 break
         self.channel = channel
         logger.info("started")
-        battery_warning_number = 0
-        temp_warning_number = 0
         n = 5
         while self.run:
             try:
                 self.process_list = scann(
                     self.process_list, psutil.process_iter())
                 if n % 2 == 0:
-                    battery = status.get_battery_status()
-                    if battery != None:
-                        if not battery["power_plugged"] and battery_warning_number >= 300:
-                            if not self.battery_warning:
-                                if self._ready:
-                                    logger.debug('Power Disconnected!')
+                    self.get_battery_state(channel)
+                    self.get_temp_state(channel)
+                if n % 5 == 0:
+                    try:
+                        disks = status.get_disk_status()
+                        for key, disk in disks.items():
+                            percentage = round(disk["percent"], 1)
+                            if key in self.disks:
+                                if percentage > 99 and percentage > (self.disks[key] + 3):
                                     self.send_message(
-                                        channel, f"@everyone The Battery is not plugged in!")
-                                    self.battery_warning = True
-                        elif not battery["power_plugged"]:
-                            battery_warning_number += 1
-                        elif self.battery_warning:
-                            self.battery_warning = False
-                        elif battery_warning_number != 0:
-                            battery_warning_number = 0
-                    temp = status.get_temp()
-                    if temp != None:
-                        if not self.temp_warning:
-                            if temp > self.high_temp:
-                                logger.warning(f'{temp}°C CPU temp detected!')
+                                        channel, f"@everyone The disk '{key}' is full ({percentage}%)!")
+                                elif percentage > 95 and percentage > (self.disks[key] + 3):
+                                    self.send_message(
+                                        channel, f"@everyone The disk '{key}' is nearly filled ({percentage}%)!")
+                                elif percentage > 90 and percentage > (self.disks[key] + 3):
+                                    self.send_message(
+                                        channel, f"@everyone The disk '{key}' is {percentage}% filled!")
+                            self.disks[key] = percentage
+                    except (psutil.AccessDenied, PermissionError) as ad:
+                        logger.error(ad)
+                    memory = status.get_memory_status()
+                    for key, data in memory.items():
+                        percentage = round(data["percent"], 1)
+                        if key in self.memory:
+                            if percentage > 90 and percentage > (self.memory[key] + 3):
                                 self.send_message(
-                                    channel, f"@everyone CPU is running hot @ {temp}°C!")
-                                self.temp_warning = True
-                        else:
-                            if temp > self.high_temp:
-                                temp_warning_number += 1
-                            else:
-                                temp_warning_number = 0
-                                self.temp_warning = False
-                            if temp_warning_number % 150 == 0:
-                                logger.warning('CPU temp constantly high!')
-                                self.loop.create_task(channel.send(
-                                    f"@everyone CPU is running hot @ {temp}°C for more than 5 minutes! The server will be hut down in 5 minutes!"))
-                    if n % 5 == 0:
-                        try:
-                            disks = status.get_disk_status()
-                            for key, disk in disks.items():
-                                percentage = round(disk["percent"], 1)
-                                if key in self.disks:
-                                    if percentage > 99 and percentage > (self.disks[key] + 3):
-                                        self.send_message(
-                                            channel, f"@everyone The disk '{key}' is full ({percentage}%)!")
-                                    elif percentage > 95 and percentage > (self.disks[key] + 3):
-                                        self.send_message(
-                                            channel, f"@everyone The disk '{key}' is nearly filled ({percentage}%)!")
-                                    elif percentage > 90 and percentage > (self.disks[key] + 3):
-                                        self.send_message(
-                                            channel, f"@everyone The disk '{key}' is {percentage}% filled!")
-                                self.disks[key] = percentage
-                        except (psutil.AccessDenied, PermissionError) as ad:
-                            logger.error(ad)
-                        memory = status.get_memory_status()
-                        for key, data in memory.items():
-                            percentage = round(data["percent"], 1)
-                            if key in self.memory:
-                                if percentage > 90 and percentage > (self.memory[key] + 3):
-                                    self.send_message(
-                                        channel, f"@everyone The {key} is going to be filled! Current status: {percentage}%")
-                                if percentage > 85 and percentage > (self.memory[key] + 3):
-                                    self.send_message(
-                                        channel, f"@everyone The {key} is {percentage}% filled!")
-                            self.memory[key] = percentage
+                                    channel, f"@everyone The {key} is going to be filled! Current status: {percentage}%")
+                            if percentage > 85 and percentage > (self.memory[key] + 3):
+                                self.send_message(
+                                    channel, f"@everyone The {key} is {percentage}% filled!")
+                        self.memory[key] = percentage
                 if n >= 20:
                     n = 0
                 else:
