@@ -3,7 +3,7 @@ SET main_dir=%~dp0
 echo %main_dir%
 cd %main_dir%
 
-start /wait update.bat
+call update.bat
 
 if ERRORLEVEL 1 (
     call rub.bat %*
