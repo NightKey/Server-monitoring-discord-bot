@@ -1493,7 +1493,6 @@ def Main(_loop: asyncio.AbstractEventLoop):
         logger.info('Program started')
         logger.debug("Creating loop")
         loop = _loop
-        loop.create_task(updater(None))
         load()
         if '--al' in os.sys.argv:
             logger.info("Starting discord logger")
