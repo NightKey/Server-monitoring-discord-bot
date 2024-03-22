@@ -6,7 +6,7 @@ cd %main_dir%
 call update.bat
 
 if ERRORLEVEL 1 (
-    call rub.bat %*
+    call run.bat %*
     exit /b 0
 )
 
