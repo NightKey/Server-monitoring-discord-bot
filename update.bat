@@ -1,6 +1,5 @@
 @ECHO off
 SET main_dir=%~dp0
-echo %main_dir%
 cd %main_dir%
 
 call git remote update
@@ -17,5 +16,4 @@ if NOT %current%==%remote% (
     exit /b 1
 )
 
-echo "Already up to date!"
 exit /b 0

@@ -16,5 +16,4 @@ then
     exit 1
 fi
 
-echo "Already up to date"
 exit 0
