@@ -17,7 +17,6 @@ class Telegramm():
             "id": Command("id", CommandPrivilege.Anyone, True, True),
             "ping": Command("ping", CommandPrivilege.Anyone, True, True)
         }
-        self.telebot_log_level = INFO if logger_level == LEVEL.INFO else DEBUG
         self.Telegramm_thread = None
         self.Telegramm_bot = telebot.TeleBot(token)
         self.Telegramm_bot.add_message_handler({"function":self.incoming_message, 'filters':{}})
@@ -25,6 +24,7 @@ class Telegramm():
             "telegramm.log", log_folder=logger_folder, level=logger_level, log_to_console=True, use_caller_name=True)
         self.callbacks = {}
         self.previous_messages = {}
+        self.stop_flag = False
         self.register_callback(self.__status__, "status", accessable_to_user=False)
 
     # Basic controll
@@ -32,13 +32,21 @@ class Telegramm():
         if (self.Telegramm_thread != None):
             return
         self.Telegramm_thread = threading.Thread(
-            target=self.Telegramm_bot.infinity_polling,
+            target=self.watchdogged_runner,
             kwargs={"timeout":20}
         )
         self.Telegramm_thread.name = "Telegram thread"
         self.Telegramm_thread.start()
         self.logger.debug(f"Bot thread started")
         self.Telegramm_bot.get_me()
+
+    def watchdogged_runner(self, timeout: int):
+        while not self.stop_flag:
+            try:
+                self.logger.trace("Starting Telegramm client...")
+                self.Telegramm_bot.infinity_polling(timeout)
+            except Exception as ex:
+                self.logger.warning(f"Telegramm connection failed: {ex}")
 
     def remove_command(self, name: str) -> None:
         if (name in self.commands):
