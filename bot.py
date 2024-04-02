@@ -3,7 +3,7 @@ import errno
 from platform import system
 from os import system as run
 from os import path, remove, rename
-from sys import argv, gettrace
+from sys import argv, gettrace, executable
 from time import sleep
 from modules import log_level, log_folder
 from smdb_logger import Logger
@@ -21,8 +21,6 @@ if not path.exists(path.join("configs", "folder")):
     with open(path.join("configs", "folder"), "w") as f:
         f.write("logs")
 
-
-interpreter = 'python' if system() == 'Windows' else 'python3'
 dnull = "NUL" if system() == 'Windows' else "/dev/null"
 restart_counter = 0
 
@@ -36,7 +34,7 @@ def main(param):
     global restart_counter
     logger.debug(f"Calling the bot with the following params: {param}")
     # Creates a child process with the 'server.py' script
-    server = subprocess.Popen([interpreter, 'bot_core.py', *param])
+    server = subprocess.Popen([executable, 'bot_core.py', *param])
     while server.poll() is None:  # Works while the child process runs
         try:
             if path.exists('Restart'):  # When the server requires a restart
@@ -52,10 +50,10 @@ def main(param):
                             remove("discord.log.last")
                         rename("discord.log", "discord.log.last")
                     server = subprocess.Popen(
-                        [interpreter, 'bot_core.py', '--al', *param])
+                        [executable, 'bot_core.py', '--al', *param])
                 else:
                     server = subprocess.Popen(
-                        [interpreter, 'bot_core.py', *param])
+                        [executable, 'bot_core.py', *param])
             if path.exists('Exit'):
                 remove('Exit')
                 server.kill()
