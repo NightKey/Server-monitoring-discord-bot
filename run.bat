@@ -24,7 +24,7 @@ IF "%VIRTUAL_ENV%"=="" (
     call venv/Scripts/activate.bat
 )
 
-call python -m pip install --upgrade -r dependencies.txt
+call python -m pip install -r dependencies.txt --upgrade
 ECHO Starting bot
 call python bot.py %*
 call venv/Scripts/deactivate.bat

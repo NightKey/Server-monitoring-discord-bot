@@ -30,7 +30,7 @@ then
     source venv/bin/activate
 fi
 
-pip install --upgrade -r dependencies.txt
+pip install -r dependencies.txt --upgrade
 echo "Starting bot"
 python bot.py
 deactivate
