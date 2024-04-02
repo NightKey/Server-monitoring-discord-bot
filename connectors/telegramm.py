@@ -7,7 +7,7 @@ from telebot.types import ReplyKeyboardMarkup, Message, KeyboardButton
 from smdb_logger import Logger, LEVEL
 from time import time
 from .data_structures import CommandPrivilege, Command
-from logging import INFO, DEBUG
+from logging import CRITICAL, DEBUG
 
 class Telegramm():
     def __init__(self, token: str, logger_level: LEVEL, logger_folder: str) -> None:
@@ -18,10 +18,10 @@ class Telegramm():
             "ping": Command("ping", CommandPrivilege.Anyone, True, True)
         }
         self.Telegramm_thread = None
+        self.telegramm_bot_log_level = CRITICAL if logger_level == LEVEL.INFO else DEBUG
         self.Telegramm_bot = telebot.TeleBot(token)
         self.Telegramm_bot.add_message_handler({"function":self.incoming_message, 'filters':{}})
-        self.logger = Logger(
-            "telegramm.log", log_folder=logger_folder, level=logger_level, log_to_console=True, use_caller_name=True)
+        self.logger = Logger("telegramm.log", log_folder=logger_folder, level=logger_level, use_caller_name=True)
         self.callbacks = {}
         self.previous_messages = {}
         self.stop_flag = False
@@ -44,7 +44,7 @@ class Telegramm():
         while not self.stop_flag:
             try:
                 self.logger.trace("Starting Telegramm client...")
-                self.Telegramm_bot.infinity_polling(timeout)
+                self.Telegramm_bot.infinity_polling(timeout, logger_level=self.telegramm_bot_log_level)
             except Exception as ex:
                 self.logger.warning(f"Telegramm connection failed: {ex}")
 
