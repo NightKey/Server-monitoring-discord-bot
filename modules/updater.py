@@ -1,19 +1,13 @@
-from os import system as run
-from os import remove
+from platform import system
+from subprocess import Popen, DEVNULL
+from time import sleep
 
 
 def main():
-    with open("Update", "w") as f:
-        pass
-    run('git pull > update.lg')
-    with open('update.lg', 'r') as f:
-        c = f.read(-1).split('\n')
-    remove('update.lg')
-    if len(c) > 2:
-        return True
-    else:
-        return False
-
-
-if __name__ == '__main__':
-    main()
+    cmd = []
+    cmd.append("update.bat" if system() == "Windows" else "update.sh")
+    updater = Popen(cmd, stdout=DEVNULL)
+    while updater.poll() is None:
+        sleep(.1)
+    if updater.returncode == 1: return True
+    return False

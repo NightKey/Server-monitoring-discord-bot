@@ -326,7 +326,7 @@ Data ([Message object](#message)):
     "called": "UPDATE",
     "attachments": [],
     "interface": None,
-    "random_id": Random Integer
+    "random_id": Random Hexvalue
 }
 ```
 
@@ -343,7 +343,7 @@ Data ([Message object](#message)):
     "called": "TRACK FINISHED",
     "attachments": [],
     "interface": Interface.Discord,
-    "random_id": Random Integer
+    "random_id": Random Hexvalue
 }
 ```
 
@@ -360,6 +360,6 @@ Data ([Message object](#message)):
     "called": "EVENT",
     "attachments": [],
     "interface": Interface.Discord,
-    "random_id": Random Integer
+    "random_id": Random Hexvalue
 }
 ```

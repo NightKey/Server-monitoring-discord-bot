@@ -1,10 +1,8 @@
 from modules import log_folder, log_level
 from smdb_logger import Logger
 from os import path, chdir
-from os import system as run
+from subprocess import Popen
 from platform import system
-from sys import argv
-from bot import main as runner_main
 
 self_path = path.dirname(path.realpath(__file__))
 chdir(self_path)
@@ -32,14 +30,17 @@ def get_params():
             if param[0] == "#":
                 break
             param_value += f" {param}"
-        param_list.append(param_value.strip(" "))
+        param_list.append(f"--{param_value.strip(' ')}")
 
     return param_list
 
 
 def main():
     logger.info("Starting bot")
-    runner_main(get_params())
+    cmd = []
+    cmd.append("run.bat" if system() == "Windows" else "run.sh")
+    cmd.extend(get_params())
+    Popen(cmd)
 
 
 if __name__ == "__main__":

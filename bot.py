@@ -3,16 +3,10 @@ import errno
 from platform import system
 from os import system as run
 from os import path, remove, rename
-from sys import argv, gettrace
+from sys import argv, gettrace, executable
 from time import sleep
-try:
-    from modules import log_level, log_folder
-    from smdb_logger import Logger
-except:
-    run("pip install -r dependencies.txt > remove")
-    remove("remove")
-    from modules import log_level, log_folder
-    from smdb_logger import Logger
+from modules import log_level, log_folder
+from smdb_logger import Logger
 
 
 def is_debugger():
@@ -27,32 +21,11 @@ if not path.exists(path.join("configs", "folder")):
     with open(path.join("configs", "folder"), "w") as f:
         f.write("logs")
 
-
-interpreter = 'python' if system() == 'Windows' else 'python3'
 dnull = "NUL" if system() == 'Windows' else "/dev/null"
 restart_counter = 0
 
 logger = Logger("bot_runner.log", log_folder=log_folder, level=log_level,
                 log_to_console=True, use_caller_name=True, use_file_names=True)
-
-
-def install_dependencies(sudo: bool):
-    post = " --user" if system() == 'Windows' and sudo else ""
-    logger.debug(f"System: {system()}")
-    if sudo:
-        logger.info("Upgrading pip...")
-        run(f"{interpreter} -m pip install{post} --upgrade pip > remove")
-    logger.info("Upgrading dependencies...")
-    resp = run(
-        f"{interpreter} -m pip install{post} --upgrade -r dependencies.txt > remove")
-    remove("remove")
-    if resp == 0:
-        logger.info("Dependencies installed!")
-    else:
-        logger.error(
-            f"Error in installing dependecies, please install them manually!\nUse the following command: {interpreter} -m pip install{post} --upgrade -r dependencies.txt")
-    return resp
-
 
 def main(param):
     """
@@ -61,7 +34,7 @@ def main(param):
     global restart_counter
     logger.debug(f"Calling the bot with the following params: {param}")
     # Creates a child process with the 'server.py' script
-    server = subprocess.Popen([interpreter, 'bot_core.py', *param])
+    server = subprocess.Popen([executable, 'bot_core.py', *param])
     while server.poll() is None:  # Works while the child process runs
         try:
             if path.exists('Restart'):  # When the server requires a restart
@@ -77,18 +50,15 @@ def main(param):
                             remove("discord.log.last")
                         rename("discord.log", "discord.log.last")
                     server = subprocess.Popen(
-                        [interpreter, 'bot_core.py', '--al', *param])
+                        [executable, 'bot_core.py', '--al', *param])
                 else:
                     server = subprocess.Popen(
-                        [interpreter, 'bot_core.py', *param])
+                        [executable, 'bot_core.py', *param])
             if path.exists('Exit'):
                 remove('Exit')
                 server.kill()
                 while server.poll() is None:
                     pass
-            if path.exists('Update'):
-                remove('Update')
-                install_dependencies(False)
             sleep(1)
         except KeyboardInterrupt:
             logger.info("Interrupted by user")
@@ -98,10 +68,7 @@ def main(param):
         except Exception as ex:
             logger.error(f"{ex}")
     if server.returncode == errno.EPERM:
-        logger.warning(
-            "Permission error! If this occures more than once, please try to run the program in administrator/root mode")
-        logger.info("Installing dependencies...")
-        install_dependencies(True)
+        logger.warning("Permission error! Please use the run.bat/run.sh file")
 
 
 if __name__ == '__main__':
@@ -110,7 +77,8 @@ if __name__ == '__main__':
     while True:
         params = argv[1:]
         if is_debugger():
-            params.extend(['--nowd', '--api', '--scilent', "--dev"])
+            logger.info("Debugger mode")
+            params.extend(['--nowd', '--api', '--scilent', "--dev", "--telegramm"])
         main(params)
         logger.warning('Bot killed!')
         ansv = str(input('Do you want to restart the bot? ([Y]/N) ') or 'Y')
