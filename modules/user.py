@@ -21,7 +21,7 @@ def create_code(seed: bytes) -> str:
 
 
 class User:
-    def __init__(self, id: int, discord: int = None, telegramm=None) -> None:
+    def __init__(self, id: int, discord: int = None, telegramm: int = None) -> None:
         self.id = id
         self.__discord: int = discord
         self.__telegramm: int = telegramm
@@ -86,6 +86,7 @@ class UserContainer:
         for user in self.__users:
             fp.write(dict(user))
 
+    @staticmethod
     def from_file(fp: TextIOWrapper) -> "UserContainer":
         users = fp.read(-1).split("\n")
         return UserContainer(users)
@@ -120,12 +121,10 @@ class UserContainer:
         return len(self.__users)
 
     def __getitem__(self, __o: Union[User, int]) -> Union[User, None]:
-        selected = None
         for user in self.__users:
             if user == __o:
-                selected = user
-                break
-        return selected
+                return user
+        return None
 
     def __setitem__(self, __i: Union[User, int], __o: Union[User, int]) -> None:
         index = self.__users.index(__o)
@@ -141,10 +140,12 @@ if __name__ == "__main__":
     uc.append(0)
     print(uc[1])
     uc[0].add_discord(1123456, uc[0].get_code())
+    uc[0].add_telegramm(1234567, uc[0].get_code())
     print(uc[0].get_status(Events.activity))
     uc[0].set_status(Events.activity, "Activity")
     print(uc[0].get_status(Events.activity))
     print(uc[1123456])
+    print(uc[1234567])
     del uc[0]
     print(uc)
     input("Finished, press return!")
