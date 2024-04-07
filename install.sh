@@ -1,6 +1,5 @@
-#!bin/sh
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-cd $SCRIPT_DIR
+#!bin/bash
+cd "$(dirname "$0")"
 
 python -m pip install virtualenv
 x-terminal-emulator -e run.sh "$@"

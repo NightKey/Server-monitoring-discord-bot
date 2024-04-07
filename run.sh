@@ -1,8 +1,7 @@
-#!bin/sh
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-cd $SCRIPT_DIR
+#!bin/bash
+cd "$(dirname "$0")"
 
-update.sh
+x-terminal-emulator -e update.sh
 
 if [ $? -eq 1 ]
 then
@@ -20,12 +19,12 @@ fi
 if ! [ -d venv ]
 then
     echo "Installing python virtualenv"
-    x-terminal-emulator -e install.sh "$@"
+    source install.sh "$@"
     exit 0
 fi
 
 #If not in venv, activate venv.
-if [[ "$VIRTUAL_ENV" == "" ]]
+if [[ "$VIRTUAL_ENV" = "" ]]
 then
     source venv/bin/activate
 fi
