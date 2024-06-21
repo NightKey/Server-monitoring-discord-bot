@@ -5,6 +5,7 @@ If the watchdog process is in use, a notification message can be sent.
 For it to work, you will need to create one [Discord bot account](https://discordapp.com/developers/applications/).
 If you want to use the Telegramm bot API, you will need to create a [Telegramm bot](https://core.telegram.org/api/obtaining_api_id) as well.
 The watchdog and bot processes are capable of running without one another.
+The bot gathers geolocation if an address for it is provided in the `address.cfg` file in the `data` folder, using the [OpenStreetMap](https://nominatim.openstreetmap.org/) API.
 
 ## The bot
 

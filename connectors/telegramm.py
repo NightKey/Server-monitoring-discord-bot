@@ -8,6 +8,7 @@ from smdb_logger import Logger, LEVEL
 from time import time
 from .data_structures import CommandPrivilege, Command
 from logging import CRITICAL, DEBUG
+from modules import server_coordinates
 
 class Telegramm():
     def __init__(self, token: str, logger_level: LEVEL, logger_folder: str) -> None:
@@ -75,46 +76,58 @@ class Telegramm():
     # Mesage reception
     def incoming_message(self, message: Message) -> None:
         try:
-            split_message = message.text.split(' ')
-            chat_id = message.chat.id
-            previous_message_from_user = self.previous_messages[
-                chat_id] if chat_id in self.previous_messages else None
-            if (previous_message_from_user is not None):
-                del self.previous_messages[chat_id]
-            if (message.text.lower() in ['start', 'help', '/start', '/help']):
-                self.send_message(
-                    chat_id, f"Welcome!\nI will send you your possible commands in a second.", answer_with_buttons=True)
-                return
-            lowerMessage = split_message[0].lower()
-            if (lowerMessage not in [name for name in self.commands.keys()] and previous_message_from_user is None):
-                self.send_message(
-                    chat_id, f'Sorry, your message "{message.text}" is not supported!')
-                return
-            if (message.text.lower() == "ping"):
-                self.send_message(chat_id, f"{int(time()) - message.date} s")
-                return
-            elif (message.text.lower() == "id"):
-                self.send_message(
-                    chat_id, f"Your Chat ID is {chat_id}")
-                return
-            elif (lowerMessage == 'register' or previous_message_from_user == 'register'):
-                self.previous_messages[chat_id] = self.__register__(
-                    chat_id, split_message, previous_message_from_user)
-                return
-            
-            command = self.commands[lowerMessage] if lowerMessage in self.commands else self.commands[previous_message_from_user] if previous_message_from_user in self.commands else None
-            if (command is None):
-                return
-            argument = split_message[1] if len(split_message) > 1 else None
-            if (command.needs_argument and argument is None):
-                if (lowerMessage == command.name):
-                    self.previous_messages[chat_id] = lowerMessage
-                    self.send_message(chat_id, "Please provide the required argument", True)
-                    return
-                argument = message.text
-            self.__call_command__(chat_id, command, argument)
+            if message.content_type == "location":
+                self.location_handler(message)
+            elif message.content_type == "text":
+                self.message_handler(message)
+            else:
+                self.logger.error(f"Unknown message type '{message.content_type}' retrived from user {message.from_user.full_name}!")
         except Exception as ex:
             self.logger.error(f"Exception in incoming_message: {ex}")
+
+    def message_handler(self, message: Message) -> None:
+        split_message = message.text.split(' ')
+        chat_id = message.chat.id
+        previous_message_from_user = self.previous_messages[
+            chat_id] if chat_id in self.previous_messages else None
+        if (previous_message_from_user is not None):
+            del self.previous_messages[chat_id]
+        if (message.text.lower() in ['start', 'help', '/start', '/help']):
+            self.send_message(
+                chat_id, f"Welcome!\nI will send you your possible commands in a second.", answer_with_buttons=True)
+            return
+        lowerMessage = split_message[0].lower()
+        if (lowerMessage not in [name for name in self.commands.keys()] and previous_message_from_user is None):
+            self.send_message(
+                chat_id, f'Sorry, your message "{message.text}" is not supported!')
+            return
+        if (message.text.lower() == "ping"):
+            self.send_message(chat_id, f"{int(time()) - message.date} s")
+            return
+        elif (message.text.lower() == "id"):
+            self.send_message(
+                chat_id, f"Your Chat ID is {chat_id}")
+            return
+        elif (lowerMessage == 'register' or previous_message_from_user == 'register'):
+            self.previous_messages[chat_id] = self.__register__(
+                chat_id, split_message, previous_message_from_user)
+            return
+        
+        command = self.commands[lowerMessage] if lowerMessage in self.commands else self.commands[previous_message_from_user] if previous_message_from_user in self.commands else None
+        if (command is None):
+            return
+        argument = split_message[1] if len(split_message) > 1 else None
+        if (command.needs_argument and argument is None):
+            if (lowerMessage == command.name):
+                self.previous_messages[chat_id] = lowerMessage
+                self.send_message(chat_id, "Please provide the required argument", True)
+                return
+            argument = message.text
+        self.__call_command__(chat_id, command, argument)
+
+    def location_handler(self, message: Message) -> None:
+        if (server_coordinates is not None):
+            self.Telegramm_bot.send_location(message.chat.id, server_coordinates.latitude, server_coordinates.longitude, live_period=86400, proximity_alert_radius=500)
 
     # Internal logic functions
     def __register__(self, chat_id: int, split_message: List[str], previous_message: Union[str, None]) -> Union[str, None]:

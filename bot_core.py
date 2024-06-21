@@ -71,7 +71,6 @@ Category: SERVER
     logger.info(f"The url was {link}")
     return webbrowser.open(link)
 
-
 def signal(what):
     """
     Sends a signal to the runner. It is used to stop the API if it exists.
@@ -83,7 +82,6 @@ def signal(what):
     with open(what, 'w') as _:
         pass
 
-
 def enable_debug_logger():
     _logger = logging.getLogger('discord')
     _logger.setLevel(logging.DEBUG)
@@ -92,7 +90,6 @@ def enable_debug_logger():
     handler.setFormatter(logging.Formatter(
         '%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
     _logger.addHandler(handler)
-
 
 async def updater(message, _=None):
     """Updates the bot, and restarts it after a successfull update.
@@ -121,7 +118,6 @@ Category: BOT
             if message is not None:
                 await message.channel.send('Nothing was updated!')
 
-
 async def processes(message):
     text = 'Currently running processes:\n'
     text += f"{(chr(96) * 3)}\n"
@@ -141,7 +137,6 @@ async def processes(message):
             text = f"{(chr(96) * 3)}\n"
     await message.channel.send(f'{text}{chr(96)*3}')
 
-
 def get_passcode():
     from hashlib import sha256
     from random import randint
@@ -152,13 +147,11 @@ def get_passcode():
     print(f"Your key is {key}")
     return key
 
-
 def save_cfg():
     tmp = {"tokens": {"discord": discord_token, "telegramm": telegramm_token}, "id": id, 'connections': connections,
            "admins": admins, "admin key": admin_key}
     with open(os.path.join("data", "bot.cfg"), 'w') as f:
         json.dump(tmp, f)
-
 
 def load():
     """This function loads in the data, and sets up the program variables.
@@ -238,7 +231,6 @@ def load():
         save_cfg()
     check_process_list()
 
-
 def runner(loop: asyncio.AbstractEventLoop) -> None:
     """Runs the needed things in a way, the watchdog can access the bot client."""
     if '--nodcc' not in os.sys.argv and "--remote" not in os.sys.argv:
@@ -277,7 +269,6 @@ def runner(loop: asyncio.AbstractEventLoop) -> None:
             stop()
             signal(signals.exit)
 
-
 def stop():
     global is_running
     if voice_connection is not None and voice_connection.is_connected:
@@ -303,7 +294,6 @@ def stop():
         telegramm_bot.stop()
     signal(signals.exit)
 
-
 def send_message(msg: Message) -> Response:
     """Callback function to the services.py.
     """
@@ -320,7 +310,6 @@ def send_message(msg: Message) -> Response:
         return Response(ResponseCode.BadRequest, response.message)
     elif (response == ResponseCode.Failed):
         return Response(ResponseCode.InternalError, f"{response.message}")
-
 
 # region DISCORD
 def check_process_list():
@@ -339,7 +328,6 @@ def check_process_list():
             process_list = json.load(f)
         ptime = mtime
 
-
 def get_status():
     """Callback function for services.py. Returns the bot's inner status"""
     status = {}
@@ -352,7 +340,6 @@ def get_status():
     except:
         status["Ping"] = 'Nan'
     return status
-
 
 async def status_check(message: discord.Message, stype="short"):
     """Scanns the system for the running applications, and creates a message depending on the resoults.
@@ -448,7 +435,6 @@ Category: SOFTWARE
         await channel.send(embed=disk_status)
         await channel.send(embed=host_status)
 
-
 async def add_process(message, name):
     """Adds a process to the watchlist. The watchdog automaticalli gets updated with the new list.
 Usage: &add <existing process name>
@@ -460,7 +446,6 @@ Category: BOT
         with open(os.path.join("data", "process_list.json"), "w") as f:
             json.dump(process_list, f)
         await message.channel.send('Process added')
-
 
 async def remove(message: discord.Message, name):
     """Removes the given program from the watchlist
@@ -524,7 +509,6 @@ Category: SERVER
     get_addition = f' + {addition}' if addition is not None else ''
     await message.channel.send(f"{tag}{message.author.name}`[{num}d{sides}{get_addition}]` rolled [{'+'.join([str(n) for n in res])}]{get_addition}: {sum(res)+(addition if addition is not None else 0)}")
 
-
 @client.event
 async def on_presence_update(before: discord.Member, after: discord.Member):
     if (before.activity != after.activity):
@@ -538,7 +522,6 @@ async def on_presence_update(before: discord.Member, after: discord.Member):
                              after.status.name if after.status is not None else "None",
                              before.id)
 
-
 @client.event
 async def on_message_edit(before, after):
     await on_message(after)
@@ -551,7 +534,6 @@ def offline(online):
         dc_time = datetime.datetime.now()
         watchdog.not_ready()
 
-
 @client.event
 async def on_disconnect():
     try:
@@ -559,7 +541,6 @@ async def on_disconnect():
     except Exception as ex:
         errors[datetime.datetime.now(
         )] = f"Exception occured during disconnect event {ex}"
-
 
 @client.event
 async def on_ready():
@@ -1405,7 +1386,6 @@ async def start_discord_client(counter: int) -> None:
                 await start_discord_client(counter+1)
 # endregion
 
-
 # region TELEGRAMM
 def create_telegramm():
     global telegramm_bot
@@ -1519,7 +1499,6 @@ def Main(_loop: asyncio.AbstractEventLoop):
         stop()
         logger.info("Restarting...")
         signal(signals.restart)
-
 
 if __name__ == "__main__":
     logger.header('STARTUP')
