@@ -309,12 +309,14 @@ class Server:
         self.subscribers_for_event[Events(int(msg))].append(socket)
         self.send(Response(ResponseCode.Success), socket)
 
-    def create_function(self, creator: str, name: str, help: str, privilege: Privilege, show_button: bool, needs_arguments: bool) -> Response:
+    def create_function(self, creator: str, name: str, help: str, privilege: Union[Privilege, None], show_button: bool, needs_arguments: bool) -> Response:
         """Creates a function with the given parameters, and stores it in the self.functions dictionary, with the 'name' as key
         """
         logger.debug(f'Creating function with the name {name}')
         logger.debug(f'Creating function with the creator as {creator}')
         logger.debug(f'Telegram options: {privilege}, {show_button}, {needs_arguments}')
+        add_to_telegramm = privilege is not None
+        if privilege is None: privilege = Privilege.OnlyAdmin
         body = self.__read_template__(name, creator, help)
         try:
             exec(body)
@@ -323,7 +325,7 @@ class Server:
             logger.error(ex)
             return Response(ResponseCode.InternalError, ex)
         setattr(self, name, locals()[name])
-        self.use_callback("linking_editor", LinkingEditorData(name, getattr(self, name)))
+        self.use_callback("linking_editor", LinkingEditorData(name, getattr(self, name), add_to_telegramm=add_to_telegramm, privilage=privilege, needs_input=needs_arguments))
         if creator not in self.functions:
             self.functions[creator] = []
         self.functions[creator].append(name)
