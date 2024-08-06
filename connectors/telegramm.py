@@ -5,6 +5,8 @@ import telebot
 from telebot.apihelper import ApiException
 from telebot.types import ReplyKeyboardMarkup, Message, KeyboardButton
 from smdb_logger import Logger, LEVEL
+from smdb_api import Message as APIMessage
+from smdb_api import Interface
 from time import time
 from .data_structures import CommandPrivilege, Command
 from logging import CRITICAL, DEBUG
@@ -81,34 +83,34 @@ class Telegramm():
                 chat_id] if chat_id in self.previous_messages else None
             if (previous_message_from_user is not None):
                 del self.previous_messages[chat_id]
-            if (message.text.lower() in ['start', 'help', '/start', '/help']):
+            if (message.text in ['start', 'help', '/start', '/help']):
                 self.send_message(
                     chat_id, f"Welcome!\nI will send you your possible commands in a second.", answer_with_buttons=True)
                 return
-            lowerMessage = split_message[0].lower()
-            if (lowerMessage not in [name for name in self.commands.keys()] and previous_message_from_user is None):
+            commandName = split_message[0]
+            if (commandName not in [name for name in self.commands.keys()] and previous_message_from_user is None):
                 self.send_message(
                     chat_id, f'Sorry, your message "{message.text}" is not supported!')
                 return
-            if (message.text.lower() == "ping"):
+            if (message.text == "ping"):
                 self.send_message(chat_id, f"{int(time()) - message.date} s")
                 return
-            elif (message.text.lower() == "id"):
+            elif (message.text == "id"):
                 self.send_message(
                     chat_id, f"Your Chat ID is {chat_id}")
                 return
-            elif (lowerMessage == 'register' or previous_message_from_user == 'register'):
+            elif (commandName == 'register' or previous_message_from_user == 'register'):
                 self.previous_messages[chat_id] = self.__register__(
                     chat_id, split_message, previous_message_from_user)
                 return
             
-            command = self.commands[lowerMessage] if lowerMessage in self.commands else self.commands[previous_message_from_user] if previous_message_from_user in self.commands else None
+            command = self.commands[commandName] if commandName in self.commands else self.commands[previous_message_from_user] if previous_message_from_user in self.commands else None
             if (command is None):
                 return
             argument = split_message[1] if len(split_message) > 1 else None
             if (command.needs_argument and argument is None):
-                if (lowerMessage == command.name):
-                    self.previous_messages[chat_id] = lowerMessage
+                if (commandName == command.name):
+                    self.previous_messages[chat_id] = commandName
                     self.send_message(chat_id, "Please provide the required argument", True)
                     return
                 argument = message.text
@@ -272,7 +274,7 @@ class Telegramm():
             self.logger.warning(f"Command '{command.name}' not in callbacks!")
             self.send_message(chat_id, "Command not available at the moment!", answer_with_buttons=True)
             return
-        self.callbacks[command.name](chat_id, argument)
+        self.callbacks[command.name](chat_id, APIMessage.create_message(str(chat_id), argument, str(chat_id), [], None, Interface.Telegramm))
 
     def __wake__(self, chat_id: int) -> None:
         function_name = inspect.stack()[0][3].strip('__')

@@ -11,11 +11,11 @@ if ERRORLEVEL 1 (
 
 IF NOT EXIST venv\ (
     ECHO Venv doesn't exist, creating venv.
-    call python -m virtualenv venv
+    call python -m venv venv
 )
 
 IF NOT EXIST venv\ (
-    ECHO Installing python virtualenv
+    ECHO Installing python venv
     start install.bat %*
     exit /b 0
 )
