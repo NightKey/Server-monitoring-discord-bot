@@ -9,7 +9,7 @@ An easy to use tool to print loading bars in aplications. You may only print one
 import os
 
 
-class loading_bar():
+class Bar():
     def writer(self, string):
         """
         Writes out the string variable, with an added carrage return synbole in front of it, and without a newline in it.
@@ -95,24 +95,3 @@ class loading_bar():
             self.done = int(self.done)
         if show:
             self.show()
-
-
-if __name__ == "__main__":
-    import time
-    print("Test 1: 0-100")
-    test = loading_bar("Test 1", 100, size=50)
-    for i in range(101):
-        time.sleep(0.25)
-        test.update((i))
-    print("\nTest 2: 0-10")
-    test = loading_bar("Test 2", 10, size=25)
-    test.show()
-    for i in range(11):
-        time.sleep(0.25)
-        test.update(i)
-    print("\nTest 3: 0-1000")
-    test = loading_bar("Test 3", 1000)
-    test.show()
-    for i in range(1001):
-        time.sleep(0.0625)
-        test.update(i)

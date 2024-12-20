@@ -53,7 +53,7 @@ def get_graphical(bar_size, in_dict=False) -> Union[str, Dict[str, str]]:
     It shows the disks' and the momory's percentage, the used and the total space, and the battery's remaning lifetime, if it's pugged, and the battery's percentage.
     """
     disks, memory, battery = get_pc_status()
-    bars = bar.loading_bar("", 100, size=bar_size, show="▓", off_show="░")
+    bars = bar.Bar("", 100, size=bar_size, show="▓", off_show="░")
     if battery != None:
         bars.update(round(battery["percent"], 1), False)
         battery["bar"] = bars.bar()

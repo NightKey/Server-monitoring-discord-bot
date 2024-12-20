@@ -8,16 +8,16 @@ from smdb_logger import Logger, LEVEL
 from smdb_api import Message as APIMessage
 from smdb_api import Interface
 from time import time
-from .data_structures import CommandPrivilege, Command
+from .data_structures import Privilege, Command
 from logging import CRITICAL, DEBUG
 
 class Telegramm():
     def __init__(self, token: str, logger_level: LEVEL, logger_folder: str) -> None:
         self.commands = {
-            'status': Command('status', CommandPrivilege.Anyone, True, True),
-            "register": Command("register", CommandPrivilege.OnlyUnknown, True, True, True),
-            "id": Command("id", CommandPrivilege.Anyone, True, True),
-            "ping": Command("ping", CommandPrivilege.Anyone, True, True)
+            'status': Command('status', Privilege.Anyone, True, True),
+            "register": Command("register", Privilege.OnlyUnknown, True, True, True),
+            "id": Command("id", Privilege.Anyone, True, True),
+            "ping": Command("ping", Privilege.Anyone, True, True)
         }
         self.Telegramm_thread = None
         self.telegramm_bot_log_level = CRITICAL if logger_level == LEVEL.INFO else DEBUG
@@ -165,7 +165,7 @@ class Telegramm():
         caller_is_admin = self.__is_admin__(recepient)
         markup = ReplyKeyboardMarkup()
         items = [KeyboardButton(command.name)
-                 for command in self.commands.values() if ((command.is_default or show_all) and CommandPrivilege.should_show(command.privilege, caller_is_admin))]
+                 for command in self.commands.values() if ((command.is_default or show_all) and Privilege.should_show(command.privilege, caller_is_admin))]
         markup.add(*items)
         return markup
 
@@ -176,7 +176,7 @@ class Telegramm():
             name: Optional[str] = None,
             needs_argument: bool = False, 
             show_button: bool = False, 
-            privilege: CommandPrivilege = CommandPrivilege.Anyone,
+            privilege: Privilege = Privilege.Anyone,
             accessable_to_user = True
         ) -> None:
         """Registers a callback to an internal function that will be called later.
@@ -204,7 +204,7 @@ class Telegramm():
             name: Optional[str] = None,
             needs_argument: bool = False, 
             show_button: bool = False, 
-            privilege: CommandPrivilege = CommandPrivilege.Anyone, 
+            privilege: Privilege = Privilege.Anyone, 
             accessable_to_user = True
         ):
         """Registers a callback to an internal function that will be called later.

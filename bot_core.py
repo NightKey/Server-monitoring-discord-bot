@@ -8,7 +8,7 @@ from smdb_api import Message, Attachment, Interface, Response, ResponseCode, Eve
 from platform import node
 from modules.services import LinkingEditorData, Server
 from modules.scanner import scann
-from modules.voice_connection import VCRequest, VoiceConnection
+from modules.connectors.voice_connection import VCRequest, VoiceConnection
 from threading import Thread
 from time import sleep, process_time
 import datetime
@@ -20,7 +20,7 @@ import asyncio
 import logging
 import discord
 from fuzzywuzzy import fuzz
-from connectors import CommandPrivilege, Telegramm
+from modules.connectors import Privilege, Telegramm
 
 trys = 0
 discord_token = ""
@@ -1103,7 +1103,7 @@ def edit_linking(data: LinkingEditorData, remove=False):
             data.name, 
             data.needs_input, 
             data.add_button, 
-            CommandPrivilege(data.privilage.value)
+            Privilege(data.privilage.value)
         )
 
 
@@ -1447,13 +1447,13 @@ def create_telegramm():
         host_status += f'Temperature: {(f"{temp}°C" if temp is not None else "Not detected!")}'
         return host_status
 
-    @telegramm_bot.callback(show_button=True, privilege=CommandPrivilege.OnlyAdmin)
+    @telegramm_bot.callback(show_button=True, privilege=Privilege.OnlyAdmin)
     def wake(id: int, _) -> None:
         if ("wake" in outside_options):
             outside_options["wake"](server, Message.create_message(
                 str(id), "wake", str(id), [], None, Interface.Telegramm))
 
-    @telegramm_bot.callback(show_button=True, privilege=CommandPrivilege.OnlyAdmin)
+    @telegramm_bot.callback(show_button=True, privilege=Privilege.OnlyAdmin)
     def shutdown(id: int, options: Optional[str]) -> None:
         command = "shutdown"
         if (options is not None):

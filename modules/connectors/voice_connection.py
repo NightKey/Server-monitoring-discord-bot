@@ -6,7 +6,7 @@ from datetime import timedelta
 from time import sleep
 from discord import VoiceClient, VoiceChannel, opus, FFmpegPCMAudio, Member
 from smdb_logger import Logger
-from . import log_level, log_folder
+from ..modules import log_level, log_folder
 from os import path
 
 logger = Logger("VCConnectionHelper.log", log_folder=log_folder, level=log_level,

@@ -5,22 +5,18 @@ import sys
 from typing import Any, Callable, Dict, List, Optional, Union, overload
 from smdb_logger import Logger
 from smdb_api import Message, Response, ResponseCode, Events, Interface, UserEventRequest
-
-from . import log_level, log_folder
-from .voice_connection import VCRequest
 from hashlib import sha256
 import socket
 import select
 import json
 
+from . import log_level, log_folder
+from connectors.voice_connection import VCRequest
+from connectors import Privilege
+
 
 logger = Logger("api_server.log", log_folder=log_folder, level=log_level,
                 log_to_console=True, use_caller_name=True, use_file_names=True)
-
-class Privilege(Enum):
-    Anyone = 0
-    OnlyAdmin = 1
-    OnlyUnknown = 2
 
 @dataclass()
 class LinkingEditorData:
