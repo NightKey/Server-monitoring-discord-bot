@@ -1106,7 +1106,6 @@ def edit_linking(data: LinkingEditorData, remove=False):
             CommandPrivilege(data.privilage.value)
         )
 
-
 categories = {
     'HARDWARE': 'Anything that interacts with the host machine.',
     'SERVER': 'Anything that interacts with the discord server.',
@@ -1153,7 +1152,7 @@ async def on_message(message: discord.Message):
                 await linking[cmd][0](message, etc)
             if cmd in outside_options.keys():
                 outside_options[cmd](server, Message.create_message(str(message.author.id), etc, str(message.channel.id), [
-                                        Attachment.from_discord_attachment(attachment) for attachment in message.attachments], None, Interface.Discord))
+                                        Attachment(attachment.filename, attachment.url, attachment.size) for attachment in message.attachments], None, Interface.Discord))
         except Exception as ex:
             await message.channel.send(f"Error runnig the '{cmd}' command: {ex}")
         finally:
@@ -1180,7 +1179,7 @@ async def on_message(message: discord.Message):
     if 'value' in mx and mx['value'] == 100:
         try:
             outside_options[mx["key"]](server, Message.create_message(str(message.author.id), etc, str(message.channel.id), [
-                Attachment.from_discord_attachment(attachment) for attachment in message.attachments], None, Interface.Discord))
+                Attachment(attachment.filename, attachment.url, attachment.size) for attachment in message.attachments], None, Interface.Discord))
             await message.add_reaction("dot:577128688433496073")
         except Exception as ex:
             await message.channel.send(f"Error runnig the '{cmd}' command: {ex}\nInterpreted command: {mx['key']}")
