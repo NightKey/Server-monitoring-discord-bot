@@ -11,3 +11,4 @@ data/*.cfg
 *level
 *update.lg
 *.log
+*venv*

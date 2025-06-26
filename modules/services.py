@@ -318,13 +318,14 @@ class Server:
         add_to_telegramm = privilege is not None
         telegramm_privilege = Privilege(privilege) if add_to_telegramm else Privilege.OnlyAdmin
         body = self.__read_template__(name, creator, help)
+        temp_name_space = {}
         try:
-            exec(body)
+            exec(body, globals(), temp_name_space)
         except Exception as ex:
             logger.error(f"{body}")
             logger.error(ex)
             return Response(ResponseCode.InternalError, ex)
-        setattr(self, name, locals()[name])
+        setattr(self, name, temp_name_space[name])
         self.use_callback("linking_editor", LinkingEditorData(name, getattr(self, name), add_to_telegramm=add_to_telegramm, privilage=telegramm_privilege, needs_input=needs_arguments))
         if creator not in self.functions:
             self.functions[creator] = []
