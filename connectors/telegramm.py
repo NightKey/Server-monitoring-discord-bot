@@ -21,7 +21,7 @@ class Telegramm():
         }
         self.Telegramm_thread = None
         self.telegramm_bot_log_level = CRITICAL if logger_level == LEVEL.INFO else DEBUG
-        self.Telegramm_bot = telebot.TeleBot(token)
+        self.Telegramm_bot = telebot.TeleBot(token=token, threaded=False)
         self.Telegramm_bot.add_message_handler({"function":self.incoming_message, 'filters':{}})
         self.logger = Logger("telegramm.log", log_folder=logger_folder, level=logger_level, use_caller_name=True)
         self.callbacks = {}
@@ -46,7 +46,11 @@ class Telegramm():
         while not self.stop_flag:
             try:
                 self.logger.trace("Starting Telegramm client...")
-                self.Telegramm_bot.infinity_polling(timeout, logger_level=self.telegramm_bot_log_level)
+                while not self.stop_flag:
+                    try:
+                        self.Telegramm_bot.polling(timeout=timeout, logger_level=self.telegramm_bot_log_level)
+                    except Exception as ex:
+                        self.logger.warning(f"Polling exception: {ex}")
             except Exception as ex:
                 self.logger.warning(f"Telegramm connection failed: {ex}")
 
