@@ -278,7 +278,7 @@ class Telegramm():
             self.logger.warning(f"Command '{command.name}' not in callbacks!")
             self.send_message(chat_id, "Command not available at the moment!", answer_with_buttons=True)
             return
-        self.callbacks[command.name](chat_id, APIMessage.create_message(str(chat_id), argument, str(chat_id), [], None, Interface.Telegramm))
+        self.callbacks[command.name](command.name, APIMessage.create_message(str(chat_id), argument, str(chat_id), [], None, Interface.Telegramm))
 
     def __wake__(self, chat_id: int) -> None:
         function_name = inspect.stack()[0][3].strip('__')

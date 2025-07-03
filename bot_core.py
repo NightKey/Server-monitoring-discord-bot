@@ -1090,6 +1090,9 @@ linking = {
 
 outside_options = {}
 
+def __call_server_callback(message: Message, name: str):
+    outside_options[name](server, message)
+
 def edit_linking(data: LinkingEditorData, remove=False):
     """Removes an item from linking. Callback function to the services.py."""
     if remove and data in outside_options:
@@ -1099,7 +1102,7 @@ def edit_linking(data: LinkingEditorData, remove=False):
     outside_options[data.name] = data.callback
     if (data.add_to_telegramm):
         telegramm_bot.register_callback(
-            data.callback, 
+            __call_server_callback, 
             data.name, 
             data.needs_input, 
             data.add_button, 
