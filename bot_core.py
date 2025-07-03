@@ -1090,7 +1090,7 @@ linking = {
 
 outside_options = {}
 
-def __call_server_callback(message: Message, name: str):
+def __call_server_callback(name: str, message: Message):
     outside_options[name](server, message)
 
 def edit_linking(data: LinkingEditorData, remove=False):
