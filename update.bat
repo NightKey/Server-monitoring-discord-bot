@@ -2,6 +2,8 @@
 SET main_dir=%~dp0
 cd %main_dir%
 
+TITLE Server Monitoring Discord Bot Updater
+
 call git remote update
 
 for /f %%i in ('git rev-parse @') do SET current=%%i
