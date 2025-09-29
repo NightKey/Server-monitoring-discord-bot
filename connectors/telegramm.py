@@ -169,7 +169,7 @@ class Telegramm():
         caller_is_admin = self.__is_admin__(recepient)
         markup = ReplyKeyboardMarkup()
         items = [KeyboardButton(command.name)
-                 for command in self.commands.values() if ((command.is_default or show_all) and CommandPrivilege.should_show(command.privilege, caller_is_admin))]
+                 for command in self.commands.values() if (command.show_button and (command.is_default or show_all) and CommandPrivilege.should_show(command.privilege, caller_is_admin))]
         markup.add(*items)
         return markup
 
