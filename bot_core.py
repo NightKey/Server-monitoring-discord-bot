@@ -311,15 +311,9 @@ def send_message(msg: Message) -> Response:
         loop.create_task(watchdog.send_msg(msg.content))
         return Response(ResponseCode.Success)
     if (msg.interface == Interface.Discord):
-        response = send_discord_message(msg)
+        return send_discord_message(msg)
     elif (msg.interface == Interface.Telegramm and telegramm_bot is not None):
-        response = send_telegramm_message(msg)
-    if (response == ResponseCode.Success):
-        return Response(ResponseCode.Success)
-    elif (response == ResponseCode.NotFound):
-        return Response(ResponseCode.BadRequest, response.message)
-    elif (response == ResponseCode.Failed):
-        return Response(ResponseCode.InternalError, f"{response.message}")
+        return send_telegramm_message(msg)
 
 
 # region DISCORD
@@ -1316,8 +1310,7 @@ def send_discord_message(msg: Message) -> Response:
     chn = get_channel(msg.channel)
     if chn == None:
         return Response(ResponseCode.NotFound, "User or channel not found")
-    task: asyncio.tasks.Task = loop.create_task(
-        _send_message(msg, chn), name="Send discord message")
+    task: asyncio.tasks.Task = loop.create_task(_send_message(msg, chn), name="Send discord message")
     while not task.done():
         sleep(0.1)
     if task.exception() is not None:
