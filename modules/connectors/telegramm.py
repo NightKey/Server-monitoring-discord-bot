@@ -8,10 +8,10 @@ from smdb_logger import Logger, LEVEL
 from smdb_api import Message as APIMessage
 from smdb_api import Interface
 from time import time
-from .data_structures import CommandPrivilege, Command
+from .command import CommandPrivilege, Command
 from logging import CRITICAL, DEBUG
 
-class Telegramm():
+class Telegramm:
     def __init__(self, token: str, logger_level: LEVEL, logger_folder: str) -> None:
         self.commands = {
             'status': Command('status', CommandPrivilege.Anyone, True, True),
@@ -168,8 +168,7 @@ class Telegramm():
     def create_buttons(self, recepient: int, show_all: Optional[bool] = True) -> ReplyKeyboardMarkup:
         caller_is_admin = self.__is_admin__(recepient)
         markup = ReplyKeyboardMarkup()
-        items = [KeyboardButton(command.name)
-                 for command in self.commands.values() if ((command.is_default or show_all) and CommandPrivilege.should_show(command.privilege, caller_is_admin))]
+        items = [KeyboardButton(command.name) for command in self.commands.values() if (command.show_button and (command.is_default or show_all) and CommandPrivilege.should_show(command.privilege, caller_is_admin) and command.show_button)]
         markup.add(*items)
         return markup
 
@@ -190,10 +189,6 @@ class Telegramm():
             - add_admin(int) -> bool
             - check_admin_password(str) -> bool
             - send_status() -> str
-
-        Optional, predefined:
-            - wake(int) -> None
-            - shutdown(int, str|None) -> None
             
         If no name is provided, the callback function's name will be used instead. The names should be the exact names specified above.
         """
@@ -218,10 +213,6 @@ class Telegramm():
             - add_admin(int) -> bool
             - check_admin_password(str) -> bool
             - send_status() -> str
-        
-        Optional, predefined:
-            - wake(int) -> None
-            - shutdown(int, str|None) -> None
         
         If no name is provided, the callback function's name will be used instead. The names should be the exact names specified above.
         """
@@ -279,21 +270,3 @@ class Telegramm():
             self.send_message(chat_id, "Command not available at the moment!", answer_with_buttons=True)
             return
         self.callbacks[command.name](command.name, APIMessage.create_message(str(chat_id), argument, str(chat_id), [], None, Interface.Telegramm))
-
-    def __wake__(self, chat_id: int) -> None:
-        function_name = inspect.stack()[0][3].strip('__')
-        if (function_name in self.callbacks):
-            self.callbacks[function_name](chat_id)
-        else:
-            self.logger.warning("Wake callback is not found!")
-            self.send_message(
-                chat_id, "Waking is not available at the moment!")
-
-    def __shutdown__(self, chat_id: int, time: Union[str, None]) -> None:
-        function_name = inspect.stack()[0][3].strip('__')
-        if (function_name in self.callbacks):
-            self.callbacks[function_name](chat_id, time)
-        else:
-            self.logger.warning("Shutdown callback is not found!")
-            self.send_message(
-                chat_id, "Shutdown is not available at the moment!")

@@ -20,7 +20,7 @@ import asyncio
 import logging
 import discord
 from fuzzywuzzy import fuzz
-from connectors import CommandPrivilege, Telegramm
+from modules.connectors import CommandPrivilege, Telegramm
 
 trys = 0
 discord_token = ""
@@ -1448,21 +1448,6 @@ def create_telegramm():
         temp = status.get_temp()
         host_status += f'Temperature: {(f"{temp}°C" if temp is not None else "Not detected!")}'
         return host_status
-
-    @telegramm_bot.callback(show_button=True, privilege=CommandPrivilege.OnlyAdmin)
-    def wake(id: int, _) -> None:
-        if ("wake" in outside_options):
-            outside_options["wake"](server, Message.create_message(
-                str(id), "wake", str(id), [], None, Interface.Telegramm))
-
-    @telegramm_bot.callback(show_button=True, privilege=CommandPrivilege.OnlyAdmin)
-    def shutdown(id: int, options: Optional[str]) -> None:
-        command = "shutdown"
-        if (options is not None):
-            command += f" {options}"
-        if ("shutdown" in outside_options):
-            outside_options["shutdown"](server, Message.create_message(
-                str(id), command, str(id), [], None, Interface.Telegramm))
 
     telegramm_bot.start()
 
