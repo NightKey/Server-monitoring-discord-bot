@@ -1,6 +1,8 @@
 from argparse import ArgumentError
 import sys
 from typing import List, Optional, Union, Dict
+
+from requests import HTTPError
 from modules import status, log_level, log_folder
 from modules.watchdog import Watchdog
 from smdb_logger import Logger
@@ -347,7 +349,6 @@ def get_status():
         status["Ping"] = 'Nan'
     return status
 
-
 async def status_check(message: discord.Message, stype="short"):
     """Scanns the system for the running applications, and creates a message depending on the resoults.
 Usage: &status <full if you want to see the API status too or module name for specific module status [bot, watchdog, api, host/pc_name]>
@@ -442,7 +443,6 @@ Category: SOFTWARE
         await channel.send(embed=disk_status)
         await channel.send(embed=host_status)
 
-
 async def add_process(message, name):
     """Adds a process to the watchlist. The watchdog automaticalli gets updated with the new list.
 Usage: &add <existing process name>
@@ -454,7 +454,6 @@ Category: BOT
         with open(os.path.join("data", "process_list.json"), "w") as f:
             json.dump(process_list, f)
         await message.channel.send('Process added')
-
 
 async def remove(message: discord.Message, name):
     """Removes the given program from the watchlist
@@ -610,7 +609,6 @@ Category: SERVER
     """
     await message.channel.send(f'ping: {int(client.latency*1000)} ms{ f" PID: {os.getpid()}" if str(message.author.id) in admins["discord"] else ""}{" DEV" if dev_mode else ""}')
 
-
 async def send_link(message, _):
     """Responds with the currently running bot's invite link
 Category: SERVER
@@ -626,7 +624,6 @@ Category: SERVER
     except Exception as ex:
         errors[datetime.datetime.now(
         )] = f"Exception occured during link sending {ex}"
-
 
 async def stop_bot(message, _):
     """Stops the bot. To use this command, you need to be an admin, or need to call it from a selected channel!
@@ -678,7 +675,6 @@ class clear_helper:
     def is_finished(self):
         return self.finished or (self.number is not None and self.count == self.number)
 
-
 async def clear(message: discord.Message, data: None) -> None:
     """Clears all messages from this channel.
 Usage: &clear [optionally the number of messages or @user]
@@ -716,6 +712,28 @@ Category: SERVER
         )] = f'Exception occured during cleaning:\n```{ex}```'
         await message.channel.send("Sorry, something went wrong!")
 
+async def ban_users(message: discord.Message, original: str):
+    """Bans all users present on this server.
+Usage: &banUsers user name or id, [...]
+Category: SERVER
+    """
+    user_permissions = message.author.permissions_in(message.channel)
+    if (not user_permissions.permissions.administrator or (str(message.channel) not in channels and str(message.author.id) not in admins["discord"])):
+        return
+    users = original.split(",")
+    response_message = discord.Embed(description="Banned user(s)")
+    for user in users:
+        actual_user = client.get_user(int(user))
+        detail = ""
+        try :
+            message.guild.ban(user=actual_user)
+            detail = "Ban successful"
+        except discord.HTTPException as hex:
+            detail = f"Ban failed: {hex.text}"
+        except Exception as ex:
+            detail = f"Ban failed with exception: {ex}"
+        response_message.add_field(name=actual_user.name, value=detail, inline=False)
+    message.channel.send(embed=response_message)   
 
 async def count(message, channel):
     """Counts the messages for every user in a channel's last 1000 messages. The channel can either be given as a tag, or left empty.
@@ -1079,7 +1097,8 @@ linking = {
     "roll": [roll, False],
     "terminate": [terminate_process, True],
     "update": [updater, True],
-    "decide": [decide, False]
+    "decide": [decide, False],
+    "banUsers": [ban_users, True]
 }
 
 outside_options = {}
