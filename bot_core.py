@@ -722,7 +722,7 @@ Category: SERVER
     if (isinstance(message.channel, (discord.DMChannel, discord.GroupChannel))):
         message.channel.send("Can't bann users in private message!")
     user_permissions = message.channel.permissions_for(message.author)
-    if (not user_permissions.permissions.ban_users):
+    if (not user_permissions.ban_members and not user_permissions.administrator):
         return
     users = original.split(",")
     response_message = discord.Embed(description="Banned user(s)")
