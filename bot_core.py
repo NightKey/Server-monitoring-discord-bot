@@ -738,7 +738,7 @@ Category: SERVER
             detail = f"Ban failed: {hex.text}"
         except Exception as ex:
             detail = f"Ban failed with exception: {ex}"
-        response_message.add_field(name=actual_user.name or user.strip(" "), value=detail, inline=False)
+        response_message.add_field(name=actual_user.name if actual_user is not None else user.strip(" "), value=detail, inline=False)
     message.channel.send(embed=response_message)   
 
 async def count(message, channel):
