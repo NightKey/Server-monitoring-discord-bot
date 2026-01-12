@@ -732,11 +732,13 @@ Category: SERVER
         try :
             message.guild.ban(user=actual_user)
             detail = "Ban successful"
+        except discord.NotFound:
+            detail = "Ban failed: No such user"
         except discord.HTTPException as hex:
             detail = f"Ban failed: {hex.text}"
         except Exception as ex:
             detail = f"Ban failed with exception: {ex}"
-        response_message.add_field(name=actual_user.name, value=detail, inline=False)
+        response_message.add_field(name=actual_user.name or user.strip(" "), value=detail, inline=False)
     message.channel.send(embed=response_message)   
 
 async def count(message, channel):
