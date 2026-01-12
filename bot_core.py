@@ -720,6 +720,8 @@ Category: SERVER
     user_permissions = message.author.permissions_in(message.channel)
     if (not user_permissions.permissions.administrator or (str(message.channel) not in channels and str(message.author.id) not in admins["discord"])):
         return
+    if (message.channel.is_private()):
+        message.channel.send("Can't bann users in private message!")
     users = original.split(",")
     response_message = discord.Embed(description="Banned user(s)")
     for user in users:
