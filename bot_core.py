@@ -680,7 +680,7 @@ async def clear(message: discord.Message, data: None) -> None:
 Usage: &clear [optionally the number of messages or @user]
 Category: SERVER
     """
-    user_permissions = message.author.permissions_in(message.channel)
+    user_permissions = message.channel.permissions_for(message.author)
     if (not user_permissions.administrator and not user_permissions.manage_messages):
         return
     user: discord.Member = None
@@ -717,15 +717,15 @@ async def ban_users(message: discord.Message, original: str):
 Usage: &banUsers user name or id, [...]
 Category: SERVER
     """
-    user_permissions = message.author.permissions_in(message.channel)
-    if (not user_permissions.permissions.administrator or (str(message.channel) not in channels and str(message.author.id) not in admins["discord"])):
-        return
     if (message.channel.is_private()):
         message.channel.send("Can't bann users in private message!")
+    user_permissions = message.channel.permissions_for(message.author)
+    if (not user_permissions.permissions.ban_users):
+        return
     users = original.split(",")
     response_message = discord.Embed(description="Banned user(s)")
     for user in users:
-        actual_user = client.get_user(int(user))
+        actual_user = client.get_user(int(user.strip(" ")))
         detail = ""
         try :
             message.guild.ban(user=actual_user)
@@ -1100,7 +1100,7 @@ linking = {
     "terminate": [terminate_process, True],
     "update": [updater, True],
     "decide": [decide, False],
-    "banUsers": [ban_users, True]
+    "banUsers": [ban_users, False]
 }
 
 outside_options = {}
