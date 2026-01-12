@@ -680,6 +680,8 @@ async def clear(message: discord.Message, data: None) -> None:
 Usage: &clear [optionally the number of messages or @user]
 Category: SERVER
     """
+    if (isinstance(message.channel, (discord.DMChannel, discord.GroupChannel))):
+        message.channel.send("Can't remvoe messages in private message!")
     user_permissions = message.channel.permissions_for(message.author)
     if (not user_permissions.administrator and not user_permissions.manage_messages):
         return
@@ -717,7 +719,7 @@ async def ban_users(message: discord.Message, original: str):
 Usage: &banUsers user name or id, [...]
 Category: SERVER
     """
-    if (message.channel.is_private()):
+    if (isinstance(message.channel, (discord.DMChannel, discord.GroupChannel))):
         message.channel.send("Can't bann users in private message!")
     user_permissions = message.channel.permissions_for(message.author)
     if (not user_permissions.permissions.ban_users):
