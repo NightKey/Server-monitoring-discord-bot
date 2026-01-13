@@ -442,8 +442,7 @@ class Server:
         """
         client_socket, client_address = self.socket.accept()
         client_socket.settimeout(30)
-        logger.info(
-            f"Incoming connection from {client_address[0]}:{client_address[1]}")
+        logger.debug(f"Incoming connection from {client_address[0]}:{client_address[1]}")
         retrived = Message.from_json(self.retrive(client_socket))
         try:
             name, key = retrived.called, retrived.content
@@ -460,7 +459,7 @@ class Server:
             client_socket.close()
             return
         self.send(Response(ResponseCode.Success), client_socket)
-        logger.debug(f"Adding {name} to the connections")
+        logger.info(f"Accepted connection from {client_address[0]}:{client_address[1]} with name {name}")
         self.socket_list.append(client_socket)
         self.clients[client_socket] = name
 

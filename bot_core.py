@@ -730,7 +730,7 @@ Category: SERVER
         actual_user = client.get_user(int(user.strip(" ")))
         detail = ""
         try :
-            message.guild.ban(user=actual_user)
+            await message.guild.ban(user=actual_user)
             detail = "Ban successful"
         except discord.NotFound:
             detail = "Ban failed: No such user"
@@ -739,7 +739,7 @@ Category: SERVER
         except Exception as ex:
             detail = f"Ban failed with exception: {ex}"
         response_message.add_field(name=actual_user.name if actual_user is not None else user.strip(" "), value=detail, inline=False)
-    message.channel.send(embed=response_message)   
+    await message.channel.send(embed=response_message)   
 
 async def count(message, channel):
     """Counts the messages for every user in a channel's last 1000 messages. The channel can either be given as a tag, or left empty.
