@@ -1,14 +1,12 @@
-from dataclasses import dataclass, field
-from enum import Enum
 from os import path
 import sys
-from typing import Any, Callable, Dict, List, Optional, Union, overload
+from typing import Any, Callable, Dict, List, Optional, Union
 from smdb_logger import Logger
-from smdb_api import Message, Response, ResponseCode, Events, Interface, UserEventRequest
-
-from . import log_level, log_folder
-from .voice_connection import VCRequest
+from smdb_api import Message, Response, ResponseCode, Events, Interface, UserEventRequest, Privilege
+from modules import log_level, log_folder
+from modules.voice_connection import VCRequest
 from hashlib import sha256
+from .linking_editor_data import LinkingEditorData
 import socket
 import select
 import json
@@ -16,21 +14,6 @@ import json
 
 logger = Logger("api_server.log", log_folder=log_folder, level=log_level,
                 log_to_console=True, use_caller_name=True, use_file_names=True)
-
-class Privilege(Enum):
-    Anyone = 0
-    OnlyAdmin = 1
-    OnlyUnknown = 2
-
-@dataclass()
-class LinkingEditorData:
-    name: str
-    callback: Callable[..., Any] = field(default_factory=None)
-    add_to_telegramm: bool = False
-    add_button: bool = False
-    privilage: Privilege = field(default=Privilege.OnlyAdmin)
-    needs_input: bool = False
-
 
 class Server:
     def __init__(self) -> None:
@@ -206,7 +189,7 @@ class Server:
     # endregion
 
     def create_command(self, socket: socket, data: dict) -> None:
-        """Creates a command in the discord bot
+        """Creates a commands in the discord bot
         """
         if data is None:
             self.send(Response(ResponseCode.BadRequest, "No data given"), socket)
@@ -220,16 +203,16 @@ class Server:
         self.send(self.use_callback("get_status", ), socket)
 
     def send_command(self, socket: socket, msg: str) -> None:
-        """Sends the message retrived from the socket to the bot.
+        """Sends the messaging retrived from the socket to the bot.
         """
         if msg is None:
-            self.send(Response(ResponseCode.BadRequest, "Empty message"), socket)
+            self.send(Response(ResponseCode.BadRequest, "Empty messaging"), socket)
             return
         message = Message.from_json(msg)
         self.send(self.use_callback("send_message", message), socket)
 
     def retrive(self, socket: socket) -> str:
-        r"""Retrives a message from the socket. Every message is '\x00' terminated (terminator not included)
+        r"""Retrives a messaging from the socket. Every messaging is '\x00' terminated (terminator not included)
         """
         ret = ""
         try:
@@ -252,10 +235,10 @@ class Server:
             return None
 
     def send(self, msg: Union[Message, Response], socket: Union[socket.socket, str]) -> bool:
-        r"""Sends a message to the socket. Every message is '\x00' terminated (terminator does not required)
+        r"""Sends a messaging to the socket. Every messaging is '\x00' terminated (terminator does not required)
         """
         try:
-            logger.debug(f"Sending total message: {msg}")
+            logger.debug(f"Sending total messaging: {msg}")
             if isinstance(socket, str):
                 for key, value in self.clients.items():
                     if value == socket:
@@ -316,7 +299,7 @@ class Server:
         logger.debug(f'Creating function with the creator as {creator}')
         logger.debug(f'Telegram options: {privilege}, {show_button}, {needs_arguments}')
         add_to_telegramm = privilege is not None
-        telegramm_privilege = Privilege(privilege) if add_to_telegramm else Privilege.OnlyAdmin
+        telegramm_privilege = Privilege(privilege) if add_to_telegramm else Privilege.Admin
         body = self.__read_template__(name, creator, help)
         temp_name_space = {}
         try:
@@ -333,7 +316,7 @@ class Server:
         return Response(ResponseCode.Success)
 
     def remove_command(self, socket: socket, name) -> None:
-        """Removes a function. Removes all functions, if empty message was sent instead of a function name!
+        """Removes a function. Removes all functions, if empty messaging was sent instead of a function name!
         """
         if not name in self.functions[self.clients[socket]]:
             name = None
@@ -354,7 +337,7 @@ class Server:
             else:
                 self.use_callback("linking_editor", LinkingEditorData(name), True)
                 delattr(self, name)
-                self.functions[creator].remove(name)
+                self.functions[creator].remove_process(name)
             return Response(ResponseCode.Success)
         except Exception as ex:
             logger.error(f"{ex}")
@@ -387,10 +370,10 @@ class Server:
                         self.new_client()
                     else:
                         logger.debug(
-                            f"Incoming message from {self.clients[notified_socket]}")
+                            f"Incoming messaging from {self.clients[notified_socket]}")
                         msg = self.retrive(notified_socket)
                         if msg is None:
-                            logger.debug("None message retrived")
+                            logger.debug("None messaging retrived")
                             self.client_lost(notified_socket)
                             continue
                         else:
@@ -408,7 +391,7 @@ class Server:
         """Retrives commands
         """
         if msg.called not in self.commands:
-            self.send(Response(ResponseCode.BadRequest, Data="Command is not a valid command"), socket)
+            self.send(Response(ResponseCode.BadRequest, Data="Command is not a valid commands"), socket)
             return
         self.commands[msg.called](socket, msg.content)
 

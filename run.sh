@@ -1,5 +1,3 @@
-#!bin/bash
-
 echo $'\033]30;Server Monitoring Discord Bot\007'
 
 cd "$(dirname "$0")"
@@ -32,6 +30,7 @@ then
     source venv/bin/activate
 fi
 
+python -m ensurepip --upgrade
 pip install -r dependencies.txt --upgrade
 echo "Starting bot"
 python bot.py

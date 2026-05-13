@@ -1,3 +1,5 @@
+from typing import Callable
+
 import discord
 import psutil
 import os
@@ -5,15 +7,16 @@ import json
 from copy import deepcopy
 from smdb_logger import Logger
 from .scanner import scann
-from . import status, log_level, log_folder
+from . import status, log_level, log_folder, TODO
 from time import sleep
 
 logger = Logger("watchdog.log", log_folder=log_folder, level=log_level,
                 log_to_console=True, use_caller_name=True, use_file_names=True)
 
 
-class Watchdog():
+class Watchdog:
     def __init__(self, loop, client, admins, process_list=None, telegramm=None):
+        self.channel = None
         self.process_list = deepcopy(process_list)
         self.error = ""
         self.battery_warning = False
@@ -59,18 +62,19 @@ class Watchdog():
     def not_ready(self):
         self._ready = False
 
-    async def check_connection(self, call_back):
+    def check_connection(self, connector: str, call_back: Callable[[str, bool], None]) -> None:
         try:
-            await self.channel.pins()
-            call_back(True)
+
+            self.channel.pins()
+            call_back(connector, True)
         except discord.HTTPException:
-            call_back(False)
+            call_back(connector, False)
 
     async def send_msg(self, msg):
         try:
             await self.channel.send(msg)
         except:
-            logger.error(f"Failed sending message '{msg}'")
+            logger.error(f"Failed sending messaging '{msg}'")
 
     def from_tmp(self):
         """Reads the process list from a file. (Used to handle restarts)
@@ -93,7 +97,7 @@ class Watchdog():
         self.loop.create_task(channel.send(message))
         if (self.telegramm is not None):
             for admin in self.admins['telegramm']:
-                self.telegramm.send_message(admin, message)
+                self.telegramm.__send_message(admin, message)
 
     def get_battery_state(self, channel):
         battery = status.get_battery_status()
@@ -130,7 +134,7 @@ class Watchdog():
                 self.send_message(channel, f"@everyone CPU is running hot @ {temp}°C for more than 5 minutes! The server will be hut down in 5 minutes!")
 
     def run_watchdog(self, channels):
-        """This method scanns the system for runing processes, and if no process found, sends a mention message to all of the valid channels.
+        """This method scanns the system for runing processes, and if no process found, sends a mention messaging to all of the valid channels.
         This scan runs every 10 secound. And every 50 Secound, the program scanns for updates in the process list.
         """
         while not self._ready:
@@ -185,7 +189,7 @@ class Watchdog():
                 if self.process_list is not None:
                     for key, value in self.process_list.items():
                         if not value[1] and not value[0]:
-                            # Adds the process name, to the message
+                            # Adds the process name, to the messaging
                             self.error += f"{key} stopped working!\n"
                             # Don't want to send the same process more than once every time it stops
                             self.process_list[key] = [False, True]

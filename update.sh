@@ -1,7 +1,3 @@
-#!bin/bash
-
-echo $'\033]30;Server Monitoring Discord Bot Updater\007'
-
 cd "$(dirname "$0")"
 
 git remote update

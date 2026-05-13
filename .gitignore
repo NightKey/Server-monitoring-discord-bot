@@ -12,3 +12,4 @@ data/*.cfg
 *update.lg
 *.log
 *venv*
+.idea*

@@ -1,3 +1,4 @@
+# noinspection PyBroadException
 try:
     import bot_core
 except:

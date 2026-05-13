@@ -19,9 +19,11 @@ class VCStatus(Enum):
     connected = 2
     sameChannel = 4
 
+    @staticmethod
     def from_bool(boolean: bool) -> 'VCStatus':
         return VCStatus.connected if boolean else VCStatus.disconnected
 
+    @staticmethod
     def to_bool(status: 'VCStatus') -> bool:
         return status.value != VCStatus.disconnected.value
 
@@ -38,9 +40,11 @@ class VCRequest(Enum):
     stop = 6
     skip = 8
 
+    @staticmethod
     def need_path(value: "VCRequest") -> bool:
         return (value.value > 0 and value.value % 2 != 0) or value.value == 0
 
+    @staticmethod
     def need_user(value: "VCRequest") -> bool:
         return value.value > 0 and value != VCRequest.add
 
@@ -49,12 +53,12 @@ class IdleTimer:
     def __init__(self) -> None:
         self.cancelled = False
         self.sleep_time = 2
-        self.time_to_wait: int = None
-        self.call_after: Callable = None
-        self.thread: Thread = None
+        self.time_to_wait: int | None = None
+        self.call_after: Callable
+        self.thread: Thread | None = None
 
     def start(self, time_to_wait: int, call_after: Callable) -> None:
-        if self.thread != None and self.thread.is_alive():
+        if self.thread is not None and self.thread.is_alive():
             self.cancel()
             self.thread.join()
         self.thread = Thread(target=self.__timer)
@@ -68,11 +72,13 @@ class IdleTimer:
         counter = 0
         for _ in range(0, self.time_to_wait, self.sleep_time):
             if self.cancelled:
-                return self.__reset()
+                self.__reset()
+                return
             sleep(self.sleep_time)
             counter += 1
             if self.cancelled:
-                return self.__reset()
+                self.__reset()
+                return
         else:
             if self.time_to_wait % counter != 0:
                 sleep(1)
@@ -139,7 +145,6 @@ class VoiceConnection:
         self.is_connected = True
         self.voice_channel = channel
         self.client = await self.voice_channel.connect()
-        self.client
         return True
 
     def __disconnect(self) -> None:
@@ -178,15 +183,16 @@ class VoiceConnection:
             return False
         if self.manually_stopped:
             self.manually_stopped = False
-            return
+            return True
         logger.debug("Song finished")
         self.__track_finished()
-        if self.play_list != []:
+        if self.play_list:
             self.play_next()
             return True
         self.start_disconnect_timer()
         self.playing = False
         self.paused = False
+        return True
 
     def play_next(self) -> Coroutine['VoiceConnection', Any, None]:
         if self.playing:

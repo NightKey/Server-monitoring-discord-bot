@@ -19,10 +19,10 @@ logger = Logger("service.log", log_folder=log_folder,
 
 def get_params():
     with open(path.join(self_path, "configs", "params"), "r") as f:
-        all = f.read(-1).split('\n')
+        all_params = f.read(-1).split('\n')
     param_list = []
 
-    for item in all:
+    for item in all_params:
         if item == "" or item[0] == '#':
             continue
         param_value = ""
@@ -37,8 +37,7 @@ def get_params():
 
 def main():
     logger.info("Starting bot")
-    cmd = []
-    cmd.append("run.bat" if system() == "Windows" else "run.sh")
+    cmd = ["run.bat" if system() == "Windows" else "run.sh"]
     cmd.extend(get_params())
     Popen(cmd)
 

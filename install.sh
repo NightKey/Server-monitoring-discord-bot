@@ -1,5 +1,3 @@
-#!bin/bash
-
 echo $'\033]30;Server Monitoring Discord Bot\007'
 
 cd "$(dirname "$0")"

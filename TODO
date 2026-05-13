@@ -1,6 +1,11 @@
-✔ API setup.py @done(21-03-19 04:23)
-☐ Add way to set preferrences per server
-✔ Add way to play music trough API @done(23-02-20 15:48)
-☐ Add unified user to ease of use with API
-✔ Event subscription @done(23-05-26 09:05)
-✔ Add event to user changing status @done(23-05-26 09:05)
+[ ] Move Discord to be a connector
+[ ] Connectors should be be able to handle tasks specific to platform, but fall back to BotCore for further options
+[ ] Create user for BotCore with UUID and option for any connector to attach to it (with an attach code)
+[ ] API should have way to request any connector ID for a user UUID if connector is present
+[ ] Voice capable connector
+
+[X] Connector capabilities:
+    [X] Get messages
+    [X] React on messages
+    [X] Delete messages
+    [X] Ban user
