@@ -4,8 +4,20 @@
 [ ] API should have way to request any connector ID for a user UUID if connector is present
 [ ] Voice capable connector
 
+[ ] Bot settings page
+    [ ] Safe server (Admin only)
+    [ ] Enable watchdog warnings (Admin only)
+    [ ] Monitored applications (Admin only)
+    [ ] Server status (Admin only)
+    [ ] Bot channel per server
+
+[ ] API object has settings
+    [ ] Get page
+    [ ] Update key
+
 [X] Connector capabilities:
     [X] Get messages
     [X] React on messages
     [X] Delete messages
     [X] Ban user
+    [ ] Authenticate
