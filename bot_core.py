@@ -1177,8 +1177,7 @@ async def on_message(message: discord.Message):
                                         Attachment(attachment.filename, attachment.url, attachment.size) for attachment in message.attachments], None, Interface.Discord))
         except Exception as ex:
             await message.channel.send(f"Error runnig the '{cmd}' command: {ex}")
-        finally:
-            return
+        return
     mx = {}
     for key in linking.keys():
         tmp = fuzz.ratio(cmd.lower(), key.lower())
@@ -1191,8 +1190,7 @@ async def on_message(message: discord.Message):
             await message.add_reaction("dot:577128688433496073")
         except Exception as ex:
             await message.channel.send(f"Error runnig the '{cmd}' command: {ex}\nInterpreted command: {mx['key']}")
-        finally:
-            return
+        return
     for key in outside_options.keys():
         tmp = fuzz.ratio(cmd.lower(), key.lower())
         if 'value' not in mx or mx["value"] < tmp:
@@ -1205,8 +1203,7 @@ async def on_message(message: discord.Message):
             await message.add_reaction("dot:577128688433496073")
         except Exception as ex:
             await message.channel.send(f"Error runnig the '{cmd}' command: {ex}\nInterpreted command: {mx['key']}")
-        finally:
-            return
+        return
     if 'value' in mx and mx['value'] > 70:
         await message.add_reaction("👎")
         await message.channel.send(f"Did you mean `{mx['key']}`? Probability: {mx['value']}%")
@@ -1544,7 +1541,7 @@ def Main(_loop: asyncio.AbstractEventLoop):
 if __name__ == "__main__":
     logger.header('STARTUP')
     logger.debug("Creating bot thread...")
-    Bot = Thread(target=Main, args=[asyncio.get_event_loop(), ])
+    Bot = Thread(target=Main, args=[asyncio.new_event_loop(), ])
     Bot.name = "Bot thread"
     logger.debug("Starting bot thread...")
     Bot.start()

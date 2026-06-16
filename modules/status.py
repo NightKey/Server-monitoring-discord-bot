@@ -10,7 +10,7 @@ def get_temp() -> float:
     if not hasattr(psutil, "sensors_temperatures"):
         return None
     temps = psutil.sensors_temperatures()
-    if not temps:
+    if not temps or "coretemp" not in temps:
         return None
     cpu_temps = temps["coretemp"]
     return cpu_temps[0].current
